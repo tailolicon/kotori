@@ -10,10 +10,12 @@ import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import eu.kanade.presentation.theme.TachiyomiTheme
+import kotlinx.coroutines.launch
 
 /**
  * Anime video player (design screen 03) built on androidx.media3/ExoPlayer.
@@ -23,6 +25,7 @@ import eu.kanade.presentation.theme.TachiyomiTheme
 class AnimePlayerActivity : ComponentActivity() {
 
     private var player: ExoPlayer? = null
+    private var animeViewModel: AnimePlayerViewModel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +37,25 @@ class AnimePlayerActivity : ComponentActivity() {
         val sourceLabel = intent.getStringExtra(EXTRA_SOURCE)
 
         val exoPlayer = ExoPlayer.Builder(this).build().also { player = it }
+
+        // Episode mode: resolve and play a library anime's episodes with the list shown below.
+        val animeId = intent.getLongExtra(EXTRA_ANIME_ID, -1L)
+        if (animeId != -1L) {
+            val episodeId = intent.getLongExtra(EXTRA_EPISODE_ID, -1L)
+            val vm = AnimePlayerViewModel(exoPlayer, animeId, episodeId).also { animeViewModel = it }
+            vm.start()
+            setContent {
+                TachiyomiTheme {
+                    AnimeEpisodePlayerScreen(
+                        viewModel = vm,
+                        onNavigateUp = ::finish,
+                        onOpenMpv = { openInMpv(animeId, vm.currentEpisode?.id ?: episodeId) },
+                    )
+                }
+            }
+            return
+        }
+
         if (url != null) {
             exoPlayer.setMediaItem(MediaItem.fromUri(url))
             exoPlayer.prepare()
@@ -51,6 +73,18 @@ class AnimePlayerActivity : ComponentActivity() {
                     onEnterPip = ::enterPip,
                 )
             }
+        }
+    }
+
+    private fun openInMpv(animeId: Long, episodeId: Long) {
+        lifecycleScope.launch {
+            eu.kanade.tachiyomi.ui.main.MainActivity.startPlayerActivity(
+                this@AnimePlayerActivity,
+                animeId,
+                episodeId,
+                extPlayer = false,
+            )
+            finish()
         }
     }
 
@@ -74,6 +108,8 @@ class AnimePlayerActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        animeViewModel?.onDestroy()
+        animeViewModel = null
         player?.release()
         player = null
         super.onDestroy()
@@ -89,6 +125,16 @@ class AnimePlayerActivity : ComponentActivity() {
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_EPISODE = "episode"
         private const val EXTRA_SOURCE = "source"
+        private const val EXTRA_ANIME_ID = "animeId"
+        private const val EXTRA_EPISODE_ID = "episodeId"
+
+        /** Launch the portrait player for a library anime episode (design screen 03). */
+        fun newIntentForAnime(context: Context, animeId: Long, episodeId: Long): Intent {
+            return Intent(context, AnimePlayerActivity::class.java).apply {
+                putExtra(EXTRA_ANIME_ID, animeId)
+                putExtra(EXTRA_EPISODE_ID, episodeId)
+            }
+        }
 
         fun newIntent(
             context: Context,
