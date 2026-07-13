@@ -82,7 +82,7 @@ fun AnimeHistoryItem(
                 .padding(horizontal = 12.dp),
         ) {
             Text(
-                text = history.title,
+                text = history.title.ifBlank { stringResource(MR.strings.unknown_title) },
                 fontFamily = BeVietnamProFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.5.sp,
@@ -91,16 +91,18 @@ fun AnimeHistoryItem(
                 overflow = TextOverflow.Ellipsis,
             )
             val seenAt = remember { history.seenAt?.toTimestampString() ?: "" }
+            val subtitle = when {
+                history.episodeName.isNotBlank() ->
+                    if (seenAt.isNotBlank()) "${history.episodeName} · $seenAt" else history.episodeName
+                history.episodeNumber > -1 -> stringResource(
+                    AYMR.strings.recent_anime_time,
+                    formatEpisodeNumber(history.episodeNumber),
+                    seenAt,
+                )
+                else -> seenAt
+            }
             Text(
-                text = if (history.episodeNumber > -1) {
-                    stringResource(
-                        AYMR.strings.recent_anime_time,
-                        formatEpisodeNumber(history.episodeNumber),
-                        seenAt,
-                    )
-                } else {
-                    seenAt
-                },
+                text = subtitle,
                 modifier = Modifier.padding(top = 3.dp),
                 fontFamily = BeVietnamProFamily,
                 fontSize = 10.5.sp,

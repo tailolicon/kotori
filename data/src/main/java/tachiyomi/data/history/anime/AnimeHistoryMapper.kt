@@ -21,6 +21,7 @@ object AnimeHistoryMapper {
         animeId: Long,
         episodeId: Long,
         title: String,
+        episodeName: String,
         thumbnailUrl: String?,
         sourceId: Long,
         isFavorite: Boolean,
@@ -32,6 +33,7 @@ object AnimeHistoryMapper {
         episodeId = episodeId,
         animeId = animeId,
         title = title,
+        episodeName = episodeName,
         episodeNumber = episodeNumber,
         seenAt = seenAt,
         coverData = AnimeCover(

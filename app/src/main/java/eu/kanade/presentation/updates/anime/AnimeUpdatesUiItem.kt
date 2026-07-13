@@ -238,7 +238,7 @@ private fun AnimeUpdatesUiItem(
                 .weight(1f),
         ) {
             Text(
-                text = update.animeTitle,
+                text = update.animeTitle.ifBlank { stringResource(MR.strings.unknown_title) },
                 maxLines = 1,
                 fontFamily = BeVietnamProFamily,
                 fontWeight = FontWeight.Bold,
