@@ -142,6 +142,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
+/** Auto-mark an episode seen once playback is within this many ms of the end. */
+private const val MARK_SEEN_TAIL_MS = 2 * 60 * 1000L
+
 class PlayerViewModelProviderFactory(
     private val activity: PlayerActivity,
 ) : ViewModelProvider.Factory {
@@ -1671,7 +1674,9 @@ class PlayerViewModel @JvmOverloads constructor(
 
         val progress = playerPreferences.progressPreference().get()
         val shouldTrack = !incognitoMode || hasTrackers
-        if (seconds >= totalSeconds * progress && shouldTrack) {
+        // Mark seen at the configured percentage or once within two minutes of the end.
+        val nearEnd = totalSeconds - seconds <= MARK_SEEN_TAIL_MS
+        if ((seconds >= totalSeconds * progress || nearEnd) && shouldTrack) {
             viewModelScope.launchNonCancellable {
                 updateEpisodeProgressOnComplete(currentEp)
             }

@@ -450,7 +450,12 @@ class ExternalIntents {
 
         if (totalSeconds > 0L) {
             val progress = playerPreferences.progressPreference().get()
-            val seen = if (!currEp.seen) lastSecondSeen >= totalSeconds * progress else true
+            // Mark seen at the configured percentage or once within two minutes of the end.
+            val seen = if (!currEp.seen) {
+                lastSecondSeen >= totalSeconds * progress || totalSeconds - lastSecondSeen <= 2 * 60 * 1000L
+            } else {
+                true
+            }
             updateEpisode.await(
                 EpisodeUpdate(
                     id = currEp.id,
