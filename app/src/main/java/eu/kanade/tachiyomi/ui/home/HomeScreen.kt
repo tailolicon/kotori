@@ -37,6 +37,8 @@ import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriNavBar
+import eu.kanade.presentation.theme.kotori.KotoriNavRail
+import eu.kanade.presentation.theme.kotori.KotoriNavRailScope
 import eu.kanade.presentation.theme.kotori.KotoriNavBarScope
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
@@ -95,9 +97,9 @@ object HomeScreen : Screen() {
                 Scaffold(
                     startBar = {
                         if (isTabletUi()) {
-                            NavigationRail {
+                            KotoriNavRail {
                                 TABS.fastForEach {
-                                    NavigationRailItem(it)
+                                    KotoriNavRailItem(it)
                                 }
                             }
                         }
@@ -184,6 +186,32 @@ object HomeScreen : Screen() {
 
     @Composable
     private fun KotoriNavBarScope.KotoriNavBarItem(tab: eu.kanade.presentation.util.Tab) {
+        val tabNavigator = LocalTabNavigator.current
+        val navigator = LocalNavigator.currentOrThrow
+        val scope = rememberCoroutineScope()
+        val selected = tabNavigator.current::class == tab::class
+        Item(
+            title = tab.options.title,
+            selected = selected,
+            onClick = {
+                if (!selected) {
+                    tabNavigator.current = tab
+                } else {
+                    scope.launch { tab.onReselect(navigator) }
+                }
+            },
+            icon = {
+                CompositionLocalProvider(
+                    LocalContentColor provides if (selected) Color.White else KotoriColors.textMuted,
+                ) {
+                    NavigationIconItem(tab)
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun KotoriNavRailScope.KotoriNavRailItem(tab: eu.kanade.presentation.util.Tab) {
         val tabNavigator = LocalTabNavigator.current
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()

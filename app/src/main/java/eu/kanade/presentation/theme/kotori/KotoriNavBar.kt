@@ -6,12 +6,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,6 +64,82 @@ fun KotoriNavBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         KotoriNavBarScope(this, accent).content()
+    }
+}
+
+/**
+ * Kotori vertical glass navigation rail — tablet counterpart of [KotoriNavBar].
+ */
+@Composable
+fun KotoriNavRail(
+    modifier: Modifier = Modifier,
+    accent: KotoriAccent = KotoriTheme.accent,
+    content: @Composable KotoriNavRailScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .fillMaxHeight()
+            .padding(start = 14.dp, top = 14.dp, bottom = 14.dp)
+            .shadow(
+                elevation = 17.dp,
+                shape = KotoriShapes.nav,
+                ambientColor = Color.Black.copy(alpha = 0.45f),
+                spotColor = Color.Black.copy(alpha = 0.45f),
+            )
+            .clip(KotoriShapes.nav)
+            .background(KotoriColors.bgNavbar)
+            .border(1.dp, Color(0x1AFFFFFF), KotoriShapes.nav)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+            .selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        KotoriNavRailScope(accent).content()
+    }
+}
+
+class KotoriNavRailScope(
+    private val accent: KotoriAccent,
+) {
+    @Composable
+    fun Item(
+        title: String,
+        selected: Boolean,
+        onClick: () -> Unit,
+        icon: @Composable () -> Unit,
+    ) {
+        val itemShape = RoundedCornerShape(20.dp)
+        val textColor by animateColorAsState(
+            targetValue = if (selected) Color.White else KotoriColors.textMuted,
+            animationSpec = tween(250),
+            label = "navRailItemColor",
+        )
+        val background: Brush = if (selected) accent.gradient else SolidColor(Color.Transparent)
+        Column(
+            modifier = Modifier
+                .width(72.dp)
+                .clip(itemShape)
+                .background(background)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                )
+                .padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            icon()
+            Text(
+                text = title,
+                color = textColor,
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
