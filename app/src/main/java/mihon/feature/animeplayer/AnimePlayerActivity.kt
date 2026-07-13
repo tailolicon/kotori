@@ -50,6 +50,7 @@ class AnimePlayerActivity : ComponentActivity() {
                         viewModel = vm,
                         onNavigateUp = ::finish,
                         onOpenMpv = { openInMpv(animeId, vm.currentEpisode?.id ?: episodeId) },
+                        onEnterPip = ::enterPip,
                     )
                 }
             }
@@ -85,6 +86,23 @@ class AnimePlayerActivity : ComponentActivity() {
                 extPlayer = false,
             )
             finish()
+        }
+    }
+
+    /** Toggle landscape fullscreen for the portrait ExoPlayer screen. */
+    fun setFullscreen(enabled: Boolean) {
+        requestedOrientation = if (enabled) {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+        val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+        if (enabled) {
+            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
     }
 
