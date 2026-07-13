@@ -1,17 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-android:layout_width="match_parent"
-android:layout_height="match_parent"
-android:fitsSystemWindows="false">
-
-<eu.kanade.tachiyomi.ui.player.AniyomiMPVView
-    android:id="@+id/player"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:background="#100D18"
+    android:fitsSystemWindows="false">
 
-<androidx.compose.ui.platform.ComposeView
-    android:id="@+id/controls"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    <!-- Video + controls. Portrait: pinned to the top at 16:9. Fullscreen: resized to fill. -->
+    <FrameLayout
+        android:id="@+id/video_frame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@android:color/black"
+        app:layout_constraintDimensionRatio="H,16:9"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <eu.kanade.tachiyomi.ui.player.AniyomiMPVView
+            android:id="@+id/player"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/controls"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/fullscreen_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end" />
+    </FrameLayout>
+
+    <!-- Episode list below the video in portrait; hidden in fullscreen. -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/episode_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/video_frame" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

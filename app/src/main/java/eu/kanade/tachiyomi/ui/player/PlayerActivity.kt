@@ -269,10 +269,11 @@ class PlayerActivity : BaseActivity() {
                 PlayerControls(
                     viewModel = viewModel,
                     onBackPress = {
-                        if (isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get()) {
-                            enterPictureInPictureMode(createPipParams())
-                        } else {
-                            finish()
+                        when {
+                            playerFullscreen.value -> togglePlayerFullscreen()
+                            isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get() ->
+                                enterPictureInPictureMode(createPipParams())
+                            else -> finish()
                         }
                     },
                     modifier = Modifier.onGloballyPositioned {
@@ -290,7 +291,47 @@ class PlayerActivity : BaseActivity() {
             }
         }
 
+        binding.episodeList.setContent {
+            TachiyomiTheme {
+                PlayerEpisodePanel(viewModel = viewModel, onSwitchEpisode = { changeEpisode(it) })
+            }
+        }
+        binding.fullscreenButton.setContent {
+            TachiyomiTheme {
+                PlayerFullscreenButton(fullscreen = playerFullscreen.value, onToggle = ::togglePlayerFullscreen)
+            }
+        }
+        applyPlayerLayout()
+
         onNewIntent(this.intent)
+    }
+
+    /** Portrait (video + episode list) vs landscape fullscreen; toggled without recreating mpv. */
+    private val playerFullscreen = androidx.compose.runtime.mutableStateOf(false)
+
+    private fun togglePlayerFullscreen() {
+        playerFullscreen.value = !playerFullscreen.value
+        applyPlayerLayout()
+    }
+
+    private fun applyPlayerLayout() {
+        val fullscreen = playerFullscreen.value
+        val lp = binding.videoFrame.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
+        if (fullscreen) {
+            lp.dimensionRatio = null
+            lp.bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+        } else {
+            lp.dimensionRatio = "H,16:9"
+            lp.bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
+        }
+        binding.videoFrame.layoutParams = lp
+        binding.episodeList.visibility = if (fullscreen) android.view.View.GONE else android.view.View.VISIBLE
+        setupPlayerOrientation()
+        if (fullscreen) {
+            windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        } else {
+            windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     override fun onDestroy() {
@@ -831,6 +872,11 @@ class PlayerActivity : BaseActivity() {
 
     private fun setupPlayerOrientation() {
         if (player.isExiting) return
+        // Portrait shows the video + episode list; the orientation preference only applies in fullscreen.
+        if (!playerFullscreen.value) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            return
+        }
         requestedOrientation = when (playerPreferences.defaultPlayerOrientationType().get()) {
             PlayerOrientation.Free -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
             PlayerOrientation.Video -> if ((player.getVideoOutAspect() ?: 0.0) > 1.0) {
