@@ -72,7 +72,11 @@ fun Anime.copyFrom(other: SAnime): Anime {
     }
     val thumbnailUrl = other.thumbnail_url ?: thumbnailUrl
     val backgroundUrl = other.background_url ?: backgroundUrl
+    // Sources may only provide the title in details (empty in popular/latest); pull it in on
+    // refresh so entries added from such a list stop showing "Unknown title".
+    val title = other.title.takeIf { it.isNotBlank() } ?: title
     return this.copy(
+        title = title,
         author = author,
         artist = artist,
         description = description,

@@ -240,7 +240,9 @@ class AnimeScreenModel(
                 setAnimeDefaultSeasonFlags.await(anime)
             }
 
-            val needRefreshInfo = !anime.initialized
+            // Also refetch when the stored title is blank so entries added from sources that omit
+            // the title in their popular/latest lists (only providing it in details) self-heal.
+            val needRefreshInfo = !anime.initialized || anime.title.isBlank()
             val needRefreshEpisode = episodes.isEmpty() && anime.fetchType == FetchType.Episodes
             val needRefreshSeason = seasons.isEmpty() && anime.fetchType == FetchType.Seasons
 
