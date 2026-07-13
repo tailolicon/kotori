@@ -96,6 +96,9 @@ fun PlayerControls(
     viewModel: PlayerViewModel,
     onBackPress: () -> Unit,
     modifier: Modifier = Modifier,
+    // Portrait shows a separate compact control bar, so mpv's own (fullscreen-oriented) main
+    // controls are suppressed to avoid overlap. Gestures, sheets and panels stay active.
+    portrait: Boolean = false,
 ) {
     val spacing = MaterialTheme.padding
     val playerPreferences = remember { Injekt.get<PlayerPreferences>() }
@@ -104,9 +107,11 @@ fun PlayerControls(
     val subtitlePreferences = remember { Injekt.get<SubtitlePreferences>() }
     val interactionSource = remember { MutableInteractionSource() }
 
-    val controlsShown by viewModel.controlsShown.collectAsState()
+    val controlsShownRaw by viewModel.controlsShown.collectAsState()
+    val seekBarShownRaw by viewModel.seekBarShown.collectAsState()
+    val controlsShown = controlsShownRaw && !portrait
     val areControlsLocked by viewModel.areControlsLocked.collectAsState()
-    val seekBarShown by viewModel.seekBarShown.collectAsState()
+    val seekBarShown = seekBarShownRaw && !portrait
     val isLoading by viewModel.isLoading.collectAsState()
     val isLoadingEpisode by viewModel.isLoadingEpisode.collectAsState()
     val duration by viewModel.duration.collectAsState()

@@ -287,6 +287,23 @@ class PlayerActivity : BaseActivity() {
                             )
                         }
                     },
+                    portrait = !playerFullscreen.value,
+                )
+            }
+        }
+
+        binding.portraitControls.setContent {
+            TachiyomiTheme {
+                if (playerFullscreen.value) return@TachiyomiTheme
+                PortraitPlayerControls(
+                    viewModel = viewModel,
+                    onBackPress = {
+                        when {
+                            isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get() ->
+                                enterPictureInPictureMode(createPipParams())
+                            else -> finish()
+                        }
+                    },
                 )
             }
         }
@@ -326,6 +343,7 @@ class PlayerActivity : BaseActivity() {
         }
         binding.videoFrame.layoutParams = lp
         binding.episodeList.visibility = if (fullscreen) android.view.View.GONE else android.view.View.VISIBLE
+        binding.portraitControls.visibility = if (fullscreen) android.view.View.GONE else android.view.View.VISIBLE
         setupPlayerOrientation()
         if (fullscreen) {
             windowInsetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
