@@ -62,6 +62,9 @@ class SourcePreferences(
 
     val extensionRepos: Preference<Set<String>> = preferenceStore.getStringSet("extension_repos", emptySet())
 
+    // Set once the default Keiyoushi (manga) + yuzono (anime) repos have been seeded on first run.
+    val defaultReposSeeded: Preference<Boolean> = preferenceStore.getBoolean("default_repos_seeded", false)
+
     val extensionUpdatesCount: Preference<Int> = preferenceStore.getInt("ext_updates_count", 0)
 
     val trustedExtensions: Preference<Set<String>> = preferenceStore.getStringSet(
