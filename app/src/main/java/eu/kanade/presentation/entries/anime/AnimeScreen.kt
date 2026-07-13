@@ -1092,6 +1092,13 @@ private fun LazyGridScope.sharedEpisodeItems(
                                 formatTime(episodeItem.episode.totalSeconds),
                             )
                         },
+                    watchProgressFraction = episodeItem.episode.let { ep ->
+                        if (!ep.seen && ep.totalSeconds > 0L && ep.lastSecondSeen > 0L) {
+                            (ep.lastSecondSeen.toFloat() / ep.totalSeconds).coerceIn(0f, 1f)
+                        } else {
+                            null
+                        }
+                    },
                     scanlator = episodeItem.episode.scanlator.takeIf { !it.isNullOrBlank() },
                     summary = episodeItem.episode.summary.takeIf { !it.isNullOrBlank() && showSummaries },
                     previewUrl = episodeItem.episode.previewUrl.takeIf { !it.isNullOrBlank() && showPreviews },

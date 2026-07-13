@@ -3,10 +3,12 @@ package eu.kanade.presentation.entries.anime.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -73,6 +76,7 @@ fun AnimeEpisodeListItem(
     title: String,
     date: String?,
     watchProgress: String?,
+    watchProgressFraction: Float?,
     scanlator: String?,
     summary: String?,
     previewUrl: String?,
@@ -118,15 +122,15 @@ fun AnimeEpisodeListItem(
         swipeThreshold = swipeActionThreshold,
         backgroundUntilSwipeThreshold = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        val showProgressBar = watchProgressFraction != null && !seen
+        Column(
             modifier = Modifier
                 .padding(horizontal = 18.dp, vertical = 4.dp)
                 .alpha(if (seen) 0.55f else 1f)
+                .clip(KotoriShapes.row)
                 .then(
                     if (selected) {
                         Modifier
-                            .clip(KotoriShapes.row)
                             .background(KotoriTheme.accent.start.copy(alpha = 0.16f))
                             .border(1.dp, KotoriTheme.accent.light.copy(alpha = 0.55f), KotoriShapes.row)
                     } else {
@@ -136,8 +140,13 @@ fun AnimeEpisodeListItem(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
-                )
-                .padding(start = 12.dp, top = 11.dp, end = 8.dp, bottom = 11.dp),
+                ),
+        ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, top = 11.dp, end = 8.dp, bottom = if (showProgressBar) 9.dp else 11.dp),
         ) {
             if (previewUrl.isNullOrBlank() && summary.isNullOrBlank()) {
                 SimpleEpisodeListItemImpl(
@@ -224,6 +233,28 @@ fun AnimeEpisodeListItem(
                 }
             }
         }
+            if (showProgressBar && watchProgressFraction != null) {
+                EpisodeProgressBar(fraction = watchProgressFraction)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeProgressBar(fraction: Float) {
+    val accent = KotoriTheme.accent
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(3.dp)
+            .background(Color.White.copy(alpha = 0.10f)),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .background(Brush.horizontalGradient(listOf(accent.start, accent.end))),
+        )
     }
 }
 
@@ -515,6 +546,7 @@ fun AnimeEpisodeListItemPreview() {
         title = "Ep. 1 - To You, 2000 Years in the Future: The Fall of Zhiganshina (1)",
         date = "7/4/13",
         watchProgress = null,
+        watchProgressFraction = null,
         scanlator = null,
         summary = "As Titans continue to rampage, the townspeople gather at the inner gate. But a new Titan breaks " +
             "through and this one is unlike the others. Source: crunchyroll",
