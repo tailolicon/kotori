@@ -27,6 +27,8 @@ object AnimeHistoryMapper {
         isFavorite: Boolean,
         coverLastModified: Long,
         episodeNumber: Double,
+        lastSecondSeen: Long,
+        totalSeconds: Long,
         seenAt: Date?,
     ): AnimeHistoryWithRelations = AnimeHistoryWithRelations(
         id = historyId,
@@ -35,6 +37,8 @@ object AnimeHistoryMapper {
         title = title,
         episodeName = episodeName,
         episodeNumber = episodeNumber,
+        lastSecondSeen = lastSecondSeen,
+        totalSeconds = totalSeconds,
         seenAt = seenAt,
         coverData = AnimeCover(
             animeId = animeId,

@@ -10,6 +10,8 @@ data class AnimeHistoryWithRelations(
     val title: String,
     val episodeName: String,
     val episodeNumber: Double,
+    val lastSecondSeen: Long,
+    val totalSeconds: Long,
     val seenAt: Date?,
     val coverData: AnimeCover,
 )

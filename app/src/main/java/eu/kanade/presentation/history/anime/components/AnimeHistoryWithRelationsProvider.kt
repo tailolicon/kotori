@@ -12,6 +12,8 @@ internal class AnimeHistoryWithRelationsProvider : PreviewParameterProvider<Anim
         animeId = 3L,
         title = "Test Title",
         episodeName = "Test Episode",
+        lastSecondSeen = 600000L,
+        totalSeconds = 1440000L,
         episodeNumber = 10.2,
         seenAt = Date(1697247357L),
         coverData = tachiyomi.domain.entries.anime.model.AnimeCover(
@@ -29,6 +31,8 @@ internal class AnimeHistoryWithRelationsProvider : PreviewParameterProvider<Anim
         animeId = 3L,
         title = "Test Title",
         episodeName = "Test Episode",
+        lastSecondSeen = 600000L,
+        totalSeconds = 1440000L,
         episodeNumber = 10.2,
         seenAt = null,
         coverData = tachiyomi.domain.entries.anime.model.AnimeCover(
@@ -46,6 +50,8 @@ internal class AnimeHistoryWithRelationsProvider : PreviewParameterProvider<Anim
         animeId = 3L,
         title = "Test Title",
         episodeName = "Test Episode",
+        lastSecondSeen = 600000L,
+        totalSeconds = 1440000L,
         episodeNumber = -2.0,
         seenAt = Date(1697247357L),
         coverData = tachiyomi.domain.entries.anime.model.AnimeCover(

@@ -91,7 +91,14 @@ fun AnimeHistoryItem(
                 overflow = TextOverflow.Ellipsis,
             )
             val seenAt = remember { history.seenAt?.toTimestampString() ?: "" }
-            val subtitle = when {
+            val progressPct = remember(history.lastSecondSeen, history.totalSeconds) {
+                if (history.totalSeconds > 0L && history.lastSecondSeen in 1 until history.totalSeconds) {
+                    (history.lastSecondSeen * 100 / history.totalSeconds).toInt()
+                } else {
+                    null
+                }
+            }
+            val baseSub = when {
                 history.episodeName.isNotBlank() ->
                     if (seenAt.isNotBlank()) "${history.episodeName} · $seenAt" else history.episodeName
                 history.episodeNumber > -1 -> stringResource(
@@ -101,6 +108,7 @@ fun AnimeHistoryItem(
                 )
                 else -> seenAt
             }
+            val subtitle = if (progressPct != null) "$baseSub · xem dở $progressPct%" else baseSub
             Text(
                 text = subtitle,
                 modifier = Modifier.padding(top = 3.dp),
