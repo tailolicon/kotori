@@ -69,8 +69,6 @@ import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
-import tachiyomi.core.common.util.lang.withUIContext
-import mihon.feature.animeplayer.AnimePlayerActivity
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.entries.anime.model.Anime
 import tachiyomi.domain.items.episode.model.Episode
@@ -414,17 +412,13 @@ class AnimeScreen(
     }
 
     private suspend fun openEpisode(context: Context, episode: Episode, useExternalPlayer: Boolean) {
-        if (useExternalPlayer) {
-            withIOContext {
-                MainActivity.startPlayerActivity(context, episode.animeId, episode.id, true)
-            }
-        } else {
-            // Kotori portrait player (design screen 03) with the episode list below.
-            withUIContext {
-                context.startActivity(
-                    AnimePlayerActivity.newIntentForAnime(context, episode.animeId, episode.id),
-                )
-            }
+        withIOContext {
+            MainActivity.startPlayerActivity(
+                context,
+                episode.animeId,
+                episode.id,
+                useExternalPlayer,
+            )
         }
     }
 
