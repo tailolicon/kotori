@@ -119,7 +119,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                     ) {
                         setContentTitle(stringResource(MR.strings.pref_incognito_mode))
                         setContentText(stringResource(MR.strings.notification_incognito_text))
-                        setSmallIcon(R.drawable.ic_glasses_24dp)
+                        setSmallIcon(R.drawable.ic_kotori_notification)
                         setOngoing(true)
 
                         val pendingIntent = PendingIntent.getBroadcast(
