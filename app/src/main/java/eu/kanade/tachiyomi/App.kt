@@ -23,6 +23,7 @@ import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.util.DebugLogger
 import dev.mihon.injekt.patchInjekt
+import eu.kanade.domain.AnimeDomainModule
 import eu.kanade.domain.DomainModule
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences
@@ -99,6 +100,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         Injekt.importModule(PreferenceModule(this))
         Injekt.importModule(AppModule(this))
         Injekt.importModule(DomainModule())
+        Injekt.importModule(AnimeDomainModule())
 
         setupNotificationChannels()
 
@@ -198,9 +200,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
                 add(BufferedSourceFetcher.Factory())
                 add(MangaCoverFetcher.MangaCoverFactory(callFactoryLazy))
                 add(MangaCoverFetcher.MangaFactory(callFactoryLazy))
+                add(eu.kanade.tachiyomi.data.coil.AnimeImageFetcher.AnimeCoverFactory(callFactoryLazy))
+                add(eu.kanade.tachiyomi.data.coil.AnimeImageFetcher.AnimeFactory(callFactoryLazy))
                 // Keyer
                 add(MangaCoverKeyer())
                 add(MangaKeyer())
+                add(eu.kanade.tachiyomi.data.coil.AnimeCoverKeyer())
+                add(eu.kanade.tachiyomi.data.coil.AnimeKeyer())
             }
 
             memoryCache(

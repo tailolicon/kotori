@@ -14,9 +14,27 @@ sealed interface StatsData {
         val localMangaCount: Int,
     ) : StatsData
 
+    data class AnimeOverview(
+        val libraryAnimeCount: Int,
+        val completedAnimeCount: Int,
+        val totalSeenDuration: Long,
+    ) : StatsData
+
+    data class AnimeTitles(
+        val globalUpdateItemCount: Int,
+        val startedAnimeCount: Int,
+        val localAnimeCount: Int,
+    ) : StatsData
+
     data class Chapters(
         val totalChapterCount: Int,
         val readChapterCount: Int,
+        val downloadCount: Int,
+    ) : StatsData
+
+    data class Episodes(
+        val totalEpisodeCount: Int,
+        val readEpisodeCount: Int,
         val downloadCount: Int,
     ) : StatsData
 

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.components.WheelNumberPicker
 import tachiyomi.presentation.core.components.WheelTextPicker
@@ -83,6 +84,31 @@ fun TrackStatusSelector(
             }
             if (state.canScrollBackward) HorizontalDivider(modifier = Modifier.align(Alignment.TopCenter))
             if (state.canScrollForward) HorizontalDivider(modifier = Modifier.align(Alignment.BottomCenter))
+        },
+        onConfirm = onConfirm,
+        onDismissRequest = onDismissRequest,
+    )
+}
+
+@Composable
+fun TrackItemSelector(
+    selection: Int,
+    onSelectionChange: (Int) -> Unit,
+    range: Iterable<Int>,
+    onConfirm: () -> Unit,
+    onDismissRequest: () -> Unit,
+    isManga: Boolean,
+) {
+    val titleText = if (isManga) MR.strings.chapters else AYMR.strings.episodes
+    BaseSelector(
+        title = stringResource(titleText),
+        content = {
+            WheelNumberPicker(
+                items = range.toList(),
+                modifier = Modifier.align(Alignment.Center),
+                startIndex = selection,
+                onSelectionChanged = { onSelectionChange(it) },
+            )
         },
         onConfirm = onConfirm,
         onDismissRequest = onDismissRequest,

@@ -65,6 +65,7 @@ fun MoreScreen(
     onClickSettings: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
+    modeSwitcher: @Composable () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -73,6 +74,9 @@ fun MoreScreen(
         ScrollbarLazyColumn(contentPadding = contentPadding) {
             item {
                 KotoriAppCard(onClickHeart = onClickSupport)
+            }
+            item {
+                modeSwitcher()
             }
             item {
                 SwitchPreferenceWidget(

@@ -15,6 +15,14 @@ android {
                 packageName.set("tachiyomi.data")
                 dialect(libs.sqldelight.sqliteDialect338)
                 schemaOutputDirectory.set(project.file("./src/main/sqldelight"))
+                srcDirs.from(project.file("./src/main/sqldelight"))
+                generateAsync.set(true)
+            }
+            create("AnimeDatabase") {
+                packageName.set("tachiyomi.mi.data")
+                dialect(libs.sqldelight.sqliteDialect338)
+                schemaOutputDirectory.set(project.file("./src/main/sqldelightanime"))
+                srcDirs.from(project.file("./src/main/sqldelightanime"))
                 generateAsync.set(true)
             }
         }

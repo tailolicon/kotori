@@ -12,6 +12,10 @@ class TrackPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
 
+    fun trackOnAddingToLibrary() = preferenceStore.getBoolean("track_on_adding_to_library", true)
+
+    fun showNextEpisodeAiringTime() = preferenceStore.getBoolean("show_next_episode_airing_time", true)
+
     fun trackUsername(tracker: Tracker) = preferenceStore.getString(
         Preference.privateKey("pref_mangasync_username_${tracker.id}"),
         "",

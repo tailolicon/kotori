@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ fun ReorderableCollectionItemScope.CategoryListItem(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    onHide: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -68,6 +71,15 @@ fun ReorderableCollectionItemScope.CategoryListItem(
                 contentDescription = stringResource(MR.strings.action_rename_category),
                 tint = KotoriColors.textSecondary,
             )
+        }
+        if (onHide != null) {
+            IconButton(onClick = onHide) {
+                Icon(
+                    imageVector = if (category.hidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                    contentDescription = null,
+                    tint = KotoriColors.textSecondary,
+                )
+            }
         }
         IconButton(onClick = onDelete) {
             Icon(

@@ -125,6 +125,7 @@ fun OkHttpClient.newCachelessCallWithProgress(
 ): Call {
     val progressClient = newBuilder()
         .cache(null)
+        .callTimeout(30, java.util.concurrent.TimeUnit.HOURS)
         .addNetworkInterceptor { chain ->
             val request = chain.request()
                 .newBuilder()

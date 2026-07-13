@@ -19,8 +19,12 @@ import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.components.TabbedScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.ui.browse.anime.extension.AnimeExtensionsScreenModel
+import eu.kanade.tachiyomi.ui.browse.anime.extension.animeExtensionsTab
+import eu.kanade.tachiyomi.ui.browse.anime.source.animeSourcesTab
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsScreenModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
+import eu.kanade.tachiyomi.ui.browse.anime.migration.sources.migrateAnimeSourceTab
 import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.sourcesTab
@@ -66,9 +70,34 @@ data object BrowseTab : Tab {
         val uiPreferences = remember { Injekt.get<UiPreferences>() }
         val activeMode by uiPreferences.activeMediaMode.changes()
             .collectAsState(initial = uiPreferences.activeMediaMode.get())
+        if (activeMode == MediaType.ANIME) {
+            // Anime mode: full Aniyomi-style browse (sources, extensions, migrate).
+            val animeExtensionsScreenModel = rememberScreenModel { AnimeExtensionsScreenModel() }
+            val animeExtensionsState by animeExtensionsScreenModel.state.collectAsState()
+            val animeTabs = listOf(
+                animeSourcesTab(),
+                animeExtensionsTab(animeExtensionsScreenModel),
+                migrateAnimeSourceTab(),
+            )
+            val animeState = rememberPagerState { animeTabs.size }
+            TabbedScreen(
+                titleRes = MR.strings.browse,
+                tabs = animeTabs,
+                state = animeState,
+                searchQuery = animeExtensionsState.searchQuery,
+                onChangeSearchQuery = animeExtensionsScreenModel::search,
+            )
+            LaunchedEffect(Unit) {
+                switchToExtensionTabChannel.receiveAsFlow()
+                    .collectLatest { animeState.scrollToPage(1) }
+            }
+            LaunchedEffect(Unit) {
+                (context as? MainActivity)?.ready = true
+            }
+            return
+        }
         if (activeMode != MediaType.MANGA) {
-            // Anime/Novel modes browse their own media sources only —
-            // manga extension repos stay in Manga mode.
+            // Novel mode browses its own media sources only.
             MediaBrowseContent(mediaType = activeMode)
             LaunchedEffect(Unit) {
                 (context as? MainActivity)?.ready = true

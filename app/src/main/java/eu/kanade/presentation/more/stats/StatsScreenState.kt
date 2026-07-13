@@ -14,4 +14,12 @@ sealed interface StatsScreenState {
         val chapters: StatsData.Chapters,
         val trackers: StatsData.Trackers,
     ) : StatsScreenState
+
+    @Immutable
+    data class SuccessAnime(
+        val overview: StatsData.AnimeOverview,
+        val titles: StatsData.AnimeTitles,
+        val episodes: StatsData.Episodes,
+        val trackers: StatsData.Trackers,
+    ) : StatsScreenState
 }

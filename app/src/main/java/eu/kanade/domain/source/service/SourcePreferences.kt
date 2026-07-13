@@ -10,7 +10,7 @@ import tachiyomi.core.common.preference.getLongArray
 import tachiyomi.domain.library.model.LibraryDisplayMode
 
 class SourcePreferences(
-    preferenceStore: PreferenceStore,
+    private val preferenceStore: PreferenceStore,
 ) {
 
     val sourceDisplayMode: Preference<LibraryDisplayMode> = preferenceStore.getObjectFromString(
@@ -73,6 +73,28 @@ class SourcePreferences(
         Preference.appStateKey("has_filters_toggle_state"),
         false,
     )
+
+    // region Anime (Aniyomi-ported preferences)
+
+    fun disabledAnimeSources() = preferenceStore.getStringSet("hidden_anime_catalogues", emptySet())
+
+    fun incognitoAnimeExtensions() = preferenceStore.getStringSet("incognito_anime_extensions", emptySet())
+
+    fun pinnedAnimeSources() = preferenceStore.getStringSet("pinned_anime_catalogues", emptySet())
+
+    fun lastUsedAnimeSource() = preferenceStore.getLong(
+        Preference.appStateKey("last_anime_catalogue_source"),
+        -1,
+    )
+
+    fun animeExtensionUpdatesCount() = preferenceStore.getInt("animeext_updates_count", 0)
+
+    fun hideInAnimeLibraryItems() = preferenceStore.getBoolean(
+        "browse_hide_in_anime_library_items",
+        false,
+    )
+
+    // endregion
 
     val migrationSources: Preference<List<Long>> = preferenceStore.getLongArray("migration_sources", emptyList())
 

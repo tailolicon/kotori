@@ -17,6 +17,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import androidx.compose.runtime.remember
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
+import eu.kanade.tachiyomi.ui.history.anime.AnimeHistoryHome
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import eu.kanade.presentation.history.HistoryScreen
 import eu.kanade.presentation.history.components.HistoryDeleteAllDialog
 import eu.kanade.presentation.history.components.HistoryDeleteDialog
@@ -60,8 +66,17 @@ data object HistoryTab : Tab {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
+
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val activeMode by uiPreferences.activeMediaMode.changes()
+            .collectAsState(initial = uiPreferences.activeMediaMode.get())
+        if (activeMode == MediaType.ANIME) {
+            AnimeHistoryHome()
+            return
+        }
+
+        val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel { HistoryScreenModel() }
         val state by screenModel.state.collectAsState()
 

@@ -498,7 +498,7 @@ private fun ExtensionItemActions(
 }
 
 @Composable
-private fun ExtensionHeader(
+internal fun ExtensionHeader(
     textRes: StringResource,
     modifier: Modifier = Modifier,
     action: @Composable RowScope.() -> Unit = {},
@@ -575,7 +575,7 @@ private fun ExtensionUpdateBanner(
 }
 
 @Composable
-private fun ExtensionHeader(
+internal fun ExtensionHeader(
     text: String,
     modifier: Modifier = Modifier,
     action: @Composable RowScope.() -> Unit = {},
@@ -595,7 +595,7 @@ private fun ExtensionHeader(
 }
 
 @Composable
-private fun ExtensionTrustDialog(
+internal fun ExtensionTrustDialog(
     onClickConfirm: () -> Unit,
     onClickDismiss: () -> Unit,
     onDismissRequest: () -> Unit,

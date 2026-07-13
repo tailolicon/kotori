@@ -23,11 +23,15 @@ internal fun LibraryList(
     onClickContinueReading: ((LibraryManga) -> Unit)?,
     searchQuery: String?,
     onGlobalSearchClicked: () -> Unit,
+    header: (@Composable () -> Unit)? = null,
 ) {
     FastScrollLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding + PaddingValues(vertical = 8.dp),
     ) {
+        if (header != null) {
+            item(contentType = "library_header") { header() }
+        }
         item {
             if (!searchQuery.isNullOrEmpty()) {
                 GlobalSearchItem(

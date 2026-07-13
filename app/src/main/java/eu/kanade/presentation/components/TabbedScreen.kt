@@ -139,4 +139,7 @@ data class TabContent(
     val searchEnabled: Boolean = false,
     val actions: List<AppBar.AppBarAction> = listOf(),
     val content: @Composable (contentPadding: PaddingValues, snackbarHostState: SnackbarHostState) -> Unit,
+    val numberTitle: Int = 0,
+    val cancelAction: () -> Unit = {},
+    val navigateUp: (() -> Unit)? = null,
 )

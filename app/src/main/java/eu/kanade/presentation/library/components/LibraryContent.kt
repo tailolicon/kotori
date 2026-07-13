@@ -38,6 +38,7 @@ fun LibraryContent(
     showPageTabs: Boolean,
     onChangeCurrentPage: (Int) -> Unit,
     topContent: @Composable () -> Unit = {},
+    header: (@Composable () -> Unit)? = null,
     onClickManga: (Long) -> Unit,
     onContinueReadingClicked: ((LibraryManga) -> Unit)?,
     onToggleSelection: (Category, LibraryManga) -> Unit,
@@ -116,6 +117,7 @@ fun LibraryContent(
                 },
                 onLongClickManga = onToggleRangeSelection,
                 onClickContinueReading = onContinueReadingClicked,
+                header = header,
             )
         }
 

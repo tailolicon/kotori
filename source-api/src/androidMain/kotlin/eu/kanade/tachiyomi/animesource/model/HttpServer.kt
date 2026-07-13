@@ -1,17 +1,31 @@
 package eu.kanade.tachiyomi.animesource.model
 
-/**
- * API-surface stand-in for Aniyomi's NanoHTTPD-backed local http server
- * (extensions-lib 16 torrent support). Kotori does not bundle a torrent
- * engine; extensions that require a real local server are unsupported.
- */
-open class HttpServer {
-    open val url: String
-        get() = ""
+import fi.iki.elonen.NanoHTTPD
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 
-    open fun isRunning(): Boolean = false
+open class HttpServer : NanoHTTPD(0) {
+    val url: String
+        get() = "http://localhost:$listeningPort"
 
-    open fun start() {}
+    fun isRunning(): Boolean {
+        return isRunning
+    }
 
-    open fun stop() {}
+    @Volatile
+    private var isRunning = false
+
+    override fun start() {
+        try {
+            super.start()
+            isRunning = true
+        } catch (e: Exception) {
+            logcat(LogPriority.DEBUG, e) { "Failed to start http server" }
+        }
+    }
+
+    override fun stop() {
+        super.stop()
+        isRunning = false
+    }
 }

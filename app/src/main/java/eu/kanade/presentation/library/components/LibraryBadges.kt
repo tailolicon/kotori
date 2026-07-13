@@ -54,6 +54,11 @@ internal fun DownloadsBadge(count: Int) {
  * Unread badge: mode-gradient pill `n mới` with accent glow (top-right of covers).
  */
 @Composable
+internal fun UnviewedBadge(count: Long) {
+    UnreadBadge(count)
+}
+
+@Composable
 internal fun UnreadBadge(count: Long) {
     if (count > 0) {
         val accent = KotoriTheme.accent

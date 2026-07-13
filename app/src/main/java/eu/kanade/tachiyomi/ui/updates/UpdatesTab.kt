@@ -15,6 +15,12 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import androidx.compose.runtime.remember
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
+import eu.kanade.tachiyomi.ui.updates.anime.AnimeUpdatesHome
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import eu.kanade.presentation.updates.UpdateScreen
 import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
 import eu.kanade.presentation.updates.UpdatesFilterDialog
@@ -53,6 +59,15 @@ data object UpdatesTab : Tab {
     @Composable
     override fun Content() {
         val context = LocalContext.current
+
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val activeMode by uiPreferences.activeMediaMode.changes()
+            .collectAsState(initial = uiPreferences.activeMediaMode.get())
+        if (activeMode == MediaType.ANIME) {
+            AnimeUpdatesHome()
+            return
+        }
+
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel { UpdatesScreenModel() }
         val settingsScreenModel = rememberScreenModel { UpdatesSettingsScreenModel() }

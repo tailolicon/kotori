@@ -1,0 +1,6 @@
+# Cursor IDE Core Rules
+MANDATORY DIRECTIVE: You MUST read the file AGENTS.md at the root of this workspace FIRST before executing any commands or writing any code.
+AGENTS.md contains the absolute truth for project architecture, Chat Interceptor pipelines, and behavioral rules.
+Additionally, you MUST read .specify/memory/lessons_learned.md before making architectural changes.
+SPEED NEVER SUPERSEDES COMPLIANCE. You must strictly follow all steps in AGENTS.md even during an 'Emergency'.
+

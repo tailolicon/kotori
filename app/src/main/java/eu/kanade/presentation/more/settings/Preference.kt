@@ -1,6 +1,8 @@
 package eu.kanade.presentation.more.settings
 
+import uy.kohesive.injekt.api.get
 import androidx.annotation.IntRange
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -145,6 +147,72 @@ sealed class Preference {
         }
 
         /**
+         * A multi-line [PreferenceItem] backed by an EditText dialog.
+         */
+        data class MultiLineEditTextPreference(
+            val preference: PreferenceData<String>,
+            val canBeBlank: Boolean = false,
+            override val title: String,
+            override val subtitle: String? = "%s",
+            override val enabled: Boolean = true,
+            override val onValueChanged: suspend (value: String) -> Boolean = { true },
+        ) : PreferenceItem<String, Boolean>() {
+            override val icon: ImageVector? = null
+        }
+
+        /**
+         * A [PreferenceItem] for editing MPV config files.
+         * If [fileName] is not null, it will update this file in the config directory.
+         */
+        data class MPVConfPreference(
+            val preference: PreferenceData<String>,
+            val scope: kotlinx.coroutines.CoroutineScope,
+            val context: android.content.Context,
+            val fileName: String? = null,
+            val canBeBlank: Boolean = true,
+            override val title: String,
+            override val subtitle: String? = "%s",
+            override val enabled: Boolean = true,
+            override val onValueChanged: suspend (value: String) -> Boolean = { value ->
+                if (fileName != null) {
+                    val storageManager: tachiyomi.domain.storage.service.StorageManager =
+                        uy.kohesive.injekt.Injekt.get()
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+                        android.os.Environment.isExternalStorageManager()
+                    ) {
+                        val inputFile = storageManager.getMPVConfigDirectory()
+                            ?.createFile(fileName)
+                        inputFile?.openOutputStream()?.bufferedWriter()?.use { writer ->
+                            writer.write(value)
+                        }
+                        preference.set(value)
+                    }
+                }
+                true
+            },
+        ) : PreferenceItem<String, Boolean>() {
+            override val icon: ImageVector? = null
+        }
+
+        /**
+         * A [PreferenceItem] that shows a EditText with a subtitle in the dialog.
+         * Unlike [EditTextPreference], empty values can be set and a subtitle in the dialog can be shown.
+         */
+        data class EditTextInfoPreference(
+            val preference: PreferenceData<String>,
+            val dialogSubtitle: String?,
+            val validate: (String) -> Boolean = { true },
+            val errorMessage: @Composable ((String) -> String)? = null,
+            val keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+            override val title: String,
+            override val subtitle: String? = "%s",
+            override val enabled: Boolean = true,
+            override val onValueChanged: suspend (value: String) -> Boolean = { true },
+        ) : PreferenceItem<String, Boolean>() {
+            override val icon: ImageVector? = null
+        }
+
+        /**
          * A [PreferenceItem] for individual tracker.
          */
         data class TrackerPreference(
@@ -161,8 +229,8 @@ sealed class Preference {
 
         data class InfoPreference(
             override val title: String,
+            override val enabled: Boolean = true,
         ) : PreferenceItem<String, Unit>() {
-            override val enabled: Boolean = true
             override val subtitle: String? = null
             override val icon: ImageVector? = null
             override val onValueChanged: suspend (value: String) -> Unit = {}

@@ -1065,4 +1065,21 @@
     <string name="donationCampaign.paragraph3">Regardless, Mihon will continue to be maintained by me and the volunteers, and it will stay open source.</string>
     <string name="donationCampaign.contactPlatform">Discord</string>
     <string name="donationCampaign.dismiss">Dismiss</string>
+    <string name="error_repo_exists">This repo already exists!</string>
+    <string name="invalid_repo_name">Invalid repo URL</string>
+    <string name="label_extension_repos">Extension repos</string>
+    <string name="action_add_repo">Add repo</string>
+    <string name="action_delete_repo">Delete repo</string>
+    <string name="action_replace_repo">Replace</string>
+    <string name="action_replace_repo_message">Repository %1$s has the same Signing Key Fingerprint as %2$s.\nIf this is expected, %2$s will be replaced, otherwise contact your repo maintainer.</string>
+    <string name="action_replace_repo_title">Signing Key Fingerprint Already Exists</string>
+    <string name="delete_repo_confirmation">Do you wish to delete the repo \"%s\"?</string>
+    <string name="label_add_repo_input">Repo URL</string>
+    <string name="notification_update_error">%1$d update(s) failed</string>
+    <string name="confirm_add_duplicate_manga">You have an entry in your library with the same name.
+
+Do you still wish to continue?</string>
+    <string name="action_migrate_duplicate">Migrate existing entry</string>
+    <string name="add_repo_confirmation">Do you wish to add the repo \"%s\"?</string>
+    <string name="information_empty_repos">You have no repos set.</string>
 </resources>

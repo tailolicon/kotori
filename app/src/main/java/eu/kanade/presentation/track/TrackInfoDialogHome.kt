@@ -280,7 +280,7 @@ private fun TrackInfoItem(
 private const val UNSET_TEXT_ALPHA = 0.5F
 
 @Composable
-private fun TrackDetailsItem(
+internal fun TrackDetailsItem(
     text: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -338,7 +338,7 @@ private fun TrackInfoItemEmpty(
 }
 
 @Composable
-private fun TrackInfoItemMenu(
+internal fun TrackInfoItemMenu(
     onOpenInBrowser: () -> Unit,
     onRemoved: () -> Unit,
     onCopyLink: () -> Unit,

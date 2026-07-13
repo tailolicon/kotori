@@ -153,7 +153,7 @@ fun KotoriResumeHeroCard(
     title: String,
     meta: String,
     progress: Float,
-    coverData: MangaCoverModel,
+    coverData: Any?,
     onClick: () -> Unit,
     onResume: () -> Unit,
     modifier: Modifier = Modifier,

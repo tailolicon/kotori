@@ -207,6 +207,7 @@ dependencies {
     baselineProfile(projects.baselineProfile)
 
     implementation(projects.i18n)
+    implementation(projects.i18nAniyomi)
     implementation(projects.core.archive)
     implementation(projects.core.common)
     implementation(projects.coreMetadata)
@@ -237,6 +238,17 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.androidx.media3.ui)
+
+    // Anime player (mpv) + video tooling
+    implementation(libs.androidx.constraintLayout.compose)
+    implementation(libs.androidx.localbroadcastmanager)
+    implementation(libs.mediasession)
+    implementation(libs.aniyomi.mpv)
+    implementation(libs.ffmpeg.kit)
+    implementation(libs.arthenica.smartexceptions)
+    implementation(libs.torrserver)
+    implementation(libs.seeker)
+    implementation(libs.truetypeparser)
 
     implementation(libs.androidx.sqlite.bundled)
 

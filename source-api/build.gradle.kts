@@ -38,6 +38,7 @@ kotlin {
             dependencies {
                 implementation(projects.core.common)
                 api(libs.androidx.preference)
+                api(libs.nanohttpd)
             }
         }
     }

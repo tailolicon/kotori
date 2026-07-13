@@ -39,6 +39,27 @@ class PreferenceModule(val app: Application) : InjektModule {
             SourcePreferences(get())
         }
         addSingletonFactory {
+            aniyomi.core.common.torrent.TorrentPreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.GesturePreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.SubtitlePreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.AudioPreferences(get())
+        }
+        addSingletonFactory {
+            eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences(get())
+        }
+        addSingletonFactory {
             SecurityPreferences(get())
         }
         addSingletonFactory {

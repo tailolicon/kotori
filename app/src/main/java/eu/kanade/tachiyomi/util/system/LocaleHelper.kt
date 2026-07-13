@@ -85,4 +85,14 @@ object LocaleHelper {
     fun getDefaultEnabledLanguages(): Set<String> {
         return setOf("all", "en", "vi", Locale.getDefault().language)
     }
+
+    /**
+     * Return English display string from string language code
+     */
+    fun getSimpleLocaleDisplayName(): String {
+        return LocaleListCompat.getDefault()[0]!!.displayLanguage
+    }
 }
+
+internal const val PINNED_KEY = "pinned"
+internal const val LAST_USED_KEY = "last_used"

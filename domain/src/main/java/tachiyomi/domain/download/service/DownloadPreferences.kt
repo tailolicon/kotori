@@ -4,7 +4,7 @@ import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
 
 class DownloadPreferences(
-    preferenceStore: PreferenceStore,
+    private val preferenceStore: PreferenceStore,
 ) {
 
     val downloadOnlyOverWifi: Preference<Boolean> = preferenceStore.getBoolean(
@@ -53,7 +53,51 @@ class DownloadPreferences(
 
     val parallelPageLimit: Preference<Int> = preferenceStore.getInt("download_parallel_page_limit", 5)
 
+    // region Anime (Aniyomi-ported preferences)
+
+    fun useExternalDownloader() = preferenceStore.getBoolean("use_external_downloader", false)
+
+    fun externalDownloaderSelection() = preferenceStore.getString(
+        "external_downloader_selection",
+        "",
+    )
+
+    fun autoDownloadWhileWatching() = preferenceStore.getInt("auto_download_while_watching", 0)
+
+    fun downloadFillermarkedItems() = preferenceStore.getBoolean("pref_download_fillermarked", false)
+
+    fun removeExcludeAnimeCategories() = preferenceStore.getStringSet(
+        REMOVE_EXCLUDE_ANIME_CATEGORIES_PREF_KEY,
+        emptySet(),
+    )
+
+    fun downloadNewEpisodes() = preferenceStore.getBoolean("download_new_episode", false)
+
+    fun downloadNewEpisodeCategories() = preferenceStore.getStringSet(
+        DOWNLOAD_NEW_ANIME_CATEGORIES_PREF_KEY,
+        emptySet(),
+    )
+
+    fun downloadNewEpisodeCategoriesExclude() = preferenceStore.getStringSet(
+        DOWNLOAD_NEW_ANIME_CATEGORIES_EXCLUDE_PREF_KEY,
+        emptySet(),
+    )
+
+    fun downloadNewUnseenEpisodesOnly() = preferenceStore.getBoolean(
+        "download_new_unread_episodes_only",
+        false,
+    )
+
+    fun numberOfDownloads() = preferenceStore.getInt("download_slots", 1)
+
+    fun downloadSpeedLimit() = preferenceStore.getInt("download_speed_limit", 0)
+
+    // endregion
+
     companion object {
+        private const val REMOVE_EXCLUDE_ANIME_CATEGORIES_PREF_KEY = "remove_exclude_anime_categories"
+        private const val DOWNLOAD_NEW_ANIME_CATEGORIES_PREF_KEY = "download_new_anime_categories"
+        private const val DOWNLOAD_NEW_ANIME_CATEGORIES_EXCLUDE_PREF_KEY = "download_new_anime_categories_exclude"
         private const val REMOVE_EXCLUDE_CATEGORIES_PREF_KEY = "remove_exclude_categories"
         private const val DOWNLOAD_NEW_CATEGORIES_PREF_KEY = "download_new_categories"
         private const val DOWNLOAD_NEW_CATEGORIES_EXCLUDE_PREF_KEY = "download_new_categories_exclude"

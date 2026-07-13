@@ -9,6 +9,8 @@ object Constants {
 
     const val MANGA_EXTRA = "manga"
 
+    const val ANIME_EXTRA = "anime"
+
     const val MAIN_ACTIVITY = "eu.kanade.tachiyomi.ui.main.MainActivity"
 
     // Shortcut actions
@@ -19,4 +21,9 @@ object Constants {
     const val SHORTCUT_SOURCES = "eu.kanade.tachiyomi.SHOW_CATALOGUES"
     const val SHORTCUT_EXTENSIONS = "eu.kanade.tachiyomi.EXTENSIONS"
     const val SHORTCUT_DOWNLOADS = "eu.kanade.tachiyomi.SHOW_DOWNLOADS"
+
+    const val SHORTCUT_ANIMELIB = "eu.kanade.tachiyomi.SHOW_ANIMELIB"
+    const val SHORTCUT_ANIME = "eu.kanade.tachiyomi.SHOW_ANIME"
+    const val SHORTCUT_ANIMEEXTENSIONS = "eu.kanade.tachiyomi.ANIMEEXTENSIONS"
+    const val SHORTCUT_ANIME_DOWNLOADS = "eu.kanade.tachiyomi.SHOW_ANIME_DOWNLOADS"
 }

@@ -5,12 +5,15 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.RippleConfiguration
+import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
@@ -143,3 +146,20 @@ private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.YINYANG to YinYangColorScheme,
     AppTheme.YOTSUBA to YotsubaColorScheme,
 )
+
+private const val RIPPLE_DRAGGED_ALPHA = .1f
+private const val RIPPLE_FOCUSED_ALPHA = .1f
+private const val RIPPLE_HOVERED_ALPHA = .1f
+private const val RIPPLE_PRESSED_ALPHA = .1f
+
+val playerRippleConfiguration
+    @Composable get() = RippleConfiguration(
+        color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+        rippleAlpha = RippleAlpha(
+            draggedAlpha = RIPPLE_DRAGGED_ALPHA,
+            focusedAlpha = RIPPLE_FOCUSED_ALPHA,
+            hoveredAlpha = RIPPLE_HOVERED_ALPHA,
+            pressedAlpha = RIPPLE_PRESSED_ALPHA,
+        ),
+    )
+

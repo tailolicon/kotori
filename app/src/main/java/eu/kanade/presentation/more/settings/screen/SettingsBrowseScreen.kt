@@ -11,11 +11,14 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.more.settings.Preference
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
 import mihon.domain.extension.interactor.GetExtensionStoreCountAsFlow
+import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepoCount
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
@@ -34,8 +37,10 @@ object SettingsBrowseScreen : SearchableSettings {
 
         val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
         val getExtensionStoreCountAsFlow = remember { Injekt.get<GetExtensionStoreCountAsFlow>() }
+        val getAnimeExtensionRepoCount = remember { Injekt.get<GetAnimeExtensionRepoCount>() }
 
         val reposCount by getExtensionStoreCountAsFlow().collectAsState(0)
+        val animeReposCount by getAnimeExtensionRepoCount.subscribe().collectAsState(0)
 
         return listOf(
             Preference.PreferenceGroup(
@@ -50,6 +55,13 @@ object SettingsBrowseScreen : SearchableSettings {
                         subtitle = pluralStringResource(MR.plurals.num_repos, reposCount.toInt(), reposCount),
                         onClick = {
                             navigator.push(ExtensionStoresScreen())
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(AYMR.strings.label_anime_extension_repos),
+                        subtitle = pluralStringResource(MR.plurals.num_repos, animeReposCount, animeReposCount),
+                        onClick = {
+                            navigator.push(AnimeExtensionReposScreen())
                         },
                     ),
                 ),

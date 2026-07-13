@@ -57,6 +57,7 @@ import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.KotoriModeSwitcher
+import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.presentation.library.components.KotoriResumeHeroCard
 import eu.kanade.presentation.library.components.KotoriWordmark
 import eu.kanade.presentation.library.components.LibraryContent
@@ -130,6 +131,16 @@ data object LibraryTab : Tab {
 
     @Composable
     override fun Content() {
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val activeMode by uiPreferences.activeMediaMode.changes()
+            .collectAsState(initial = uiPreferences.activeMediaMode.get())
+
+        // ANIME mode → full Aniyomi library (mihon manga path is skipped entirely).
+        if (activeMode == MediaType.ANIME) {
+            AnimeLibraryTab.Content()
+            return
+        }
+
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
@@ -140,10 +151,6 @@ data object LibraryTab : Tab {
         val state by screenModel.state.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
-
-        val uiPreferences = remember { Injekt.get<UiPreferences>() }
-        val activeMode by uiPreferences.activeMediaMode.changes()
-            .collectAsState(initial = uiPreferences.activeMediaMode.get())
         val lastRead by produceState<HistoryWithRelations?>(initialValue = null) {
             Injekt.get<GetHistory>().subscribe("").collectLatest { value = it.firstOrNull() }
         }
@@ -425,22 +432,22 @@ data object LibraryTab : Tab {
                         showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
                         onChangeCurrentPage = screenModel::updateActiveCategoryIndex,
                         topContent = {
-                            Column(
+                            KotoriModeSwitcher(
+                                active = activeMode,
+                                onSelect = { uiPreferences.activeMediaMode.set(it) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                KotoriModeSwitcher(
-                                    active = activeMode,
-                                    onSelect = { uiPreferences.activeMediaMode.set(it) },
-                                    modifier = Modifier.padding(top = 14.dp),
-                                )
-                                val heroItem = lastRead?.let { history ->
-                                    state.libraryData.favoritesById[history.mangaId]
-                                }
-                                if (lastRead != null && heroItem != null) {
-                                    val history = lastRead ?: return@Column
+                                    .padding(horizontal = 18.dp)
+                                    .padding(top = 14.dp),
+                            )
+                        },
+                        header = run {
+                            val history = lastRead
+                            val heroItem = history?.let {
+                                state.libraryData.favoritesById[it.mangaId]
+                            }
+                            if (history != null && heroItem != null) {
+                                {
                                     val libraryManga = heroItem.libraryManga
                                     KotoriResumeHeroCard(
                                         mode = activeMode,
@@ -455,8 +462,11 @@ data object LibraryTab : Tab {
                                         coverData = history.coverData,
                                         onClick = { navigator.push(MangaScreen(history.mangaId)) },
                                         onResume = { onContinueReading(libraryManga) },
+                                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
                                     )
                                 }
+                            } else {
+                                null
                             }
                         },
                         onClickManga = { navigator.push(MangaScreen(it)) },

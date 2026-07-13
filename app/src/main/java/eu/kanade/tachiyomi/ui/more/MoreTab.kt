@@ -15,13 +15,21 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
+import eu.kanade.presentation.library.components.KotoriModeSwitcher
 import eu.kanade.presentation.more.MoreScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
+import eu.kanade.tachiyomi.ui.category.anime.AnimeCategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
@@ -60,19 +68,38 @@ data object MoreTab : Tab {
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = rememberScreenModel { MoreScreenModel() }
         val downloadQueueState by screenModel.downloadQueueState.collectAsState()
+
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val activeMode by uiPreferences.activeMediaMode.changes()
+            .collectAsState(initial = uiPreferences.activeMediaMode.get())
+        val isAnime = activeMode == MediaType.ANIME
+
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },
             downloadedOnly = screenModel.downloadedOnly,
             onDownloadedOnlyChange = { screenModel.downloadedOnly = it },
             incognitoMode = screenModel.incognitoMode,
             onIncognitoModeChange = { screenModel.incognitoMode = it },
-            onClickDownloadQueue = { navigator.push(DownloadQueueScreen) },
-            onClickCategories = { navigator.push(CategoryScreen()) },
-            onClickStats = { navigator.push(StatsScreen()) },
+            onClickDownloadQueue = {
+                navigator.push(if (isAnime) AnimeDownloadQueueScreen else DownloadQueueScreen)
+            },
+            onClickCategories = {
+                navigator.push(if (isAnime) AnimeCategoryScreen() else CategoryScreen())
+            },
+            onClickStats = {
+                navigator.push(if (isAnime) AnimeStatsScreen() else StatsScreen())
+            },
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
             onClickSettings = { navigator.push(SettingsScreen()) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
             onClickAbout = { navigator.push(SettingsScreen(SettingsScreen.Destination.About)) },
+            modeSwitcher = {
+                KotoriModeSwitcher(
+                    active = activeMode,
+                    onSelect = { uiPreferences.activeMediaMode.set(it) },
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
+                )
+            },
         )
     }
 }

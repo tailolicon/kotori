@@ -50,6 +50,12 @@ dependencies {
     // JavaScript engine
     implementation(libs.quickJs)
 
+    // FFmpeg-kit
+    implementation(libs.ffmpeg.kit)
+
+    // TorrServer
+    implementation(libs.torrserver)
+
     testImplementation(libs.bundles.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

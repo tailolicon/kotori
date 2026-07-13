@@ -21,6 +21,10 @@ class BasePreferences(
 
     val extensionInstaller: ExtensionInstallerPreference = ExtensionInstallerPreference(context, preferenceStore)
 
+    fun deviceHasPip() = context.packageManager.hasSystemFeature(
+        android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE,
+    )
+
     val shownOnboardingFlow: Preference<Boolean> = preferenceStore.getBoolean(
         Preference.appStateKey("onboarding_complete"),
         false,

@@ -28,6 +28,18 @@ internal fun LazyLibraryGrid(
     )
 }
 
+/** Full-span scrollable header (e.g. resume hero card) placed above the grid items. */
+internal fun LazyGridScope.libraryHeaderItem(header: (@Composable () -> Unit)?) {
+    if (header != null) {
+        item(
+            span = { GridItemSpan(maxLineSpan) },
+            contentType = { "library_header" },
+        ) {
+            header()
+        }
+    }
+}
+
 internal fun LazyGridScope.globalSearchItem(
     searchQuery: String?,
     onGlobalSearchClicked: () -> Unit,

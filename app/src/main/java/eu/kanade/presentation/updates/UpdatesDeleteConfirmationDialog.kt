@@ -11,6 +11,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 fun UpdatesDeleteConfirmationDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") isManga: Boolean = true,
 ) {
     AlertDialog(
         text = {

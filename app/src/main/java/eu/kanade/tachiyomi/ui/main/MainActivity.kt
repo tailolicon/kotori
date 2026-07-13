@@ -105,6 +105,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import eu.kanade.tachiyomi.util.system.toast
 import logcat.LogPriority
 import mihon.core.migration.Migrator
 import mihon.feature.support.SupportUsScreen
@@ -597,7 +598,45 @@ class MainActivity : BaseActivity() {
     companion object {
         const val INTENT_SEARCH = "eu.kanade.tachiyomi.SEARCH"
         const val INTENT_SEARCH_QUERY = "query"
+        const val INTENT_SEARCH_TYPE = "type"
         const val INTENT_SEARCH_FILTER = "filter"
+
+        /**
+         * Launches the anime player for the given episode. When [extPlayer] is true an external
+         * player intent is used; otherwise the built-in mpv [PlayerActivity] is started.
+         */
+        suspend fun startPlayerActivity(
+            context: android.content.Context,
+            animeId: Long,
+            episodeId: Long,
+            extPlayer: Boolean,
+            video: eu.kanade.tachiyomi.animesource.model.Video? = null,
+            hosterIndex: Int = -1,
+            videoIndex: Int = -1,
+            hosterList: List<eu.kanade.tachiyomi.animesource.model.Hoster>? = null,
+        ) {
+            if (extPlayer) {
+                val intent = try {
+                    eu.kanade.tachiyomi.ui.player.ExternalIntents.newIntent(context, animeId, episodeId, video)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e)
+                    tachiyomi.core.common.util.lang.withUIContext { context.toast(e.message) }
+                    null
+                } ?: return
+                context.startActivity(intent)
+            } else {
+                context.startActivity(
+                    eu.kanade.tachiyomi.ui.player.PlayerActivity.newIntent(
+                        context,
+                        animeId,
+                        episodeId,
+                        hosterList,
+                        hosterIndex,
+                        videoIndex,
+                    ),
+                )
+            }
+        }
     }
 }
 
