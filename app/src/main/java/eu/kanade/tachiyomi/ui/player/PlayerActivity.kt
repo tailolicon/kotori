@@ -88,6 +88,7 @@ import `is`.xyz.mpv.MPVLib
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -335,6 +336,13 @@ class PlayerActivity : BaseActivity() {
      * `MPV_EVENT_PLAYBACK_RESTART` after load, mirroring that manual fix automatically.
      */
     private var pendingResumeSeconds: Double? = null
+
+    /**
+     * Bumped on every [setVideo] call; a delayed resume-seek coroutine captures the value at
+     * schedule time and re-checks it before firing, so switching episodes/quality while the delay
+     * is still pending can't apply a stale seek to the wrong file.
+     */
+    private var resumeLoadToken = 0
 
     private fun togglePlayerFullscreen() {
         playerFullscreen.value = !playerFullscreen.value
@@ -829,7 +837,17 @@ class PlayerActivity : BaseActivity() {
                 pendingResumeSeconds?.let { secs ->
                     pendingResumeSeconds = null
                     if (secs > 0.5) {
-                        MPVLib.command(arrayOf("seek", secs.toString(), "absolute"))
+                        // Seeking the instant the first frame appears still catches some hwdec
+                        // pipelines mid-initialization (same failure this is meant to avoid, just
+                        // deferred a few ms) — a brief delay lets the decoder settle first, and a
+                        // fast keyframe seek (vs. an exact/hr-seek) is much less demanding of it.
+                        val token = resumeLoadToken
+                        lifecycleScope.launch {
+                            delay(700)
+                            if (token == resumeLoadToken && !player.isExiting) {
+                                MPVLib.command(arrayOf("seek", secs.toString(), "absolute+keyframes"))
+                            }
+                        }
                     }
                 }
             }
@@ -1147,6 +1165,7 @@ class PlayerActivity : BaseActivity() {
 
         setHttpOptions(video)
 
+        resumeLoadToken++
         pendingResumeSeconds = if (viewModel.isLoadingEpisode.value) {
             viewModel.currentEpisode.value?.let { episode ->
                 val preservePos = playerPreferences.preserveWatchingPosition().get()
