@@ -79,12 +79,15 @@ abstract class YoutubeChannelSource(
         AnimesPage(filtered.map { it.toSAnime() }, false)
     }
 
-    private fun PlaylistInfoItem.toSAnime() = SAnime.create().apply {
-        setUrlWithoutDomain(url)
-        title = name
-        thumbnail_url = thumbnails.bestUrl()
-        author = uploaderName
-        initialized = false
+    private fun PlaylistInfoItem.toSAnime(): SAnime {
+        val item = this
+        return SAnime.create().apply {
+            setUrlWithoutDomain(item.url)
+            title = item.name
+            thumbnail_url = item.thumbnails.bestUrl()
+            author = item.uploaderName
+            initialized = false
+        }
     }
 
     // ============================== Details ==============================
