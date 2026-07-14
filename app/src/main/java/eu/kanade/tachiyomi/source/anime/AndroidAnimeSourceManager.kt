@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.source.anime.builtin.AnimeHay08Source
+import eu.kanade.tachiyomi.source.anime.builtin.AnimeVietsubSource
 import eu.kanade.tachiyomi.source.anime.builtin.youtube.AniOneVietnamSource
 import eu.kanade.tachiyomi.source.anime.builtin.youtube.MuseVietnamSource
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +54,7 @@ class AndroidAnimeSourceManager(
     private val builtInSources: List<AnimeSource> by lazy {
         listOf(
             AnimeHay08Source(),
+            AnimeVietsubSource(),
             MuseVietnamSource(),
             AniOneVietnamSource(),
         )
