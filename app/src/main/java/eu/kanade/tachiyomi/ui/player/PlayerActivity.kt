@@ -325,23 +325,19 @@ class PlayerActivity : BaseActivity() {
     /** Portrait (video + episode list) vs landscape fullscreen; toggled without recreating mpv. */
     private val playerFullscreen = androidx.compose.runtime.mutableStateOf(false)
 
-    /**
-     * Resume position (seconds) to apply once the freshly loaded file actually renders a frame.
-     *
-     * We used to pre-seek via the mpv `start` property before `loadfile`, but seeking *before* the
-     * hardware decoder has processed a real keyframe leaves it in a broken state on some
-     * devices/streams (e.g. resuming a YouTube muxed stream): audio plays but the video stays
-     * black until the user seeks again. A manual seek after the fact always fixed it, so instead
-     * we let the file open at 0 normally and issue a normal runtime seek on the first
-     * `MPV_EVENT_PLAYBACK_RESTART` after load, mirroring that manual fix automatically.
-     */
-    private var pendingResumeSeconds: Double? = null
+    /** Resume request keyed to the exact file load so a late callback cannot seek another episode. */
+    private data class PendingResume(
+        val path: String,
+        val seconds: Double,
+        val loadToken: Int,
+        val preferH264: Boolean,
+        var scheduled: Boolean = false,
+        var targetVideoTrackId: Int? = null,
+    )
 
-    /**
-     * Bumped on every [setVideo] call; a delayed resume-seek coroutine captures the value at
-     * schedule time and re-checks it before firing, so switching episodes/quality while the delay
-     * is still pending can't apply a stale seek to the wrong file.
-     */
+    private val pendingResumeLock = Any()
+    private var pendingResume: PendingResume? = null
+    @Volatile
     private var resumeLoadToken = 0
 
     private fun togglePlayerFullscreen() {
@@ -829,27 +825,125 @@ class PlayerActivity : BaseActivity() {
         if (player.isExiting) return
         when (eventId) {
             MPVLib.mpvEventId.MPV_EVENT_FILE_LOADED -> {
+                selectResumeVideoTrack()
                 viewModel.viewModelScope.launchIO { fileLoaded() }
             }
             MPVLib.mpvEventId.MPV_EVENT_SEEK -> viewModel.isLoading.update { true }
             MPVLib.mpvEventId.MPV_EVENT_PLAYBACK_RESTART -> {
                 player.isExiting = false
-                pendingResumeSeconds?.let { secs ->
-                    pendingResumeSeconds = null
-                    if (secs > 0.5) {
-                        // Seeking the instant the first frame appears still catches some hwdec
-                        // pipelines mid-initialization (same failure this is meant to avoid, just
-                        // deferred a few ms) — a brief delay lets the decoder settle first, and a
-                        // fast keyframe seek (vs. an exact/hr-seek) is much less demanding of it.
-                        val token = resumeLoadToken
-                        lifecycleScope.launch {
-                            delay(700)
-                            if (token == resumeLoadToken && !player.isExiting) {
-                                MPVLib.command(arrayOf("seek", secs.toString(), "absolute+keyframes"))
+                val currentPath = MPVLib.getPropertyString("path")
+                val activeVideoCodec = MPVLib.getPropertyString("current-tracks/video/codec")
+                val activeVideoTrackId = MPVLib.getPropertyInt("vid")
+                val resume = synchronized(pendingResumeLock) {
+                    pendingResume
+                        ?.takeIf {
+                            it.path == currentPath &&
+                                !it.scheduled &&
+                                isResumeTrackReady(it, activeVideoTrackId, activeVideoCodec)
+                        }
+                        ?.also { it.scheduled = true }
+                }
+                resume?.let { request ->
+                    lifecycleScope.launch {
+                        try {
+                            // A FILE_LOADED/PLAYBACK_RESTART event can precede the first rendered frame.
+                            // Wait for a real video output before seeking; otherwise MediaCodec can keep
+                            // playing audio after its surface is invalidated by the initial resume seek.
+                            repeat(50) {
+                                if (
+                                    request.loadToken != resumeLoadToken ||
+                                    player.isExiting ||
+                                    MPVLib.getPropertyString("path") != request.path
+                                ) {
+                                    return@launch
+                                }
+                                val selectedCodec = MPVLib.getPropertyString("current-tracks/video/codec")
+                                val selectedTrackId = MPVLib.getPropertyInt("vid")
+                                val targetTrackReady = isResumeTrackReady(request, selectedTrackId, selectedCodec)
+                                if ((player.videoH ?: 0) > 0 && targetTrackReady) {
+                                    delay(500)
+                                    val pathStillMatches = MPVLib.getPropertyString("path") == request.path
+                                    val codecStillMatches = isResumeTrackReady(
+                                        request,
+                                        MPVLib.getPropertyInt("vid"),
+                                        MPVLib.getPropertyString("current-tracks/video/codec"),
+                                    )
+                                    val target = synchronized(pendingResumeLock) {
+                                        pendingResume
+                                            ?.takeIf {
+                                                it.loadToken == request.loadToken &&
+                                                    it.loadToken == resumeLoadToken &&
+                                                    pathStillMatches &&
+                                                    !player.isExiting &&
+                                                    codecStillMatches
+                                            }
+                                            ?.also { pendingResume = null }
+                                    }
+                                    target?.let {
+                                        MPVLib.command(arrayOf("seek", it.seconds.toString(), "absolute"))
+                                    }
+                                    return@launch
+                                }
+                                delay(100)
                             }
+                        } finally {
+                            resetResumeSchedule(request)
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun isResumeTrackReady(request: PendingResume, trackId: Int?, codec: String?): Boolean {
+        val targetTrackId = request.targetVideoTrackId ?: return true
+        return trackId == targetTrackId && codec == "h264"
+    }
+
+    private fun resetResumeSchedule(request: PendingResume) {
+        synchronized(pendingResumeLock) {
+            pendingResume
+                ?.takeIf { it.loadToken == request.loadToken && it.path == request.path }
+                ?.scheduled = false
+        }
+    }
+
+    /** Prefer the highest H.264 track when resuming; MuMu cannot seek YouTube's VP9 HLS track. */
+    private fun selectResumeVideoTrack() {
+        val currentPath = MPVLib.getPropertyString("path") ?: return
+        val request = synchronized(pendingResumeLock) {
+            pendingResume?.takeIf { it.path == currentPath && it.preferH264 }
+        }
+        if (request == null) return
+
+        val trackCount = MPVLib.getPropertyInt("track-list/count") ?: return
+        val h264Track = (0 until trackCount)
+            .mapNotNull { index ->
+                val type = MPVLib.getPropertyString("track-list/$index/type")
+                val codec = MPVLib.getPropertyString("track-list/$index/codec")
+                val id = MPVLib.getPropertyInt("track-list/$index/id")
+                if (type == "video" && codec == "h264" && id != null) {
+                    id to (MPVLib.getPropertyInt("track-list/$index/demux-h") ?: 0)
+                } else {
+                    null
+                }
+            }
+            .maxByOrNull { (_, height) -> height }
+            ?.first
+
+        h264Track?.let { trackId ->
+            synchronized(pendingResumeLock) {
+                pendingResume
+                    ?.takeIf {
+                        it.loadToken == request.loadToken &&
+                            it.loadToken == resumeLoadToken &&
+                            it.path == request.path &&
+                            MPVLib.getPropertyString("path") == request.path
+                    }
+                    ?.also {
+                        it.targetVideoTrackId = trackId
+                        MPVLib.setPropertyInt("vid", trackId)
+                    }
             }
         }
     }
@@ -1165,8 +1259,7 @@ class PlayerActivity : BaseActivity() {
 
         setHttpOptions(video)
 
-        resumeLoadToken++
-        pendingResumeSeconds = if (viewModel.isLoadingEpisode.value) {
+        val resumeSeconds = if (viewModel.isLoadingEpisode.value) {
             viewModel.currentEpisode.value?.let { episode ->
                 val preservePos = playerPreferences.preserveWatchingPosition().get()
                 val resumePositionMs = position
@@ -1181,6 +1274,11 @@ class PlayerActivity : BaseActivity() {
             player.timePos?.toDouble()
         }
 
+        val loadToken = synchronized(pendingResumeLock) { ++resumeLoadToken }
+        val preferH264 = resumeSeconds != null &&
+            resumeSeconds > 0.5 &&
+            Build.SUPPORTED_ABIS.any { it.startsWith("x86") } &&
+            video.mpvArgs.none { (option) -> option == "vid" }
         val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
             "$option=\"$value\""
         }
@@ -1194,17 +1292,22 @@ class PlayerActivity : BaseActivity() {
         ) {
             launchIO {
                 TorrentServerService.start()
-                torrentLinkHandler(video.videoUrl, video.videoTitle, videoOptions)
+                torrentLinkHandler(
+                    video.videoUrl,
+                    video.videoTitle,
+                    videoOptions,
+                    resumeSeconds,
+                    loadToken,
+                    preferH264,
+                )
             }
         } else {
-            MPVLib.command(
-                arrayOf(
-                    "loadfile",
-                    parseVideoUrl(video.videoUrl),
-                    "replace",
-                    "0",
-                    videoOptions,
-                ),
+            loadFile(
+                path = parseVideoUrl(video.videoUrl) ?: video.videoUrl,
+                videoOptions = videoOptions,
+                resumeSeconds = resumeSeconds,
+                loadToken = loadToken,
+                preferH264 = preferH264,
             )
         }
     }
@@ -1223,7 +1326,14 @@ class PlayerActivity : BaseActivity() {
         finish()
     }
 
-    private suspend fun torrentLinkHandler(videoUrl: String, title: String, videoOptions: String) {
+    private suspend fun torrentLinkHandler(
+        videoUrl: String,
+        title: String,
+        videoOptions: String,
+        resumeSeconds: Double?,
+        loadToken: Int,
+        preferH264: Boolean,
+    ) {
         var index = 0
 
         // check if link is from localSource
@@ -1232,15 +1342,7 @@ class PlayerActivity : BaseActivity() {
             val torrent = torrentServerApi.uploadTorrent(videoInputStream!!, title, false)
             val torrentUrl = torrentServerUtils.getTorrentPlayLink(torrent, 0)
 
-            MPVLib.command(
-                arrayOf(
-                    "loadfile",
-                    torrentUrl,
-                    "replace",
-                    "0",
-                    videoOptions,
-                ),
-            )
+            loadFile(torrentUrl, videoOptions, resumeSeconds, loadToken, preferH264)
             return
         }
 
@@ -1258,15 +1360,31 @@ class PlayerActivity : BaseActivity() {
         val currentTorrent = torrentServerApi.addTorrent(videoUrl, title, "", "", false)
         val videoTorrentUrl = torrentServerUtils.getTorrentPlayLink(currentTorrent, index)
 
-        MPVLib.command(
-            arrayOf(
-                "loadfile",
-                videoTorrentUrl,
-                "replace",
-                "0",
-                videoOptions,
-            ),
-        )
+        loadFile(videoTorrentUrl, videoOptions, resumeSeconds, loadToken, preferH264)
+    }
+
+    private fun loadFile(
+        path: String,
+        videoOptions: String,
+        resumeSeconds: Double?,
+        loadToken: Int,
+        preferH264: Boolean,
+    ) {
+        synchronized(pendingResumeLock) {
+            if (loadToken != resumeLoadToken) return
+            pendingResume = resumeSeconds
+                ?.takeIf { it > 0.5 }
+                ?.let { PendingResume(path, it, loadToken, preferH264) }
+            MPVLib.command(
+                arrayOf(
+                    "loadfile",
+                    path,
+                    "replace",
+                    "0",
+                    videoOptions,
+                ),
+            )
+        }
     }
 
     fun parseVideoUrl(videoUrl: String?): String? {

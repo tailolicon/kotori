@@ -339,10 +339,12 @@ fun PlayerControls(
                     )
                 }
                 AnimatedVisibility(
+                    // isLoading/isLoadingEpisode used to bypass the portrait gate entirely, so
+                    // mpv's own loading spinner popped up on top of the portrait control bar
+                    // (which has its own loading state) whenever a seek was in flight.
                     visible =
                     (controlsShown && !areControlsLocked || gestureSeekAmount != null) ||
-                        isLoading ||
-                        isLoadingEpisode,
+                        ((isLoading || isLoadingEpisode) && !portrait),
                     enter = fadeIn(playerControlsEnterAnimationSpec()),
                     exit = fadeOut(playerControlsExitAnimationSpec()),
                     modifier = Modifier.constrainAs(centerControls) {
