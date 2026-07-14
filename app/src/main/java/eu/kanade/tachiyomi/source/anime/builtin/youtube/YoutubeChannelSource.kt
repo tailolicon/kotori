@@ -131,14 +131,20 @@ abstract class YoutubeChannelSource(
             guard++
         }
 
+        // Channel playlists are frequently NOT in episode order (videos get added ad-hoc), so
+        // derive the episode number from the title ("Tập N") and only fall back to playlist
+        // position. Return sorted so the list is tidy regardless of the app's sort preference.
         streams.mapIndexed { index, item ->
             SEpisode.create().apply {
                 setUrlWithoutDomain(item.url)
                 name = item.name
-                episode_number = (index + 1).toFloat()
+                episode_number = parseEpisodeNumber(item.name) ?: (index + 1).toFloat()
             }
-        }
+        }.sortedByDescending { it.episode_number }
     }
+
+    private fun parseEpisodeNumber(title: String): Float? =
+        EPISODE_NUMBER_REGEX.find(title)?.groupValues?.get(1)?.replace(',', '.')?.toFloatOrNull()
 
     // ============================== Video ==============================
 
@@ -210,6 +216,10 @@ abstract class YoutubeChannelSource(
     override fun episodeListParse(response: Response) = throw UnsupportedOperationException("Not used")
 
     companion object {
+        // Matches "Tập 3", "Tap 03", "Episode 12", "Ep 5", "#7" (first number wins).
+        private val EPISODE_NUMBER_REGEX =
+            Regex("""(?:tập|tap|episode|ep|#)\s*[.:\-]?\s*(\d{1,4}(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)
+
         @Volatile
         private var initialized = false
 
