@@ -1,29 +1,38 @@
 <div align="center">
 
-<a href="https://mihon.app">
-    <img src="./.github/assets/logo.png" alt="Mihon logo" title="Mihon logo" width="80"/>
-</a>
+<img src="./.github/assets/logo.png" alt="Kotori logo" title="Kotori logo" width="96" style="border-radius:22px"/>
 
-# Mihon [App](#)
+# Kotori
 
-### Full-featured reader
-Discover and read manga, webtoons, comics, and more – easier than ever on your Android device.
+### Manga, Anime & Novels in one app
+A personal [Mihon](https://github.com/mihonapp/mihon) fork with built-in Anime support (powered by [Aniyomi](https://aniyomi.org)'s mpv player) and an "Aurora Glass" visual redesign, running on Android.
 
-[![Discord server](https://img.shields.io/discord/1195734228319617024.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/mihon)
-[![GitHub downloads](https://img.shields.io/github/downloads/mihonapp/mihon/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://mihon.app/download)
-
-[![CI](https://img.shields.io/github/actions/workflow/status/mihonapp/mihon/build.yml?labelColor=27303D)](https://github.com/mihonapp/mihon/actions/workflows/build_push.yml)
-[![License: Apache-2.0](https://img.shields.io/github/license/mihonapp/mihon?labelColor=27303D&color=0877d2)](/LICENSE)
-[![Translation status](https://img.shields.io/weblate/progress/mihon?labelColor=27303D&color=946300)](https://hosted.weblate.org/engage/mihon/)
-
-## Download
-
-[![Mihon Stable](https://img.shields.io/github/release/mihonapp/mihon.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://mihon.app/download)
-[![Mihon Beta](https://img.shields.io/github/v/release/mihonapp/mihon-preview.svg?maxAge=3600&label=Beta&labelColor=2c2c47&color=1c1c39)](https://mihon.app/download)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-0877d2?labelColor=27303D)](/LICENSE)
+[![Fork of Mihon](https://img.shields.io/badge/fork%20of-mihon-27303D?labelColor=161B22&color=0877d2)](https://github.com/mihonapp/mihon)
 
 *Requires Android 8.0 or higher.*
 
-## Features
+## Download
+
+Built privately for personal use — grab the latest APK from this repo's [Releases](https://github.com/tailolicon/kotori/releases) page.
+
+## What's different from Mihon
+
+<div align="left">
+
+* **Three content modes in one library**: Manga, Anime, and Novel, switchable from the top of the library screen.
+* **Full Anime support**, ported from [Aniyomi](https://github.com/aniyomiorg/aniyomi): browse/search anime sources, per-episode watch progress, and playback through Aniyomi's own **mpv** player — subtitles, dubbing/audio tracks, and quality selection all work as in upstream Aniyomi.
+* **Portrait-first anime player**: tapping an episode plays it at the top of the screen with the episode list right below it (thumbnails + watch progress), so switching episodes doesn't require leaving the screen. A single button toggles landscape fullscreen without interrupting playback; track menus open as bottom sheets instead of covering the video.
+* **Built-in anime sources** — compiled directly into the app, no extension install required:
+  * **AnimeHay** and **AnimeVietsub** (Vietnamese-subbed anime sites)
+  * **Muse Việt Nam** and **Ani-One Vietnam** (official, licensed YouTube channels, extracted via [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor); each YouTube *playlist* is treated as one series so episodes stay grouped)
+  * If a site's domain changes, it's fixable in-app: open the source → ⋮ → Settings → paste the new domain, no rebuild needed.
+* **"Aurora Glass" theme**: a redesigned dark theme with glassmorphism cards and purple/pink gradient accents, applied consistently across library, browse, detail, updates, and history screens for both manga and anime.
+* Everything else Mihon already does — see below.
+
+</div>
+
+## Also includes (inherited from Mihon)
 
 <div align="left">
 
@@ -32,43 +41,38 @@ Discover and read manga, webtoons, comics, and more – easier than ever on your
 * Tracker support: [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [Kitsu](https://kitsu.app/), [MangaUpdates](https://mangaupdates.com), [Shikimori](https://shikimori.one), [Bangumi](https://bgm.tv/) and [Hikka](https://hikka.io/) support.
 * Categories to organize your library.
 * Light and dark themes.
-* Schedule updating your library for new chapters.
+* Schedule updating your library for new chapters/episodes.
 * Create backups locally to read offline or to your desired cloud service.
-* Plus much more...
 
 </div>
 
 ## Contributing
 
-[Code of conduct](./CODE_OF_CONDUCT.md) · [Contributing guide](./CONTRIBUTING.md)
+This is a personal fork maintained for my own use, not a general-purpose community project — so there's no Discord, translation project, or contribution pipeline of its own.
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+For anything **not specific to Kotori's changes** (general reader bugs, upstream features), the [Mihon repository](https://github.com/mihonapp/mihon) is the right place. For issues with Kotori's own additions (anime integration, Aurora Glass theme, built-in sources), open an issue on this repo.
 
-Before reporting a new issue, take a look at the [FAQ](https://mihon.app/docs/faq/general), the [changelog](https://mihon.app/changelogs/) and the already opened [issues](https://github.com/mihonapp/mihon/issues); if you got any questions, join our [Discord server](https://discord.gg/mihon).
-
-
-### Repositories
-
-[![mihonapp/website - GitHub](https://github-readme-stats.vercel.app/api/pin/?username=mihonapp&repo=website&bg_color=161B22&text_color=c9d1d9&title_color=0877d2&icon_color=0877d2&border_radius=8&hide_border=true&description_lines_count=2)](https://github.com/mihonapp/website/)
-[![mihonapp/bitmap.kt - GitHub](https://github-readme-stats.vercel.app/api/pin/?username=mihonapp&repo=bitmap.kt&bg_color=161B22&text_color=c9d1d9&title_color=0877d2&icon_color=0877d2&border_radius=8&hide_border=true&description_lines_count=2)](https://github.com/mihonapp/bitmap.kt/)
+[Code of conduct](./CODE_OF_CONDUCT.md) · [Contributing guide](./CONTRIBUTING.md) *(inherited from Mihon; still a good read if you want to send a PR)*
 
 ### Credits
 
-Thank you to all the people who have contributed!
+Kotori builds on the work of:
 
-<a href="https://github.com/mihonapp/mihon/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=mihonapp/mihon" alt="Mihon app contributors" title="Mihon app contributors" width="800"/>
-</a>
+* [Mihon](https://github.com/mihonapp/mihon) — the reader this fork is based on.
+* [Aniyomi](https://github.com/aniyomiorg/aniyomi) and [mpvKt](https://github.com/abdallahmehiz/mpvKt) — the anime/mpv player foundation this fork's anime support is ported from.
+* [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) — YouTube extraction used by the built-in Muse/Ani-One sources.
+* [Tachiyomi](https://github.com/tachiyomiorg) — the original project both Mihon and Aniyomi descend from.
 
 ### Disclaimer
 
-The developer(s) of this application does not have any affiliation with the content providers available, and this application hosts zero content.
+The developer(s) of this application does not have any affiliation with the content providers available, and this application hosts zero content. Built-in anime sources scrape publicly available pages from third-party sites; behavior and availability of those sites are outside this app's control.
 
 ### License
 
 <pre>
 Copyright © 2015 Javier Tomás
 Copyright © 2024 Mihon Open Source Project
+Copyright © 2024 Aniyomi Open Source Project
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -82,5 +86,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 </pre>
+
+Kotori is an independent, unofficial personal fork and is not affiliated with or endorsed by the Mihon or Aniyomi projects.
 
 </div>
