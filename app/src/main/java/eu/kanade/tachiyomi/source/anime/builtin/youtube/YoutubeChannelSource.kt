@@ -139,7 +139,7 @@ abstract class YoutubeChannelSource(
 
     // ============================== Video ==============================
 
-    override suspend fun getVideoList(episode: SEpisode): List<Video> = withContext(Dispatchers.IO) {
+    override suspend fun resolveVideos(episode: SEpisode): List<Video> = withContext(Dispatchers.IO) {
         ensureInit(client)
         val info = StreamInfo.getInfo(service, baseUrl + episode.url)
 

@@ -133,7 +133,7 @@ class AnimeHay08Source : BuiltInHttpSource() {
 
     // ============================== Video ==============================
 
-    override suspend fun getVideoList(episode: SEpisode): List<Video> {
+    override suspend fun resolveVideos(episode: SEpisode): List<Video> {
         val watchHtml = client.newCall(GET(baseUrl + episode.url, headers))
             .awaitSuccess().use { it.body.string() }
 

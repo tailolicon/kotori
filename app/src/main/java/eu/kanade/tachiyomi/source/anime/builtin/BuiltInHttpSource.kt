@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.source.anime.builtin
 
 import eu.kanade.tachiyomi.animesource.model.Hoster
+import eu.kanade.tachiyomi.animesource.model.Hoster.Companion.toHosterList
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -12,22 +13,31 @@ import okhttp3.Response
  * as opposed to installed extension APKs. These are registered in
  * [eu.kanade.tachiyomi.source.anime.AndroidAnimeSourceManager] beside the local source.
  *
- * It extends [AnimeHttpSource] and stubs out the abstract members that the built-in
- * scraper sources don't use (season / hoster / RxJava-era parse hooks), so each concrete
- * source only has to implement the request + parse methods it actually needs plus a
- * suspend [getVideoList] for the (often multi-step) video resolution.
+ * App-side [AnimeHttpSource] subclasses must implement the (abstract) hoster hooks, which makes
+ * the player's `EpisodeLoader.checkHasHosters` route them through the hoster API. So instead of
+ * the legacy `getVideoList(episode)` path, concrete sources implement [resolveVideos] and this
+ * base wraps the result in a single hoster via [getHosterList].
  */
 abstract class BuiltInHttpSource : AnimeHttpSource() {
 
     // Built-in sources here target Vietnamese content by default; override if needed.
     override val lang: String = "vi"
 
+    /**
+     * Resolve the playable video(s) for an [episode] (often multi-step: page -> embed -> stream).
+     * The first video with a non-empty url is auto-selected by the player.
+     */
+    abstract suspend fun resolveVideos(episode: SEpisode): List<Video>
+
+    override suspend fun getHosterList(episode: SEpisode): List<Hoster> =
+        resolveVideos(episode).toHosterList()
+
     // These built-in sources expose episodes directly, never seasons.
     override suspend fun getSeasonList(anime: SAnime): List<SAnime> = emptyList()
 
     override fun seasonListParse(response: Response): List<SAnime> = emptyList()
 
-    // --- Unused abstract members (this class resolves videos via suspend getVideoList) ---
+    // --- Unused abstract members (video resolution goes through resolveVideos/getHosterList) ---
 
     override fun episodeVideoParse(response: Response): SEpisode =
         throw UnsupportedOperationException("Not used")
