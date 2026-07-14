@@ -288,6 +288,9 @@ dependencies {
     // HTML parser
     implementation(libs.jsoup)
 
+    // YouTube extraction for the built-in Muse / Ani-One sources (playlist = series)
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
+
     // Disk
     implementation(libs.diskLruCache)
     implementation(libs.unifile)
