@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.source.anime.builtin
 
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -36,11 +39,31 @@ import java.net.URLEncoder
  * client-side (Web Crypto), which this cannot resolve — those fall back to the metadata being
  * available even if a given server yields no direct stream.
  */
-class AnimeVietsubSource : BuiltInHttpSource() {
+class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
 
     override val name = "AnimeVietsub"
-    override val baseUrl = "https://animevietsub.meme"
     override val supportsLatest = true
+
+    private val preferences by lazy { getSourcePreferences() }
+
+    // Reads the user's domain override, so a domain change is fixable in-app without a rebuild.
+    override val baseUrl: String
+        get() = preferences.getString(PREF_DOMAIN_KEY, DEFAULT_BASE_URL)
+            ?.trim()?.trimEnd('/')?.ifBlank { DEFAULT_BASE_URL } ?: DEFAULT_BASE_URL
+
+    override val iconUrl: String
+        get() = runCatching { "https://www.google.com/s2/favicons?domain=${baseUrl.toHttpUrl().host}&sz=128" }
+            .getOrDefault("https://www.google.com/s2/favicons?domain=animevietsub.meme&sz=128")
+
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        EditTextPreference(screen.context).apply {
+            key = PREF_DOMAIN_KEY
+            title = "Ghi đè tên miền"
+            summary = "Nếu web đổi tên miền, dán địa chỉ mới vào đây (vd: $DEFAULT_BASE_URL). Để trống = mặc định. Khởi động lại app sau khi đổi."
+            dialogTitle = "Tên miền mới"
+            setDefaultValue(DEFAULT_BASE_URL)
+        }.also(screen::addPreference)
+    }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -234,6 +257,9 @@ class AnimeVietsubSource : BuiltInHttpSource() {
     }
 
     companion object {
+        const val DEFAULT_BASE_URL = "https://animevietsub.meme"
+        private const val PREF_DOMAIN_KEY = "override_base_url"
+
         private val M3U8_REGEX = Regex("""https?://[^\s"'\\]+\.m3u8[^\s"'\\]*""")
     }
 }

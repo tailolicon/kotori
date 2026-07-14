@@ -37,6 +37,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 abstract class YoutubeChannelSource(
     override val name: String,
     private val channelUrl: String,
+    override val iconUrl: String,
 ) : BuiltInHttpSource() {
 
     override val baseUrl = "https://www.youtube.com"
@@ -236,10 +237,12 @@ abstract class YoutubeChannelSource(
 class MuseVietnamSource : YoutubeChannelSource(
     name = "Muse Việt Nam (YouTube)",
     channelUrl = "https://www.youtube.com/channel/UCott96qGP5ADmsB_yNQMvDA",
+    iconUrl = "https://yt3.googleusercontent.com/FMVXW07kOyhQwAPuGpTalwdYROkBMegNgUYDAB1I2cJibDZKLUYsmLTUI70X7akdNIhgTd7IZw=s176-c-k-c0x00ffffff-no-rj",
 )
 
 /** Ani-One Vietnam — official licensed anime (Vietnamese subs). */
 class AniOneVietnamSource : YoutubeChannelSource(
     name = "Ani-One Vietnam (YouTube)",
     channelUrl = "https://www.youtube.com/@AniOneVietnam",
+    iconUrl = "https://yt3.googleusercontent.com/8z59uZHl92xeDBxVx1yYRmXJ1LfDbPwyoY20OXph9TNgfRr9rzhaFTE4RiINIZUgY32RUrzCysU=s176-c-k-c0x00ffffff-no-rj",
 )

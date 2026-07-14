@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -31,9 +32,13 @@ import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.extension.anime.model.AnimeExtension
 import eu.kanade.tachiyomi.extension.anime.util.AnimeExtensionLoader
+import eu.kanade.tachiyomi.source.anime.builtin.BuiltInHttpSource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.source.anime.model.AnimeSource
+import tachiyomi.domain.source.anime.service.AnimeSourceManager
 import tachiyomi.source.local.entries.anime.LocalAnimeSource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 private val defaultModifier = Modifier
     .height(40.dp)
@@ -45,6 +50,9 @@ fun AnimeSourceIcon(
     modifier: Modifier = Modifier,
 ) {
     val icon = source.icon
+    val builtInIconUrl = remember(source.id) {
+        (Injekt.get<AnimeSourceManager>().get(source.id) as? BuiltInHttpSource)?.iconUrl
+    }
 
     when {
         source.isStub && icon == null -> {
@@ -67,6 +75,17 @@ fun AnimeSourceIcon(
                 painter = painterResource(R.mipmap.ic_local_source),
                 contentDescription = null,
                 modifier = modifier.then(defaultModifier),
+            )
+        }
+        builtInIconUrl != null -> {
+            AsyncImage(
+                model = builtInIconUrl,
+                contentDescription = null,
+                placeholder = ColorPainter(Color(0x1F888888)),
+                error = painterResource(R.mipmap.ic_default_source),
+                modifier = modifier
+                    .then(defaultModifier)
+                    .clip(MaterialTheme.shapes.extraSmall),
             )
         }
         else -> {

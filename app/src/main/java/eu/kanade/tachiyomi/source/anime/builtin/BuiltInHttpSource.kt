@@ -24,6 +24,12 @@ abstract class BuiltInHttpSource : AnimeHttpSource() {
     override val lang: String = "vi"
 
     /**
+     * Icon shown in the source list (web favicon or channel avatar). Loaded by
+     * `AnimeSourceIcon` since built-in sources have no extension APK to pull an icon from.
+     */
+    abstract val iconUrl: String
+
+    /**
      * Resolve the playable video(s) for an [episode] (often multi-step: page -> embed -> stream).
      * The first video with a non-empty url is auto-selected by the player.
      */

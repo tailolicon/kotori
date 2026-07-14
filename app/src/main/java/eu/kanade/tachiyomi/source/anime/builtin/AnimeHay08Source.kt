@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.source.anime.builtin
 
+import androidx.preference.EditTextPreference
+import androidx.preference.PreferenceScreen
+import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -23,11 +26,32 @@ import java.net.URLEncoder
  * (e.g. ahay.stream/embed-jw/<id>); that embed page exposes a direct `master.m3u8`
  * (token + expiry) which mpv can play with the embed host as Referer.
  */
-class AnimeHay08Source : BuiltInHttpSource() {
+class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
 
     override val name = "AnimeHay"
-    override val baseUrl = "https://animehay08.site"
     override val supportsLatest = true
+
+    private val preferences by lazy { getSourcePreferences() }
+
+    // Reads the user's domain override, so a domain change is fixable in-app without a rebuild.
+    override val baseUrl: String
+        get() = preferences.getString(PREF_DOMAIN_KEY, DEFAULT_BASE_URL)
+            ?.trim()?.trimEnd('/')?.ifBlank { DEFAULT_BASE_URL } ?: DEFAULT_BASE_URL
+
+    // Favicon follows whatever the current base domain is.
+    override val iconUrl: String
+        get() = runCatching { "https://www.google.com/s2/favicons?domain=${baseUrl.toHttpUrl().host}&sz=128" }
+            .getOrDefault("https://www.google.com/s2/favicons?domain=animehay08.site&sz=128")
+
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        EditTextPreference(screen.context).apply {
+            key = PREF_DOMAIN_KEY
+            title = "Ghi đè tên miền"
+            summary = "Nếu web đổi tên miền, dán địa chỉ mới vào đây (vd: $DEFAULT_BASE_URL). Để trống = mặc định. Khởi động lại app sau khi đổi."
+            dialogTitle = "Tên miền mới"
+            setDefaultValue(DEFAULT_BASE_URL)
+        }.also(screen::addPreference)
+    }
 
     override fun headersBuilder() = Headers.Builder()
         .add("User-Agent", DESKTOP_UA)
@@ -174,6 +198,9 @@ class AnimeHay08Source : BuiltInHttpSource() {
     }
 
     companion object {
+        const val DEFAULT_BASE_URL = "https://animehay08.site"
+        private const val PREF_DOMAIN_KEY = "override_base_url"
+
         // var $wp_servers = { 'AHS': 'https://ahay.stream/embed-jw/76075', };
         private val SERVERS_REGEX = Regex("""${'$'}wp_servers\s*=\s*\{([^}]*)\}""")
         private val URL_REGEX = Regex("""https?://[^'"\s]+""")
