@@ -165,25 +165,17 @@ abstract class YoutubeChannelSource(
 
         val videos = mutableListOf<Video>()
 
-        // 1) HLS master (single URL, audio+video muxed) — nicest for mpv when present.
+        // Prefer *muxed* streams (audio+video in one file). YouTube's DASH video-only streams are
+        // throttled and start at a non-zero fragment timestamp, and pairing them with a separate
+        // audio track makes mpv buffer forever (the endless spinner / 4-second start). Muxed
+        // streams play smoothly from 0, so they go first; DASH is only offered for higher quality.
+
+        // 1) HLS master (muxed, adaptive) — best for mpv when present.
         info.hlsUrl?.takeIf { it.isNotBlank() }?.let {
-            videos += Video(videoUrl = it, videoTitle = "HLS (auto)", subtitleTracks = subtitles)
+            videos += Video(videoUrl = it, videoTitle = "Tự động (HLS)", subtitleTracks = subtitles)
         }
 
-        // 2) DASH video-only streams paired with the best audio track.
-        info.videoOnlyStreams
-            .filter { it.content?.isNotBlank() == true }
-            .sortedByDescending { it.resolution.resHeight() }
-            .forEach { vs ->
-                videos += Video(
-                    videoUrl = vs.content,
-                    videoTitle = vs.resolution.ifBlank { "video" },
-                    audioTracks = bestAudioUrl?.let { listOf(Track(it, "audio")) } ?: emptyList(),
-                    subtitleTracks = subtitles,
-                )
-            }
-
-        // 3) Muxed progressive streams (already contain audio) as a fallback.
+        // 2) Progressive muxed streams (single URL with audio) — reliable default, up to 720p.
         info.videoStreams
             .filter { it.content?.isNotBlank() == true }
             .sortedByDescending { it.resolution.resHeight() }
@@ -194,6 +186,21 @@ abstract class YoutubeChannelSource(
                     subtitleTracks = subtitles,
                 )
             }
+
+        // 3) DASH video-only + best audio (higher resolution, but can buffer) — offered last.
+        if (bestAudioUrl != null) {
+            info.videoOnlyStreams
+                .filter { it.content?.isNotBlank() == true }
+                .sortedByDescending { it.resolution.resHeight() }
+                .forEach { vs ->
+                    videos += Video(
+                        videoUrl = vs.content,
+                        videoTitle = "${vs.resolution.ifBlank { "video" }} (tách tiếng)",
+                        audioTracks = listOf(Track(bestAudioUrl, "audio")),
+                        subtitleTracks = subtitles,
+                    )
+                }
+        }
 
         videos
     }
