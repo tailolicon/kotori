@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
+import eu.kanade.tachiyomi.source.anime.builtin.AnimeHay08Source
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,6 +44,16 @@ class AndroidAnimeSourceManager(
 
     private val stubSourcesMap = ConcurrentHashMap<Long, StubAnimeSource>()
 
+    /**
+     * Anime sources compiled directly into Kotori (not installed as extension APKs).
+     * Instantiated lazily so Injekt is fully wired before their dependencies resolve.
+     */
+    private val builtInSources: List<AnimeSource> by lazy {
+        listOf(
+            AnimeHay08Source(),
+        )
+    }
+
     override val catalogueSources: Flow<List<AnimeCatalogueSource>> = sourcesMapFlow.map {
         it.values.filterIsInstance<AnimeCatalogueSource>()
     }
@@ -63,6 +74,7 @@ class AndroidAnimeSourceManager(
                             ),
                         ),
                     )
+                    builtInSources.forEach { mutableMap[it.id] = it }
                     extensions.forEach { extension ->
                         extension.sources.forEach {
                             mutableMap[it.id] = it
