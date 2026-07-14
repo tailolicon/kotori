@@ -304,6 +304,7 @@ class PlayerActivity : BaseActivity() {
                             else -> finish()
                         }
                     },
+                    onToggleFullscreen = ::togglePlayerFullscreen,
                 )
             }
         }
@@ -313,11 +314,8 @@ class PlayerActivity : BaseActivity() {
                 PlayerEpisodePanel(viewModel = viewModel, onSwitchEpisode = { changeEpisode(it) })
             }
         }
-        binding.fullscreenButton.setContent {
-            TachiyomiTheme {
-                PlayerFullscreenButton(fullscreen = playerFullscreen.value, onToggle = ::togglePlayerFullscreen)
-            }
-        }
+        // The fullscreen toggle now lives inside the portrait control bar; hide the standalone one.
+        binding.fullscreenButton.visibility = android.view.View.GONE
         applyPlayerLayout()
 
         onNewIntent(this.intent)
@@ -420,15 +418,16 @@ class PlayerActivity : BaseActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get()) {
-            if (viewModel.sheetShown.value == Sheets.None &&
-                viewModel.panelShown.value == Panels.None &&
-                viewModel.dialogShown.value == Dialogs.None
-            ) {
-                enterPictureInPictureMode()
-            }
-        } else {
-            super.onBackPressed()
+        when {
+            // Close any open track/settings sheet or panel first.
+            viewModel.sheetShown.value != Sheets.None -> viewModel.showSheet(Sheets.None)
+            viewModel.panelShown.value != Panels.None -> viewModel.showPanel(Panels.None)
+            // In landscape fullscreen, back returns to the portrait view (episode list) instead of
+            // exiting the player entirely.
+            playerFullscreen.value -> togglePlayerFullscreen()
+            isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get() &&
+                viewModel.dialogShown.value == Dialogs.None -> enterPictureInPictureMode()
+            else -> super.onBackPressed()
         }
     }
 

@@ -123,19 +123,24 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
     }
 
     private fun buildDescription(doc: Document): String = buildString {
-        // Metadata line: year • status • episode count (rendered with emojis on the page).
-        val meta = doc.select(".aim-hero__meta .aim-meta-item").joinToString("  •  ") { it.text().trim() }
+        // Year • status • episode count (the page renders these with emojis — strip them out).
+        val meta = doc.select(".aim-hero__meta .aim-meta-item")
+            .map { it.text().withoutEmoji() }
+            .filter { it.isNotBlank() }
+            .joinToString(" • ")
         if (meta.isNotBlank()) appendLine(meta)
 
         doc.selectFirst(".aim-hero__alt-name")?.text()?.takeIf { it.isNotBlank() }?.let {
             appendLine("Tên khác: $it")
         }
 
-        val synopsis = doc.selectFirst(".aim-desc, .aim-body .aim-description, [itemprop=description]")?.text()
-            ?: doc.selectFirst("meta[name=description]")?.attr("content")
+        val synopsis = (
+            doc.selectFirst(".aim-desc, .aim-body .aim-description, [itemprop=description]")?.text()
+                ?: doc.selectFirst("meta[name=description]")?.attr("content")
+            )?.withoutEmoji()
         if (!synopsis.isNullOrBlank()) {
             appendLine()
-            append(synopsis.trim())
+            append(synopsis)
         }
     }.trim()
 

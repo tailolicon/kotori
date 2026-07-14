@@ -3,6 +3,8 @@ package eu.kanade.tachiyomi.ui.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,14 +27,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -47,60 +51,69 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import kotlin.math.abs
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.glass
 import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.tachiyomi.data.database.models.anime.Episode
+import eu.kanade.tachiyomi.ui.player.controls.components.sheets.HosterState
+import kotlin.math.abs
 
 private val AnimeGradient = Brush.horizontalGradient(listOf(Color(0xFF8B5CF6), Color(0xFFF472B6)))
 private val AnimeLight = Color(0xFFC4B5FD)
+private val SheetSurface = Color(0xFF1B1526)
+private val Accent = Color(0xFFF472B6)
 
-/** Fullscreen toggle button overlaid at the bottom-right of the video (visible in both modes). */
-@Composable
-fun PlayerFullscreenButton(fullscreen: Boolean, onToggle: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .padding(12.dp)
-            .size(42.dp)
-            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-            .clickable(onClick = onToggle),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = if (fullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(24.dp),
-        )
-    }
-}
+private enum class PortraitSheet { None, Subtitle, Audio, Quality }
 
 /**
  * Compact YouTube-style control overlay shown over the video in portrait (mpv's own controls are
- * suppressed there). Handles its own tap / double-tap-seek / vertical brightness (left) & volume
- * (right) gestures since it sits above mpv's GestureHandler.
+ * suppressed there). Track menus (subtitle / audio / quality) open as full-screen modal bottom
+ * sheets instead of the cramped mpv sheet that would be clipped to the 16:9 video area. Handles its
+ * own tap / double-tap-seek / vertical brightness (left) & volume (right) gestures.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PortraitPlayerControls(viewModel: PlayerViewModel, onBackPress: () -> Unit) {
+fun PortraitPlayerControls(
+    viewModel: PlayerViewModel,
+    onBackPress: () -> Unit,
+    onToggleFullscreen: () -> Unit,
+) {
     val context = LocalContext.current
     val paused by viewModel.paused.collectAsStateWithLifecycle()
     val pos by viewModel.pos.collectAsStateWithLifecycle()
     val duration by viewModel.duration.collectAsStateWithLifecycle()
+    val subtitleTracks by viewModel.subtitleTracks.collectAsStateWithLifecycle()
+    val audioTracks by viewModel.audioTracks.collectAsStateWithLifecycle()
+    val selectedSubs by viewModel.selectedSubtitles.collectAsStateWithLifecycle()
+    val selectedAudio by viewModel.selectedAudio.collectAsStateWithLifecycle()
+    val hosterState by viewModel.hosterState.collectAsStateWithLifecycle()
+
     var shown by remember { mutableStateOf(true) }
+    var sheet by remember { mutableStateOf(PortraitSheet.None) }
+
+    val readyHosterIdx = remember(hosterState) { hosterState.indexOfFirst { it is HosterState.Ready } }
+    val qualityVideos = remember(hosterState) {
+        (hosterState.getOrNull(readyHosterIdx) as? HosterState.Ready)?.videoList ?: emptyList()
+    }
+    // Hide menus the film can't use so the bar stays clean.
+    val hasSubs = subtitleTracks.isNotEmpty()
+    val hasAudioChoice = audioTracks.size > 2 // "off" + more than one real track
+    val hasQualityChoice = qualityVideos.size > 1
+
+    fun toggle(target: PortraitSheet) {
+        sheet = if (sheet == target) PortraitSheet.None else target
+    }
 
     Box(
         modifier = Modifier
@@ -141,7 +154,7 @@ fun PortraitPlayerControls(viewModel: PlayerViewModel, onBackPress: () -> Unit) 
             },
     ) {
         if (shown) {
-            // Top bar: back + subtitle / audio / quality
+            // Top bar: back + subtitle / audio / quality (only those the film supports)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -157,26 +170,32 @@ fun PortraitPlayerControls(viewModel: PlayerViewModel, onBackPress: () -> Unit) 
                     modifier = Modifier.size(26.dp).clickable(onClick = onBackPress),
                 )
                 Spacer(Modifier.weight(1f))
-                Icon(
-                    Icons.Filled.Subtitles,
-                    null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp).clickable { viewModel.showSheet(Sheets.SubtitleTracks) },
-                )
-                Spacer(Modifier.width(18.dp))
-                Icon(
-                    Icons.Filled.MusicNote,
-                    null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp).clickable { viewModel.showSheet(Sheets.AudioTracks) },
-                )
-                Spacer(Modifier.width(18.dp))
-                Icon(
-                    Icons.Filled.HighQuality,
-                    null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp).clickable { viewModel.showSheet(Sheets.QualityTracks) },
-                )
+                if (hasSubs) {
+                    Icon(
+                        Icons.Filled.Subtitles,
+                        null,
+                        tint = if (sheet == PortraitSheet.Subtitle) Accent else Color.White,
+                        modifier = Modifier.size(24.dp).clickable { toggle(PortraitSheet.Subtitle) },
+                    )
+                    Spacer(Modifier.width(18.dp))
+                }
+                if (hasAudioChoice) {
+                    Icon(
+                        Icons.Filled.MusicNote,
+                        null,
+                        tint = if (sheet == PortraitSheet.Audio) Accent else Color.White,
+                        modifier = Modifier.size(24.dp).clickable { toggle(PortraitSheet.Audio) },
+                    )
+                    Spacer(Modifier.width(18.dp))
+                }
+                if (hasQualityChoice) {
+                    Icon(
+                        Icons.Filled.HighQuality,
+                        null,
+                        tint = if (sheet == PortraitSheet.Quality) Accent else Color.White,
+                        modifier = Modifier.size(24.dp).clickable { toggle(PortraitSheet.Quality) },
+                    )
+                }
             }
 
             // Center: play / pause
@@ -197,13 +216,13 @@ fun PortraitPlayerControls(viewModel: PlayerViewModel, onBackPress: () -> Unit) 
                 )
             }
 
-            // Bottom: seek bar + times (leave room at the end for the fullscreen button)
+            // Bottom: seek bar + times + fullscreen toggle (all on one aligned row)
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-                    .padding(start = 12.dp, end = 64.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -219,6 +238,111 @@ fun PortraitPlayerControls(viewModel: PlayerViewModel, onBackPress: () -> Unit) 
                     ),
                 )
                 Text(formatSec(duration), color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp)
+                Icon(
+                    Icons.Filled.Fullscreen,
+                    null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clickable(onClick = onToggleFullscreen),
+                )
+            }
+        }
+    }
+
+    when (sheet) {
+        PortraitSheet.Subtitle -> TrackModalSheet(
+            title = "Phụ đề",
+            options = buildList {
+                add(-1 to "Tắt phụ đề")
+                subtitleTracks.forEach { add(it.id to it.name.ifBlank { it.language ?: "Phụ đề ${it.id}" }) }
+            },
+            selectedId = selectedSubs.first,
+            onSelect = { id ->
+                val active = listOf(selectedSubs.first, selectedSubs.second).filter { it != -1 }
+                if (id == -1) {
+                    active.forEach(viewModel::selectSub)
+                } else if (id != selectedSubs.first && id != selectedSubs.second) {
+                    active.forEach(viewModel::selectSub)
+                    viewModel.selectSub(id)
+                }
+            },
+            onDismiss = { sheet = PortraitSheet.None },
+        )
+        PortraitSheet.Audio -> TrackModalSheet(
+            title = "Âm thanh / Lồng tiếng",
+            options = audioTracks.map { it.id to it.name.ifBlank { it.language ?: "Âm thanh ${it.id}" } },
+            selectedId = selectedAudio,
+            onSelect = { id ->
+                viewModel.selectAudio(id)
+                viewModel.updateAudio(id)
+            },
+            onDismiss = { sheet = PortraitSheet.None },
+        )
+        PortraitSheet.Quality -> TrackModalSheet(
+            title = "Chất lượng",
+            options = qualityVideos.mapIndexed { i, v -> i to v.videoTitle.ifBlank { "Chất lượng ${i + 1}" } },
+            selectedId = -99,
+            onSelect = { i -> viewModel.onVideoClicked(readyHosterIdx, i) },
+            onDismiss = { sheet = PortraitSheet.None },
+        )
+        PortraitSheet.None -> {}
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrackModalSheet(
+    title: String,
+    options: List<Pair<Int, String>>,
+    selectedId: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SheetSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 12.dp),
+        ) {
+            Text(
+                text = title,
+                color = KotoriColors.textPrimary,
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                modifier = Modifier.padding(start = 20.dp, top = 2.dp, bottom = 6.dp),
+            )
+            options.forEach { (id, label) ->
+                val selected = id == selectedId
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onSelect(id)
+                            onDismiss()
+                        }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) Accent else KotoriColors.textPrimary,
+                        fontFamily = BeVietnamProFamily,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = 13.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (selected) {
+                        Icon(Icons.Filled.CheckCircle, null, tint = Accent, modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
     }

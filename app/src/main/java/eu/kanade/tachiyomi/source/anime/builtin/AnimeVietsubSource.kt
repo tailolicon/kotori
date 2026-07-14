@@ -139,24 +139,25 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
 
     private fun buildDescription(doc: Document, info: Map<String, String>): String = buildString {
         val meta = listOfNotNull(
-            info["Season"]?.let { "📅 $it" },
-            info["Trạng thái"]?.let { "🔴 $it" },
-            info["Thời lượng"]?.let { "🎬 $it" },
-            info["Studio"]?.let { "🎞️ $it" },
-            info["Ngôn ngữ"]?.let { "🗣️ $it" },
-        ).joinToString("  •  ")
+            info["Season"]?.let { "Năm: $it" },
+            info["Trạng thái"]?.let { "Trạng thái: $it" },
+            info["Thời lượng"]?.let { "Số tập: $it" },
+            info["Studio"]?.let { "Studio: $it" },
+            info["Ngôn ngữ"],
+        ).joinToString(" • ")
         if (meta.isNotBlank()) appendLine(meta)
 
         doc.selectFirst(".name, .SubTitle, .other_name")?.text()?.takeIf { it.isNotBlank() }?.let {
             appendLine("Tên khác: $it")
         }
 
-        val synopsis = doc.selectFirst(".Description, div[itemprop=description], .film-content, .content-info, .mvic-desc")
-            ?.text()
-            ?: doc.selectFirst("meta[name=description]")?.attr("content")
+        val synopsis = (
+            doc.selectFirst(".Description, div[itemprop=description], .film-content, .content-info, .mvic-desc")?.text()
+                ?: doc.selectFirst("meta[name=description]")?.attr("content")
+            )?.withoutEmoji()
         if (!synopsis.isNullOrBlank()) {
             appendLine()
-            append(synopsis.trim())
+            append(synopsis)
         }
     }.trim()
 
