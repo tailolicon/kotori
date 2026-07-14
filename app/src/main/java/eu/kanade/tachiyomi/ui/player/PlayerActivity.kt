@@ -324,6 +324,18 @@ class PlayerActivity : BaseActivity() {
     /** Portrait (video + episode list) vs landscape fullscreen; toggled without recreating mpv. */
     private val playerFullscreen = androidx.compose.runtime.mutableStateOf(false)
 
+    /**
+     * Resume position (seconds) to apply once the freshly loaded file actually renders a frame.
+     *
+     * We used to pre-seek via the mpv `start` property before `loadfile`, but seeking *before* the
+     * hardware decoder has processed a real keyframe leaves it in a broken state on some
+     * devices/streams (e.g. resuming a YouTube muxed stream): audio plays but the video stays
+     * black until the user seeks again. A manual seek after the fact always fixed it, so instead
+     * we let the file open at 0 normally and issue a normal runtime seek on the first
+     * `MPV_EVENT_PLAYBACK_RESTART` after load, mirroring that manual fix automatically.
+     */
+    private var pendingResumeSeconds: Double? = null
+
     private fun togglePlayerFullscreen() {
         playerFullscreen.value = !playerFullscreen.value
         applyPlayerLayout()
@@ -812,7 +824,15 @@ class PlayerActivity : BaseActivity() {
                 viewModel.viewModelScope.launchIO { fileLoaded() }
             }
             MPVLib.mpvEventId.MPV_EVENT_SEEK -> viewModel.isLoading.update { true }
-            MPVLib.mpvEventId.MPV_EVENT_PLAYBACK_RESTART -> player.isExiting = false
+            MPVLib.mpvEventId.MPV_EVENT_PLAYBACK_RESTART -> {
+                player.isExiting = false
+                pendingResumeSeconds?.let { secs ->
+                    pendingResumeSeconds = null
+                    if (secs > 0.5) {
+                        MPVLib.command(arrayOf("seek", secs.toString(), "absolute"))
+                    }
+                }
+            }
         }
     }
 
@@ -1127,21 +1147,19 @@ class PlayerActivity : BaseActivity() {
 
         setHttpOptions(video)
 
-        if (viewModel.isLoadingEpisode.value) {
+        pendingResumeSeconds = if (viewModel.isLoadingEpisode.value) {
             viewModel.currentEpisode.value?.let { episode ->
                 val preservePos = playerPreferences.preserveWatchingPosition().get()
-                val resumePosition = position
+                val resumePositionMs = position
                     ?: if (episode.seen && !preservePos) {
                         0L
                     } else {
                         episode.last_second_seen
                     }
-                MPVLib.command(arrayOf("set", "start", "${resumePosition / 1000F}"))
+                resumePositionMs / 1000.0
             }
         } else {
-            player.timePos?.let {
-                MPVLib.command(arrayOf("set", "start", "${player.timePos}"))
-            }
+            player.timePos?.toDouble()
         }
 
         val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
