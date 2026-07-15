@@ -32,7 +32,7 @@ android {
     defaultConfig {
         applicationId = "app.mihon"
 
-        versionCode = 26
+        versionCode = 27
         versionName = "0.20.1"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
@@ -91,6 +91,15 @@ android {
         }
 
         val commonMatchingFallbacks = listOf(release.name)
+
+        create("update") {
+            initWith(release)
+
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = debug.versionNameSuffix
+
+            matchingFallbacks.addAll(commonMatchingFallbacks)
+        }
 
         create("foss") {
             initWith(release)
