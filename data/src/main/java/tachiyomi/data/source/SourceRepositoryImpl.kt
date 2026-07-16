@@ -1,5 +1,6 @@
 package tachiyomi.data.source
 
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -93,5 +94,6 @@ class SourceRepositoryImpl(
         name = source.name,
         supportsLatest = false,
         isStub = false,
+        isNovel = source is NovelSource,
     )
 }

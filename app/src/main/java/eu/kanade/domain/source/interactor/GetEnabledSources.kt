@@ -1,6 +1,8 @@
 package eu.kanade.domain.source.interactor
 
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -13,7 +15,19 @@ import tachiyomi.source.local.isLocal
 class GetEnabledSources(
     private val repository: SourceRepository,
     private val preferences: SourcePreferences,
+    private val uiPreferences: UiPreferences,
 ) {
+
+    /**
+     * Novels ride the manga stack, so both kinds arrive from the repository together; each tab
+     * keeps only its own, or Manga would list light novels among its comics.
+     */
+    private fun modeSources(): Flow<List<Source>> = combine(
+        repository.getSources(),
+        uiPreferences.activeMediaMode.changes(),
+    ) { sources, activeMode ->
+        sources.filter { it.isNovel == (activeMode == MediaType.NOVEL) || it.isLocal() }
+    }
 
     fun subscribe(): Flow<List<Source>> {
         return combine(
@@ -21,7 +35,7 @@ class GetEnabledSources(
             preferences.enabledLanguages.changes(),
             preferences.disabledSources.changes(),
             preferences.lastUsedSource.changes(),
-            repository.getSources(),
+            modeSources(),
         ) { pinnedSourceIds, enabledLanguages, disabledSources, lastUsedSource, sources ->
             sources
                 .filter { it.lang in enabledLanguages || it.isLocal() }

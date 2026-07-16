@@ -96,14 +96,8 @@ data object BrowseTab : Tab {
             }
             return
         }
-        if (activeMode != MediaType.MANGA) {
-            // Novel mode browses its own media sources only.
-            MediaBrowseContent(mediaType = activeMode)
-            LaunchedEffect(Unit) {
-                (context as? MainActivity)?.ready = true
-            }
-            return
-        }
+        // Novel mode shares this screen: novels run on the manga stack, and GetEnabledSources
+        // filters each tab down to its own sources.
 
         // Hoisted for extensions tab's search bar
         val extensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }
