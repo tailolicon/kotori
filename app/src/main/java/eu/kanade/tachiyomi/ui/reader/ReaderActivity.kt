@@ -177,11 +177,6 @@ class ReaderActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         registerSecureActivity(this)
 
-        if (redirectToNovelReaderIfNeeded()) {
-            super.onCreate(savedInstanceState)
-            return
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
                 OVERRIDE_TRANSITION_OPEN,
@@ -200,6 +195,10 @@ class ReaderActivity : BaseActivity() {
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
         super.onCreate(savedInstanceState)
+
+        // Must follow super.onCreate: finishing before the activity reaches CREATED trips the
+        // saved-state registry.
+        if (redirectToNovelReaderIfNeeded()) return
 
         binding = ReaderActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
