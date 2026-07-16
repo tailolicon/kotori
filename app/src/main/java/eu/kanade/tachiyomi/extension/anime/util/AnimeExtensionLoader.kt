@@ -163,7 +163,12 @@ internal object AnimeExtensionLoader {
             }
             .toList()
 
-        if (extPkgs.isEmpty()) return emptyList()
+        if (extPkgs.isEmpty()) {
+            logcat(LogPriority.WARN) {
+                "No anime extensions found among ${installedPkgs.size} installed packages"
+            }
+            return emptyList()
+        }
 
         // Load each extension concurrently and wait for completion
         return runBlocking {

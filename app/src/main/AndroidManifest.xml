@@ -25,6 +25,15 @@
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <!--
+      MIUI/HyperOS gates the package list behind its own runtime permission on top of
+      QUERY_ALL_PACKAGES. Without it getInstalledPackages() returns an empty list instead of
+      throwing, so every installed extension silently vanishes. Declaring it is what makes the
+      permission requestable at all; see MiuiPackageVisibility.
+    -->
+    <uses-permission
+        android:name="com.android.permission.GET_INSTALLED_APPS"
+        tools:ignore="ProtectedPermissions" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission

@@ -37,6 +37,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
 import eu.kanade.tachiyomi.core.security.PrivacyPreferences
+import eu.kanade.tachiyomi.util.system.MIUI_GET_INSTALLED_APPS
+import eu.kanade.tachiyomi.util.system.canQueryInstalledPackages
+import eu.kanade.tachiyomi.util.system.definesMiuiPackageListPermission
 import eu.kanade.tachiyomi.util.system.launchRequestPackageInstallsPermission
 import eu.kanade.tachiyomi.util.system.telemetryIncluded
 import tachiyomi.i18n.MR
@@ -51,6 +54,7 @@ internal class PermissionStep : OnboardingStep {
 
     private var notificationGranted by mutableStateOf(false)
     private var batteryGranted by mutableStateOf(false)
+    private var installedAppsGranted by mutableStateOf(false)
 
     override val isComplete: Boolean = true
 
@@ -72,6 +76,7 @@ internal class PermissionStep : OnboardingStep {
                     }
                     batteryGranted = context.getSystemService<PowerManager>()!!
                         .isIgnoringBatteryOptimizations(context.packageName)
+                    installedAppsGranted = context.canQueryInstalledPackages
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -102,6 +107,22 @@ internal class PermissionStep : OnboardingStep {
                     subtitle = stringResource(MR.strings.onboarding_permission_notifications_description),
                     granted = notificationGranted,
                     onButtonClick = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                )
+            }
+
+            // Only Xiaomi ROMs define this; elsewhere QUERY_ALL_PACKAGES alone is enough.
+            if (context.definesMiuiPackageListPermission) {
+                val installedAppsRequester = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                    onResult = {
+                        // no-op. resulting checks is being done on resume
+                    },
+                )
+                PermissionCheckbox(
+                    title = stringResource(MR.strings.onboarding_permission_installed_apps),
+                    subtitle = stringResource(MR.strings.onboarding_permission_installed_apps_description),
+                    granted = installedAppsGranted,
+                    onButtonClick = { installedAppsRequester.launch(MIUI_GET_INSTALLED_APPS) },
                 )
             }
 

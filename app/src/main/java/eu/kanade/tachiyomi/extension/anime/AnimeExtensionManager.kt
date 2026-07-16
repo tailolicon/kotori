@@ -125,6 +125,13 @@ class AnimeExtensionManager(
     fun getSourceData(id: Long) = availableAnimeExtensionsSourcesData[id]
 
     /**
+     * Re-runs discovery of installed anime extensions. See
+     * [eu.kanade.tachiyomi.extension.ExtensionManager.reloadInstalledExtensions] for why MIUI needs
+     * a second pass.
+     */
+    fun reloadInstalledExtensions() = initAnimeExtensions()
+
+    /**
      * Loads and registers the installed animeextensions.
      */
     private fun initAnimeExtensions() {

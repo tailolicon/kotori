@@ -115,6 +115,15 @@ class ExtensionManager(
     fun getSourceData(id: Long) = availableExtensionsSourcesData[id]
 
     /**
+     * Re-runs discovery of installed extensions.
+     *
+     * The startup load happens before MIUI's package-list permission can be requested, so on those
+     * ROMs the first pass sees an empty package list and finds nothing. Call this once the
+     * permission is granted to pick the extensions up without making the user restart the app.
+     */
+    fun reloadInstalledExtensions() = initExtensions()
+
+    /**
      * Loads and registers the installed extensions.
      */
     private fun initExtensions() {

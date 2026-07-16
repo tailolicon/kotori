@@ -160,7 +160,14 @@ internal object ExtensionLoader {
             }
             .toList()
 
-        if (extPkgs.isEmpty()) return emptyList()
+        if (extPkgs.isEmpty()) {
+            // Every failure below this point logs, so staying quiet here makes "no sources at all"
+            // indistinguishable from a healthy install with nothing to load.
+            logcat(LogPriority.WARN) {
+                "No extensions found among ${installedPkgs.size} installed packages"
+            }
+            return emptyList()
+        }
 
         // Load each extension concurrently and wait for completion
         return runBlocking {

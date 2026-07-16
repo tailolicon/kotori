@@ -12,7 +12,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -82,6 +84,8 @@ import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.updater.AppUpdateChecker
+import eu.kanade.tachiyomi.extension.ExtensionManager
+import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
@@ -92,9 +96,13 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
+import eu.kanade.tachiyomi.util.system.MIUI_GET_INSTALLED_APPS
+import eu.kanade.tachiyomi.util.system.canQueryInstalledPackages
+import eu.kanade.tachiyomi.util.system.definesMiuiPackageListPermission
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
+import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.channels.awaitClose
@@ -105,7 +113,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import eu.kanade.tachiyomi.util.system.toast
 import logcat.LogPriority
 import mihon.core.migration.Migrator
 import mihon.feature.support.SupportUsScreen
@@ -119,6 +126,8 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -260,6 +269,7 @@ class MainActivity : BaseActivity() {
                 HandleOnNewIntent(context = context, navigator = navigator)
 
                 if (!isBenchmarkBuildType) {
+                    RequestMiuiPackageListPermission()
                     CheckForUpdates()
                     ShowOnboarding()
                     ShowDonationCampaign()
@@ -345,6 +355,30 @@ class MainActivity : BaseActivity() {
         LaunchedEffect(Unit) {
             if (!preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
                 navigator.push(OnboardingScreen())
+            }
+        }
+    }
+
+    /**
+     * On MIUI/HyperOS the installed-package list is empty until the user grants Xiaomi's own
+     * permission, which makes every installed extension silently disappear. Extensions are already
+     * loaded by the time we get here, so re-run discovery once it is granted.
+     */
+    @Composable
+    private fun RequestMiuiPackageListPermission() {
+        val context = LocalContext.current
+
+        val requester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (!granted) return@rememberLauncherForActivityResult
+            Injekt.get<ExtensionManager>().reloadInstalledExtensions()
+            Injekt.get<AnimeExtensionManager>().reloadInstalledExtensions()
+        }
+
+        LaunchedEffect(Unit) {
+            if (context.definesMiuiPackageListPermission && !context.canQueryInstalledPackages) {
+                requester.launch(MIUI_GET_INSTALLED_APPS)
             }
         }
     }
