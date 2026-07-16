@@ -5,67 +5,91 @@
 # Kotori
 
 ### Manga, Anime & Novels in one app
-A personal [Mihon](https://github.com/mihonapp/mihon) fork with built-in Anime support (powered by [Aniyomi](https://aniyomi.org)'s mpv player) and an "Aurora Glass" visual redesign, running on Android.
+A single Android library for everything you read and watch — with a real mpv video player, anime sources built into the app, and a glassmorphism redesign throughout.
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-0877d2?labelColor=27303D)](/LICENSE)
-[![Fork of Mihon](https://img.shields.io/badge/fork%20of-mihon-27303D?labelColor=161B22&color=0877d2)](https://github.com/mihonapp/mihon)
+[![Releases](https://img.shields.io/github/v/release/tailolicon/kotori?labelColor=27303D&color=0877d2)](https://github.com/tailolicon/kotori/releases)
 
 *Requires Android 8.0 or higher.*
 
 ## Download
 
-Built privately for personal use — grab the latest APK from this repo's [Releases](https://github.com/tailolicon/kotori/releases) page.
-
-## What's different from Mihon
-
-<div align="left">
-
-* **Three content modes in one library**: Manga, Anime, and Novel, switchable from the top of the library screen.
-* **Full Anime support**, ported from [Aniyomi](https://github.com/aniyomiorg/aniyomi): browse/search anime sources, per-episode watch progress, and playback through Aniyomi's own **mpv** player — subtitles, dubbing/audio tracks, and quality selection all work as in upstream Aniyomi.
-* **Portrait-first anime player**: tapping an episode plays it at the top of the screen with the episode list right below it (thumbnails + watch progress), so switching episodes doesn't require leaving the screen. A single button toggles landscape fullscreen without interrupting playback; track menus open as bottom sheets instead of covering the video.
-* **Built-in anime sources** — compiled directly into the app, no extension install required:
-  * **AnimeHay** and **AnimeVietsub** (Vietnamese-subbed anime sites)
-  * **Muse Việt Nam** and **Ani-One Vietnam** (official, licensed YouTube channels, extracted via [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor); each YouTube *playlist* is treated as one series so episodes stay grouped)
-  * If a site's domain changes, it's fixable in-app: open the source → ⋮ → Settings → paste the new domain, no rebuild needed.
-* **"Aurora Glass" theme**: a redesigned dark theme with glassmorphism cards and purple/pink gradient accents, applied consistently across library, browse, detail, updates, and history screens for both manga and anime.
-* Everything else Mihon already does — see below.
+Grab the latest APK from the [Releases](https://github.com/tailolicon/kotori/releases) page. `arm64-v8a` is the right build for essentially every phone made in the last decade; take the `universal` APK only if you know you need it.
 
 </div>
 
-## Also includes (inherited from Mihon)
+## Features
 
 <div align="left">
 
-* Local reading of content.
-* A configurable reader with multiple viewers, reading directions and other settings.
-* Tracker support: [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [Kitsu](https://kitsu.app/), [MangaUpdates](https://mangaupdates.com), [Shikimori](https://shikimori.one), [Bangumi](https://bgm.tv/) and [Hikka](https://hikka.io/) support.
-* Categories to organize your library.
-* Light and dark themes.
-* Schedule updating your library for new chapters/episodes.
-* Create backups locally to read offline or to your desired cloud service.
+### One library, three kinds of content
+
+Manga, Anime, and Novels live side by side, switchable from the top of the library screen. Each mode swaps the whole tab set — library, browse, updates, history, and detail screens are purpose-built per content type rather than bolted onto a reader.
+
+### Anime, properly
+
+* Playback runs on **mpv**, not a toy player: subtitles, dub/audio track switching, and quality selection all work.
+* **Portrait-first player** — tapping an episode starts it at the top of the screen with the episode list right below (thumbnails + watch progress), so changing episodes never means leaving the screen. One button toggles landscape fullscreen without interrupting playback, and track menus open as bottom sheets instead of covering the video.
+* Per-episode watch progress, episode downloads, and anime trackers.
+
+### Anime sources built into the app
+
+No extension install, no repo to add — these ship compiled into the APK:
+
+| Source | What it is |
+| --- | --- |
+| **Muse Việt Nam** | Official licensed anime on YouTube |
+| **Ani-One Vietnam** | Official licensed anime on YouTube |
+| **AnimeHay** | Vietnamese-subbed anime site |
+| **AnimeVietsub** | Vietnamese-subbed anime site *(experimental — the site sits behind Cloudflare)* |
+
+The YouTube sources are extracted with [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor), and each *playlist* is treated as one series, so episodes stay grouped as a show instead of scattering one-per-entry.
+
+When one of these sites changes domain, you fix it in the app rather than waiting on a rebuild: open the source → ⋮ → Settings → paste the new domain.
+
+### Aurora Glass
+
+A dark theme with glassmorphism cards and purple/pink gradient accents, applied consistently across library, browse, detail, updates, and history — for manga and anime alike, not just the screens that were easy.
+
+### Everything a mature reader needs
+
+* Local reading of content, and a configurable reader with multiple viewers and reading directions.
+* Extension sources for manga and anime, plus categories to organize your library.
+* Trackers: [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [Kitsu](https://kitsu.app/), [MangaUpdates](https://mangaupdates.com), [Shikimori](https://shikimori.one), [Bangumi](https://bgm.tv/), [Hikka](https://hikka.io/).
+* Scheduled library updates for new chapters/episodes, and local backups.
+
+</div>
+
+## Lineage
+
+<div align="left">
+
+Kotori began as a [Mihon](https://github.com/mihonapp/mihon) fork and has since grown well past it — anime is a first-class content type here rather than a separate app, several sources are compiled in, and the UI has been redesigned end to end. It still tracks Mihon for the reader core.
+
+It is an independent, unofficial personal project, and is **not affiliated with or endorsed by** the Mihon or Aniyomi projects. Please don't take Kotori's bugs to them.
+
+### Credits
+
+* [Mihon](https://github.com/mihonapp/mihon) — the reader core Kotori grew out of.
+* [Aniyomi](https://github.com/aniyomiorg/aniyomi) and [mpvKt](https://github.com/abdallahmehiz/mpvKt) — the anime/mpv player foundation the anime support was ported from.
+* [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) — YouTube extraction behind the built-in Muse/Ani-One sources.
+* [Tachiyomi](https://github.com/tachiyomiorg) — the original project both Mihon and Aniyomi descend from.
 
 </div>
 
 ## Contributing
 
-This is a personal fork maintained for my own use, not a general-purpose community project — so there's no Discord, translation project, or contribution pipeline of its own.
+<div align="left">
 
-For anything **not specific to Kotori's changes** (general reader bugs, upstream features), the [Mihon repository](https://github.com/mihonapp/mihon) is the right place. For issues with Kotori's own additions (anime integration, Aurora Glass theme, built-in sources), open an issue on this repo.
+This is a personal project maintained for my own use, not a community distribution — there's no Discord, translation project, or contribution pipeline of its own.
+
+Issues with **Kotori's own additions** (anime integration, Aurora Glass, built-in sources) belong on this repo. Anything upstream — general reader bugs, core features — belongs with [Mihon](https://github.com/mihonapp/mihon).
 
 [Code of conduct](./CODE_OF_CONDUCT.md) · [Contributing guide](./CONTRIBUTING.md) *(inherited from Mihon; still a good read if you want to send a PR)*
 
-### Credits
-
-Kotori builds on the work of:
-
-* [Mihon](https://github.com/mihonapp/mihon) — the reader this fork is based on.
-* [Aniyomi](https://github.com/aniyomiorg/aniyomi) and [mpvKt](https://github.com/abdallahmehiz/mpvKt) — the anime/mpv player foundation this fork's anime support is ported from.
-* [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) — YouTube extraction used by the built-in Muse/Ani-One sources.
-* [Tachiyomi](https://github.com/tachiyomiorg) — the original project both Mihon and Aniyomi descend from.
-
 ### Disclaimer
 
-The developer(s) of this application does not have any affiliation with the content providers available, and this application hosts zero content. Built-in anime sources scrape publicly available pages from third-party sites; behavior and availability of those sites are outside this app's control.
+The developer(s) of this application does not have any affiliation with the content providers available, and this application hosts zero content. The built-in anime sources scrape publicly available pages from third-party sites; the behavior and availability of those sites are outside this app's control.
 
 ### License
 
@@ -86,7 +110,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 </pre>
-
-Kotori is an independent, unofficial personal fork and is not affiliated with or endorsed by the Mihon or Aniyomi projects.
 
 </div>
