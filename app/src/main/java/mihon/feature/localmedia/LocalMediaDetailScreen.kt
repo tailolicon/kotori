@@ -108,7 +108,7 @@ class LocalMediaDetailScreen(
                                                     )
                                                 }
                                                 context.startActivity(
-                                                    NovelReaderActivity.newIntent(
+                                                    NovelReaderActivity.newTextIntent(
                                                         context = context,
                                                         title = title,
                                                         chapterLabel = "Chương ${index + 1}",

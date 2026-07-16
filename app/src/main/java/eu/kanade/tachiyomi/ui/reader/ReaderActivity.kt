@@ -63,6 +63,7 @@ import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -84,6 +85,8 @@ import eu.kanade.tachiyomi.util.system.openInBrowser
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.view.setComposeContent
+import java.io.ByteArrayOutputStream
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -93,19 +96,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
+import mihon.feature.novelreader.NovelReaderActivity
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.io.ByteArrayOutputStream
-import kotlin.time.Duration.Companion.seconds
 
 class ReaderActivity : BaseActivity() {
 
@@ -116,6 +121,13 @@ class ReaderActivity : BaseActivity() {
                 putExtra("chapter", chapterId)
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
+        }
+
+        /** True when [mangaId]'s source serves prose, so the page reader is the wrong destination. */
+        private fun isNovel(mangaId: Long?): Boolean {
+            val id = mangaId ?: return false
+            val manga = runBlocking { Injekt.get<GetManga>().await(id) } ?: return false
+            return Injekt.get<SourceManager>().get(manga.source) is NovelSource
         }
     }
 
@@ -146,8 +158,30 @@ class ReaderActivity : BaseActivity() {
     /**
      * Called when the activity is created. Initializes the presenter and configuration.
      */
+    /**
+     * Novels share the manga stack and so arrive at this reader too, but their chapters are prose.
+     * Redirecting here rather than at each call site keeps every entry point — library, history,
+     * notifications, deep links — routed correctly by construction.
+     *
+     * @return true when the caller should stop setting this activity up.
+     */
+    private fun redirectToNovelReaderIfNeeded(): Boolean {
+        val mangaId = intent.extras?.getLong("manga", -1).takeIf { it != -1L } ?: return false
+        if (!isNovel(mangaId)) return false
+        val chapterId = intent.extras?.getLong("chapter", -1).takeIf { it != -1L }
+        startActivity(NovelReaderActivity.newIntent(this, mangaId, chapterId))
+        finish()
+        return true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         registerSecureActivity(this)
+
+        if (redirectToNovelReaderIfNeeded()) {
+            super.onCreate(savedInstanceState)
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
                 OVERRIDE_TRANSITION_OPEN,

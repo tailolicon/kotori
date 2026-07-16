@@ -32,10 +32,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,11 +110,30 @@ fun NovelReaderScreen(
     title: String,
     chapterLabel: String,
     content: String,
-    progressPercent: Int,
-    progressLabel: String,
+    startPercent: Int,
+    onProgressChanged: (Int) -> Unit,
     preferences: NovelReaderPreferences,
     onNavigateUp: () -> Unit,
 ) {
+    val scrollState = rememberScrollState()
+    var hasRestored by rememberSaveable(content) { mutableStateOf(false) }
+
+    // Restore once the text is laid out, otherwise maxValue is still 0 and the jump is a no-op.
+    LaunchedEffect(content, scrollState.maxValue) {
+        if (content.isNotEmpty() && scrollState.maxValue > 0 && !hasRestored) {
+            hasRestored = true
+            if (startPercent > 0) {
+                scrollState.scrollTo((scrollState.maxValue * startPercent / 100f).toInt())
+            }
+        }
+    }
+
+    val progressPercent by remember {
+        derivedStateOf {
+            if (scrollState.maxValue <= 0) 0 else (scrollState.value * 100 / scrollState.maxValue).coerceIn(0, 100)
+        }
+    }
+    LaunchedEffect(progressPercent) { onProgressChanged(progressPercent) }
     val fontSize by preferences.fontSize.changes().collectAsState(initial = preferences.fontSize.get())
     val font by preferences.fontFamily.changes().collectAsState(initial = preferences.fontFamily.get())
     val theme by preferences.theme.changes().collectAsState(initial = preferences.theme.get())
@@ -133,7 +155,7 @@ fun NovelReaderScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 22.dp),
         ) {
@@ -259,13 +281,7 @@ fun NovelReaderScreen(
                             ),
                     )
                 }
-                Text(
-                    text = progressLabel,
-                    fontFamily = BeVietnamProFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.5.sp,
-                    color = paper.muted,
-                )
+
             }
         }
 
