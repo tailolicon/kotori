@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.source.novel.builtin
 
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
+import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
@@ -17,6 +18,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import tachiyomi.core.common.util.system.logcat
+import java.text.Normalizer
 
 /**
  * Built-in novel source for MeTruyenChu / Nôvel Fever (metruyenchuvn.com).
@@ -54,10 +56,40 @@ class NovelFeverSource : BuiltInNovelSource() {
         return document.toMangasPage().copy(hasNextPage = false)
     }
 
+    override fun getFilterList(): FilterList = FilterList(
+        Filter.Header("Bỏ trống ô tìm kiếm khi lọc theo thể loại"),
+        GenreFilter(),
+    )
+
+    /**
+     * Tapping a genre or author on a novel sends its label here as an ordinary query, and a title
+     * search can only fail at that — "Ngôn Tình" is not in any title. Both have their own pages on
+     * the site, so the label is slugified back into one: genres are a known set, and anything else
+     * that finds nothing by title is tried as an author before giving up.
+     */
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
+        val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.selected()
+        if (genre != null && query.isBlank()) return path("/the-loai/$genre", page)
         if (query.isBlank()) return listing("truyen-hot", page)
+
+        val slug = query.toSlug()
+        if (slug in GENRE_SLUGS) return path("/the-loai/$slug", page)
+
         val url = "$baseUrl/search".toHttpUrl().newBuilder()
             .addQueryParameter("q", query)
+            .addQueryParameter("page", page.toString())
+            .build()
+        val byTitle = client.newCall(GET(url, headers)).awaitSuccess().asJsoup().toMangasPage()
+        if (byTitle.mangas.isNotEmpty() || page > 1) return byTitle
+
+        // Nothing by title: the query may well be an author's name.
+        return runCatching { path("/tac-gia/$slug", page) }
+            .getOrDefault(byTitle)
+            .takeIf { it.mangas.isNotEmpty() } ?: byTitle
+    }
+
+    private suspend fun path(path: String, page: Int): MangasPage {
+        val url = "$baseUrl$path".toHttpUrl().newBuilder()
             .addQueryParameter("page", page.toString())
             .build()
         return client.newCall(GET(url, headers)).awaitSuccess().asJsoup().toMangasPage()
@@ -90,9 +122,10 @@ class NovelFeverSource : BuiltInNovelSource() {
         return MangasPage(entries, hasNext)
     }
 
+    /** Card images are site-relative, so resolve them or Coil is handed a path it can't fetch. */
     private fun Element.imageUrl(): String? =
         listOf("data-src", "data-original", "src")
-            .firstNotNullOfOrNull { attr(it).takeIf(String::isNotBlank) }
+            .firstNotNullOfOrNull { absUrl(it).takeIf(String::isNotBlank) }
 
     // ============================== Details ==============================
 
@@ -107,10 +140,11 @@ class NovelFeverSource : BuiltInNovelSource() {
                 ?: coverFor(novel.url)
             author = document.selectFirst("[itemprop=author]")?.text()?.trim()
                 ?: document.infoAfter("Tác giả")
-            genre = document.select("a[href*=/the-loai/]").joinToString { it.text().trim() }
+            // Only this novel's genres — a page-wide selector sweeps up the site's genre menu too.
+            genre = document.select("li.li--genres a").joinToString { it.text().trim() }
             description = document.selectFirst("[itemprop=description]")?.wholeText()?.trim()
                 ?: document.infoAfter("Giới thiệu")
-            status = when (document.infoAfter("Trạng thái") ?: document.infoAfter("Tình trạng")) {
+            status = when (document.selectFirst("span.label-status")?.text()?.trim()) {
                 "Full", "Hoàn thành" -> SManga.COMPLETED
                 "Đang ra", "Đang cập nhật" -> SManga.ONGOING
                 else -> SManga.UNKNOWN
@@ -203,11 +237,35 @@ class NovelFeverSource : BuiltInNovelSource() {
     private fun coverFor(novelUrl: String): String =
         "$baseUrl/media/book/${novelUrl.trim('/')}.jpg"
 
+    /**
+     * Turns a Vietnamese label into the slug the site uses for it: "Ngôn Tình" -> "ngon-tinh".
+     * Normalising strips the combining accents, but đ/Đ carry no accent to strip and need mapping.
+     */
+    private fun String.toSlug(): String = Normalizer.normalize(this, Normalizer.Form.NFD)
+        .replace(COMBINING_MARKS, "")
+        .replace('đ', 'd')
+        .replace('Đ', 'd')
+        .lowercase()
+        .replace(NON_SLUG_CHARS, "-")
+        .trim('-')
+
+    private class GenreFilter : Filter.Select<String>("Thể loại", GENRE_NAMES) {
+        fun selected(): String? = GENRE_SLUGS_ORDERED.getOrNull(state)?.takeIf { it.isNotEmpty() }
+    }
+
     companion object {
         private const val TITLE_SUFFIX = "đọc online"
+        private val COMBINING_MARKS = Regex("""\p{M}+""")
+        private val NON_SLUG_CHARS = Regex("[^a-z0-9]+")
+
+        // The site's genre pages, as linked from its own nav. Held here so a genre tapped on a
+        // novel can be recognised without a lookup request.
+        private val GENRE_NAMES = arrayOf("Bất kỳ", "Bách Hợp", "Cung Đấu", "Cổ Đại", "Dị Giới", "Dị Năng", "Gia Đấu", "Góc Nhìn Nam", "Hiện Đại", "Huyền Huyễn", "Hệ Thống", "Khoa Huyễn", "Khác", "Kiếm Hiệp", "Light Novel", "Linh Dị", "Lịch Sử", "Mạt Thế", "Ngôn Tình", "Ngược", "Nữ Cường", "Nữ Phụ", "Quan Trường", "Quân Sự", "Sắc", "Sủng", "Teen", "Tiên Hiệp", "Trinh Thám", "Trọng Sinh", "Võng Du", "Xuyên Không", "Xuyên Nhanh", "Đam Mỹ", "Điền Văn", "Đoản Văn", "Đô Thị", "Đông Phương")
+        private val GENRE_SLUGS_ORDERED = listOf("", "bach-hop", "cung-dau", "co-dai", "di-gioi", "di-nang", "gia-dau", "goc-nhin-nam", "hien-dai", "huyen-huyen", "he-thong", "khoa-huyen", "khac", "kiem-hiep", "light-novel", "linh-di", "lich-su", "mat-the", "ngon-tinh", "nguoc", "nu-cuong", "nu-phu", "quan-truong", "quan-su", "sac", "sung", "truyen-teen", "tien-hiep", "trinh-tham", "trong-sinh", "vong-du", "xuyen-khong", "xuyen-nhanh", "dam-my", "dien-van", "doan-van", "do-thi", "dong-phuong")
+        private val GENRE_SLUGS = GENRE_SLUGS_ORDERED.filter { it.isNotEmpty() }.toSet()
         private val CHAPTER_NUMBER_REGEX = Regex("""(?:chương|chuong)\s*(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
         // The chapter list is paged; stop rather than loop forever if the site keeps answering.
-        private const val MAX_CHAPTER_PAGES = 60
+        private const val MAX_CHAPTER_PAGES = 300
         private val BR_REGEX = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
         private val BLANK_RUN_REGEX = Regex("""\n{3,}""")
         private val NON_STORY_PATHS = setOf("/", "/search", "/danh-sach", "/the-loai", "/dang-nhap", "/dang-ky")
