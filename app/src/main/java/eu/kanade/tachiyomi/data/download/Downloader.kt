@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.library.LibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
 import eu.kanade.tachiyomi.network.HttpException
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.UnmeteredSource
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -347,6 +348,15 @@ class Downloader(
         )
         val tmpDir = mangaDir.createDirectory(chapterDirname + TMP_DIR_SUFFIX)!!
 
+        // Novels are prose, not image pages: their chapter is one text file, so they take a
+        // dedicated path instead of the page-download pipeline (which would call the throwing
+        // getPageList).
+        val source = download.source
+        if (source is NovelSource) {
+            downloadNovelChapter(download, source, mangaDir, chapterDirname, tmpDir)
+            return
+        }
+
         try {
             // If the page list already exists, start from the file
             val pageList = download.pages ?: run {
@@ -415,6 +425,43 @@ class Downloader(
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
             // If the page list threw, it will resume here
+            logcat(LogPriority.ERROR, error)
+            download.status = Download.State.ERROR
+            notifier.onError(error.message, download.chapter.name, download.manga.title, download.manga.id)
+        }
+    }
+
+    /**
+     * Downloads a novel chapter's text into [tmpDir] as a single file, then commits the folder the
+     * same way the image path does so the cache and reader recognise it as downloaded.
+     */
+    private suspend fun downloadNovelChapter(
+        download: Download,
+        source: NovelSource,
+        mangaDir: UniFile,
+        chapterDirname: String,
+        tmpDir: UniFile,
+    ) {
+        try {
+            download.status = Download.State.DOWNLOADING
+            logcat(LogPriority.INFO) { "Novel download start: ${download.manga.title} / ${download.chapter.name}" }
+
+            val text = source.getChapterText(download.chapter.toSChapter())
+            if (text.isBlank()) {
+                throw Exception(context.stringResource(MR.strings.page_list_empty_error))
+            }
+
+            val file = tmpDir.createFile(DownloadProvider.NOVEL_TEXT_FILENAME)!!
+            file.openOutputStream().use { it.write(text.toByteArray(Charsets.UTF_8)) }
+
+            tmpDir.renameTo(chapterDirname)
+            cache.addChapter(chapterDirname, mangaDir, download.manga)
+            DiskUtil.createNoMediaFile(tmpDir, context)
+
+            download.status = Download.State.DOWNLOADED
+            logcat(LogPriority.INFO) { "Novel download done: ${text.length} chars -> $chapterDirname" }
+        } catch (error: Throwable) {
+            if (error is CancellationException) throw error
             logcat(LogPriority.ERROR, error)
             download.status = Download.State.ERROR
             notifier.onError(error.message, download.chapter.name, download.manga.title, download.manga.id)

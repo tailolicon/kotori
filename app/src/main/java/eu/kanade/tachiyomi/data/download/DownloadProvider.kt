@@ -234,6 +234,26 @@ class DownloadProvider(
     }
 
     /**
+     * Reads a downloaded novel chapter's text, or null if it isn't downloaded.
+     *
+     * Novels store their whole chapter as one text file rather than a folder of page images, so the
+     * reader retrieves it here instead of going through the image page loader.
+     */
+    fun getSavedNovelText(
+        chapterName: String,
+        chapterScanlator: String?,
+        chapterUrl: String,
+        mangaTitle: String,
+        source: Source,
+    ): String? {
+        val dir = findChapterDir(chapterName, chapterScanlator, chapterUrl, mangaTitle, source) ?: return null
+        val file = dir.findFile(NOVEL_TEXT_FILENAME) ?: return null
+        return runCatching {
+            file.openInputStream().use { it.readBytes().decodeToString() }
+        }.getOrNull()
+    }
+
+    /**
      * Returns valid downloaded chapter directory names.
      *
      * @param chapter the domain chapter object.
@@ -254,5 +274,10 @@ class DownloadProvider(
                 add("$it.cbz")
             }
         }
+    }
+
+    companion object {
+        /** Filename a downloaded novel chapter's text is stored under, inside its chapter folder. */
+        const val NOVEL_TEXT_FILENAME = "content.txt"
     }
 }

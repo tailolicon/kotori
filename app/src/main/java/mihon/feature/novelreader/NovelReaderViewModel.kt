@@ -1,5 +1,6 @@
 package mihon.feature.novelreader
 
+import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.model.SChapter
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,7 @@ class NovelReaderViewModel(
     private val updateChapter: UpdateChapter = Injekt.get(),
     private val upsertHistory: UpsertHistory = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
+    private val downloadProvider: DownloadProvider = Injekt.get(),
 ) {
 
     data class State(
@@ -90,10 +92,14 @@ class NovelReaderViewModel(
         // A source may hand the chapter back as a URL its own page must render; there is no text
         // to fetch in that case.
         val webUrl = source.chapterWebUrl(chapter.toSChapter())
-        val text = if (webUrl != null) {
-            ""
-        } else {
-            try {
+        // A downloaded chapter reads from disk, so it works offline and doesn't re-hit the source.
+        val downloaded = downloadProvider.getSavedNovelText(
+            chapter.name, chapter.scanlator, chapter.url, manga.title, source,
+        )
+        val text = when {
+            webUrl != null -> ""
+            downloaded != null -> downloaded
+            else -> try {
                 source.getChapterText(chapter.toSChapter())
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to load novel chapter ${chapter.url}" }
