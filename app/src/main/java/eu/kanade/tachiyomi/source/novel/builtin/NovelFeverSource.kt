@@ -56,24 +56,25 @@ class NovelFeverSource : BuiltInNovelSource() {
         return document.toMangasPage().copy(hasNextPage = false)
     }
 
+    /**
+     * Genre options must be named exactly as [getNovelDetails] writes them into `genre`: the app
+     * matches a tapped genre against these by name, and a mismatch silently degrades into a title
+     * search — which no genre name will ever match.
+     */
     override fun getFilterList(): FilterList = FilterList(
         Filter.Header("Bỏ trống ô tìm kiếm khi lọc theo thể loại"),
         GenreFilter(),
     )
 
     /**
-     * Tapping a genre or author on a novel sends its label here as an ordinary query, and a title
-     * search can only fail at that — "Ngôn Tình" is not in any title. Both have their own pages on
-     * the site, so the label is slugified back into one: genres are a known set, and anything else
-     * that finds nothing by title is tried as an author before giving up.
+     * Genres arrive as a filter, not a query: the app matches a tapped genre against the names in
+     * [getFilterList] and passes the filter instead. Authors have no such mechanism — the app can
+     * only search their name as text — so a query that finds no title is retried as an author.
      */
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
         val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.selected()
         if (genre != null && query.isBlank()) return path("/the-loai/$genre", page)
         if (query.isBlank()) return listing("truyen-hot", page)
-
-        val slug = query.toSlug()
-        if (slug in GENRE_SLUGS) return path("/the-loai/$slug", page)
 
         val url = "$baseUrl/search".toHttpUrl().newBuilder()
             .addQueryParameter("q", query)
@@ -83,7 +84,7 @@ class NovelFeverSource : BuiltInNovelSource() {
         if (byTitle.mangas.isNotEmpty() || page > 1) return byTitle
 
         // Nothing by title: the query may well be an author's name.
-        return runCatching { path("/tac-gia/$slug", page) }
+        return runCatching { path("/tac-gia/${query.toSlug()}", page) }
             .getOrDefault(byTitle)
             .takeIf { it.mangas.isNotEmpty() } ?: byTitle
     }
@@ -238,7 +239,7 @@ class NovelFeverSource : BuiltInNovelSource() {
         "$baseUrl/media/book/${novelUrl.trim('/')}.jpg"
 
     /**
-     * Turns a Vietnamese label into the slug the site uses for it: "Ngôn Tình" -> "ngon-tinh".
+     * Turns an author's name into the slug their page lives at: "Diệp Phàm" -> "diep-pham".
      * Normalising strips the combining accents, but đ/Đ carry no accent to strip and need mapping.
      */
     private fun String.toSlug(): String = Normalizer.normalize(this, Normalizer.Form.NFD)
