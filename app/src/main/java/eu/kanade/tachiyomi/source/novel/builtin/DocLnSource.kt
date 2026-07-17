@@ -107,6 +107,12 @@ class DocLnSource : BuiltInNovelSource() {
     private fun Element.toSChapter(): SChapter = SChapter.create().apply {
         setUrlWithoutDomain(absUrl("href"))
         name = text().trim()
+        chapter_number = CHAPTER_NUMBER_REGEX.find(name)?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
+    }
+
+    private companion object {
+        private val CHAPTER_NUMBER_REGEX =
+            Regex("""(?:chương|chuong)\s*(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
     }
 
     // ============================== Chapter text ==============================
