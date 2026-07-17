@@ -43,7 +43,16 @@ class NovelFeverSource : BuiltInNovelSource() {
 
     override suspend fun getPopularManga(page: Int): MangasPage = listing("truyen-hot", page)
 
-    override suspend fun getLatestUpdates(page: Int): MangasPage = listing("truyen-moi-cap-nhat", page)
+    /**
+     * The site has no "recently updated" listing — /danh-sach only serves truyen-hot and
+     * truyen-full — but its home page is exactly that list, so read it from there. It isn't paged,
+     * so later pages have nothing to add.
+     */
+    override suspend fun getLatestUpdates(page: Int): MangasPage {
+        if (page > 1) return MangasPage(emptyList(), false)
+        val document = client.newCall(GET("$baseUrl/", headers)).awaitSuccess().asJsoup()
+        return document.toMangasPage().copy(hasNextPage = false)
+    }
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
         if (query.isBlank()) return listing("truyen-hot", page)

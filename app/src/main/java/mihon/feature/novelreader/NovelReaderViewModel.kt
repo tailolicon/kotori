@@ -50,6 +50,8 @@ class NovelReaderViewModel(
         val error: String? = null,
         /** Where to restore the reader to, 0..100. */
         val startPercent: Int = 0,
+        /** Set when the source wants its own page to render the chapter; [content] is then unused. */
+        val webUrl: String? = null,
     )
 
     private val _state = MutableStateFlow(State())
@@ -85,12 +87,19 @@ class NovelReaderViewModel(
             return
         }
 
-        val text = try {
-            source.getChapterText(chapter.toSChapter())
-        } catch (e: Exception) {
-            logcat(LogPriority.ERROR, e) { "Failed to load novel chapter ${chapter.url}" }
-            _state.update { it.copy(isLoading = false, error = "Không tải được nội dung: ${e.message}") }
-            return
+        // A source may hand the chapter back as a URL its own page must render; there is no text
+        // to fetch in that case.
+        val webUrl = source.chapterWebUrl(chapter.toSChapter())
+        val text = if (webUrl != null) {
+            ""
+        } else {
+            try {
+                source.getChapterText(chapter.toSChapter())
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to load novel chapter ${chapter.url}" }
+                _state.update { it.copy(isLoading = false, error = "Không tải được nội dung: ${e.message}") }
+                return
+            }
         }
 
         currentPercent = chapter.lastPageRead.toInt().coerceIn(0, 100)
@@ -103,6 +112,7 @@ class NovelReaderViewModel(
                 content = text,
                 isLoading = false,
                 startPercent = currentPercent,
+                webUrl = webUrl,
             )
         }
     }

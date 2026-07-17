@@ -23,8 +23,23 @@ interface NovelSource : CatalogueSource {
      * Returns plain text, not markup: paragraphs separated by blank lines. Sources are responsible
      * for stripping the site's HTML, ads and navigation chrome, since the reader renders the string
      * verbatim.
+     *
+     * Not called when [chapterWebUrl] returns a URL for the chapter.
      */
     suspend fun getChapterText(chapter: SChapter): String
+
+    /**
+     * URL the chapter should be rendered from by the site itself, or null to use [getChapterText].
+     *
+     * Some sites deliver chapter text only to their own page scripts — docln.net, for instance,
+     * ships it obfuscated and has the page decode it for display. Rather than reimplementing a
+     * scheme a site put up precisely to stop third parties lifting its text, such a source points
+     * here and the reader embeds the real page, which is how the site means the chapter to be read.
+     *
+     * The trade-off is real and deliberate: text served this way cannot be extracted, so it cannot
+     * be downloaded for offline reading or restyled by the reader's own typography settings.
+     */
+    fun chapterWebUrl(chapter: SChapter): String? = null
 
     override suspend fun getPageList(chapter: SChapter): List<Page> =
         throw UnsupportedOperationException("Novel chapters are text; use getChapterText")

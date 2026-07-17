@@ -26,6 +26,8 @@ fun NovelReaderContent(
         state.error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
             Text(text = state.error.orEmpty())
         }
+        // Sources that hand their text to their own page scripts render the chapter themselves.
+        state.webUrl != null -> NovelWebChapterView(url = state.webUrl!!)
         else -> NovelReaderScreen(
             title = state.manga?.title.orEmpty(),
             chapterLabel = state.chapter?.name.orEmpty(),

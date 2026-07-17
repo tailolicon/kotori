@@ -117,18 +117,20 @@ class DocLnSource : BuiltInNovelSource() {
 
     // ============================== Chapter text ==============================
 
-    override suspend fun getChapterText(chapter: SChapter): String {
-        val document = client.newCall(GET(baseUrl + chapter.url, headers)).awaitSuccess().asJsoup()
-        val content = document.selectFirst("#chapter-content")
-            ?: return "Không đọc được nội dung chương."
-        // Drop the site's own notes/ads anchors, keep prose only.
-        content.select("a, script, style, ins, iframe").remove()
-        return content.select("p")
-            .map { it.wholeText().cleanText() }
-            .filter { it.isNotBlank() }
-            .joinToString("\n\n")
-            .ifBlank { content.wholeText().cleanText() }
-    }
+    /**
+     * docln ships chapter prose obfuscated: `#chapter-content` holds an empty placeholder plus a
+     * `#chapter-c-protected` div carrying `data-s="xor_shuffle"`, a key and the ciphertext, next to
+     * a `no-select` class. Its page script decodes that for display. The scheme exists to stop
+     * third parties lifting the text, so the reader embeds the real page and lets the site decode
+     * its own chapter rather than reimplementing the scheme here.
+     *
+     * Consequence, by design: docln chapters cannot be downloaded for offline reading.
+     */
+    override fun chapterWebUrl(chapter: SChapter): String = baseUrl + chapter.url
 
+    override suspend fun getChapterText(chapter: SChapter): String =
+        throw UnsupportedOperationException("docln chapters render through chapterWebUrl")
+
+    /** The site pads text with non-breaking spaces; normalise so descriptions wrap properly. */
     private fun String.cleanText(): String = replace(' ', ' ').trim()
 }
