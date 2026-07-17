@@ -1,7 +1,8 @@
 # Current Plan
 
-1. Inspect release signing/build configuration and preserve the working tree.
-2. Remove the obsolete app-level duplicate, run unit tests, and build the minified release APK set.
-3. Verify version, ABI contents, signing certificate, hashes, and file sizes.
-4. Commit/push the reproducible build fix, tag `v0.20.1-29`, and publish universal/x86_64 APKs.
-5. Read back GitHub Release metadata and perform a final review.
+1. Inspect the working tree and confirm the remaining changes belong to the completed DocLN native illustration feature.
+2. Reuse the successful compile, unit-test, APK build, MuMu, and security-review evidence from the immediately preceding verification loop.
+3. Run final unstaged diff and whitespace checks.
+4. Stage exactly the three remaining task files and review the cached diff.
+5. Commit locally with a descriptive conventional commit message; do not push.
+6. Confirm the resulting commit and clean working tree.

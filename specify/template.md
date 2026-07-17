@@ -1,16 +1,16 @@
-# Functional Specification: Complete v0.20.1-29 APK Release
+# Functional Specification: Commit DocLN Native Reader Delivery
 
 ## Objective
-Publish reproducible installable release APKs after removing the duplicate `FileExtensionsKt` class that blocks R8.
+Create one local Git commit containing the remaining reviewed changes for DocLN native text and illustration rendering.
 
-## Requirements
-- Build the minified `release` variant, not `debug`.
-- Publish the universal APK and MuMu-compatible x86_64 APK to GitHub Release `v0.20.1-29`.
-- Verify package/version, APK signature, checksums, asset states, and exact sizes.
-- Remove the misleading debug APK asset after verified release assets are present.
-- Do not commit Spec-Kit metadata or unrelated workspace changes.
+## Scope
+- Include the native reader block parsing, trusted image URL validation, Coil illustration rendering, and failure placeholder.
+- Include the current Spec-Kit specification and delivery plan.
+- Exclude unrelated files, generated APKs, MuMu evidence, and checkpoint stashes.
+- Do not push.
 
 ## Acceptance Criteria
-- Gradle release build completes successfully.
-- APK Analyzer/signing verification confirms an installable signed release artifact.
-- GitHub Release exposes both universal and x86_64 release APKs with verified metadata.
+- The staged diff contains exactly the intended remaining files.
+- `git diff --check` passes before staging and `git diff --cached --check` passes after staging.
+- The commit succeeds with a descriptive conventional commit message.
+- The working tree is clean after the commit.

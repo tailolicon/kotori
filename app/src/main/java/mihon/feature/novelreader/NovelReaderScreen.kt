@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -45,12 +46,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
@@ -59,6 +63,17 @@ import eu.kanade.presentation.theme.kotori.UnboundedFamily
 import mihon.feature.novelreader.NovelReaderPreferences.NovelFont
 import mihon.feature.novelreader.NovelReaderPreferences.NovelLineSpacing
 import mihon.feature.novelreader.NovelReaderPreferences.NovelTheme
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+
+/**
+ * Marks a line of a chapter's text as an inline illustration rather than prose: the sentinel is
+ * immediately followed by the image's absolute URL.
+ *
+ * `NovelSource.getChapterText` returns one String, so a source with pictures encodes them into that
+ * String; this private-use code point cannot collide with real prose. Sources declare the same code
+ * point themselves rather than importing it from this feature package - see `DocLnSource`.
+ */
+private const val NOVEL_IMAGE_SENTINEL: String = "\uE000"
 
 data class NovelPaperTheme(
     val background: Color,
@@ -66,6 +81,52 @@ data class NovelPaperTheme(
     val accent: Color,
     val muted: Color,
 )
+
+/**
+ * Hosts an illustration may be fetched from, mirroring `DocLnSource`'s own list. The two are
+ * deliberately independent: a source decides what to emit, but the reader is what actually issues
+ * the request, so it re-checks rather than trusting chapter text it did not produce.
+ */
+private val NOVEL_IMAGE_HOSTS = listOf("docln.net", "blogspot.com", "googleusercontent.com")
+
+/**
+ * True for HTTPS URLs served by a [NOVEL_IMAGE_HOSTS] operator.
+ *
+ * Matching is done on the parsed host, never on the raw string, so lookalikes like
+ * `evilblogspot.com` are rejected where a suffix test would admit them. Anything unparseable is
+ * untrusted, which keeps the failure closed.
+ */
+private fun String.isTrustedNovelImageUrl(): Boolean {
+    val url = toHttpUrlOrNull() ?: return false
+    return url.scheme == "https" &&
+        NOVEL_IMAGE_HOSTS.any { url.host == it || url.host.endsWith(".$it") }
+}
+
+/** One laid-out unit of a chapter: either a paragraph of prose or an illustration. */
+private sealed interface NovelBlock {
+    data class Prose(val text: String) : NovelBlock
+    data class Illustration(val url: String) : NovelBlock
+}
+
+/**
+ * Splits chapter text into blocks.
+ *
+ * Chapter text is author-controlled, so this is the last gate before an illustration URL becomes a
+ * network request: a sentinel line is kept only if it carries a trusted HTTPS image URL. Blank,
+ * malformed and untrusted lines are dropped rather than shown, which also stops the sentinel itself
+ * from leaking into the prose.
+ */
+private fun String.toNovelBlocks(): List<NovelBlock> = split("\n").mapNotNull { line ->
+    val trimmed = line.trim()
+    when {
+        trimmed.isEmpty() -> null
+        trimmed.startsWith(NOVEL_IMAGE_SENTINEL) ->
+            trimmed.removePrefix(NOVEL_IMAGE_SENTINEL).trim()
+                .takeIf(String::isTrustedNovelImageUrl)
+                ?.let(NovelBlock::Illustration)
+        else -> NovelBlock.Prose(trimmed)
+    }
+}
 
 fun NovelTheme.paper(): NovelPaperTheme = when (this) {
     NovelTheme.WHITE -> NovelPaperTheme(
@@ -175,6 +236,7 @@ fun NovelReaderScreen(
                 lineHeightMultiplier = spacing.multiplier,
                 ink = paper.ink,
                 accent = paper.accent,
+                muted = paper.muted,
             )
             Box(modifier = Modifier.height(90.dp))
         }
@@ -312,40 +374,90 @@ private fun NovelBody(
     lineHeightMultiplier: Float,
     ink: Color,
     accent: Color,
+    muted: Color,
 ) {
-    val paragraphs = remember(content) {
-        content.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-    }
-    paragraphs.forEachIndexed { index, paragraph ->
-        if (index == 0 && paragraph.isNotEmpty()) {
-            // Teal drop cap on the opening paragraph
-            Row(modifier = Modifier.padding(top = 14.dp)) {
+    val blocks = remember(content) { content.toNovelBlocks() }
+    // A chapter can open on an illustration, so the drop cap follows the first prose block rather
+    // than the first block; an illustration-only chapter simply never draws one.
+    val dropCapIndex = remember(blocks) { blocks.indexOfFirst { it is NovelBlock.Prose } }
+    blocks.forEachIndexed { index, block ->
+        when (block) {
+            is NovelBlock.Illustration -> NovelIllustration(url = block.url, muted = muted)
+            is NovelBlock.Prose -> if (index == dropCapIndex) {
+                // Teal drop cap on the opening paragraph
+                Row(modifier = Modifier.padding(top = 14.dp)) {
+                    Text(
+                        text = block.text.first().uppercase(),
+                        fontFamily = UnboundedFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 44.sp,
+                        color = accent,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    Text(
+                        text = block.text.drop(1),
+                        fontFamily = fontFamily,
+                        fontSize = fontSize.sp,
+                        lineHeight = (fontSize * lineHeightMultiplier).sp,
+                        color = ink,
+                    )
+                }
+            } else {
                 Text(
-                    text = paragraph.first().uppercase(),
-                    fontFamily = UnboundedFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 44.sp,
-                    color = accent,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    text = paragraph.drop(1),
+                    text = block.text,
                     fontFamily = fontFamily,
                     fontSize = fontSize.sp,
                     lineHeight = (fontSize * lineHeightMultiplier).sp,
                     color = ink,
+                    modifier = Modifier.padding(top = 12.dp),
                 )
             }
-        } else {
+        }
+    }
+}
+
+/**
+ * Inline illustration, sized to the column width with its aspect ratio kept. A load failure is
+ * non-fatal: the chapter keeps rendering and only this block degrades to a compact placeholder.
+ */
+@Composable
+private fun NovelIllustration(url: String, muted: Color) {
+    var failed by remember(url) { mutableStateOf(false) }
+    if (failed) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(muted.copy(alpha = 0.12f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.BrokenImage,
+                contentDescription = null,
+                tint = muted,
+                modifier = Modifier.size(16.dp),
+            )
             Text(
-                text = paragraph,
-                fontFamily = fontFamily,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize * lineHeightMultiplier).sp,
-                color = ink,
-                modifier = Modifier.padding(top = 12.dp),
+                text = "Ảnh không tải được",
+                fontFamily = BeVietnamProFamily,
+                fontSize = 11.sp,
+                color = muted,
             )
         }
+    } else {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            onState = { state -> if (state is AsyncImagePainter.State.Error) failed = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp)
+                .clip(RoundedCornerShape(6.dp)),
+        )
     }
 }
 
