@@ -74,6 +74,7 @@ class DocLnSource : BuiltInNovelSource() {
     override val baseUrl = "https://docln.net"
     override val supportsLatest = true
     override val iconUrl = "https://docln.net/favicon.ico"
+    override val loginUrl = "https://docln.net/login"
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .set("User-Agent", DESKTOP_UA)

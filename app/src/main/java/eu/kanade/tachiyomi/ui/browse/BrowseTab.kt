@@ -96,8 +96,24 @@ data object BrowseTab : Tab {
             }
             return
         }
-        // Novel mode shares this screen: novels run on the manga stack, and GetEnabledSources
-        // filters each tab down to its own sources.
+        if (activeMode == MediaType.NOVEL) {
+            // Novels are all built-in sources — there is no installable-novel-extension ecosystem —
+            // so Browse shows only Sources, not the manga Extensions/Migrate tabs (which would list
+            // manga extensions since they share this screen).
+            val novelTabs = listOf(sourcesTab())
+            val novelState = rememberPagerState { novelTabs.size }
+            TabbedScreen(
+                titleRes = MR.strings.browse,
+                tabs = novelTabs,
+                state = novelState,
+            )
+            LaunchedEffect(Unit) {
+                (context as? MainActivity)?.ready = true
+            }
+            return
+        }
+
+        // Manga mode: full browse (sources, extensions, migrate).
 
         // Hoisted for extensions tab's search bar
         val extensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }

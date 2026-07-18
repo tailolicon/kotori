@@ -31,6 +31,7 @@ class WattpadSource : BuiltInNovelSource() {
     override val baseUrl = "https://www.wattpad.com"
     override val supportsLatest = true
     override val iconUrl = "https://www.google.com/s2/favicons?sz=128&domain=wattpad.com"
+    override val loginUrl = "https://www.wattpad.com/login"
 
     private val json = Json { ignoreUnknownKeys = true }
 
