@@ -292,7 +292,7 @@ fun NovelReaderScreen(
                     tint = paper.ink,
                     modifier = Modifier
                         .size(22.dp)
-                        .clickable { settingsVisible = true },
+                        .clickable { settingsVisible = !settingsVisible },
                 )
             }
         }

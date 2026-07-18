@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.source.novel.builtin.DocLnSource
 import eu.kanade.tachiyomi.source.novel.builtin.NovelFeverSource
+import eu.kanade.tachiyomi.source.novel.builtin.WattpadSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +51,9 @@ class AndroidSourceManager(
      * and history — so they register here rather than in a parallel manager of their own; the
      * Novel tab filters them back out by [eu.kanade.tachiyomi.source.NovelSource].
      */
-    private val builtInNovelSources: List<Source> by lazy { listOf(DocLnSource(), NovelFeverSource()) }
+    private val builtInNovelSources: List<Source> by lazy {
+        listOf(DocLnSource(), NovelFeverSource(), WattpadSource())
+    }
 
     init {
         scope.launch {
