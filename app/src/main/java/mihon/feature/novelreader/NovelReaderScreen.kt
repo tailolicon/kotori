@@ -1,5 +1,6 @@
 package mihon.feature.novelreader
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,8 +35,8 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,15 +57,18 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.LiterataFamily
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import eu.kanade.tachiyomi.source.novel.builtin.DocLnImagePolicy
 import mihon.feature.novelreader.NovelReaderPreferences.NovelFont
 import mihon.feature.novelreader.NovelReaderPreferences.NovelLineSpacing
 import mihon.feature.novelreader.NovelReaderPreferences.NovelTheme
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * Marks a line of a chapter's text as an inline illustration rather than prose: the sentinel is
@@ -81,26 +86,6 @@ data class NovelPaperTheme(
     val accent: Color,
     val muted: Color,
 )
-
-/**
- * Hosts an illustration may be fetched from, mirroring `DocLnSource`'s own list. The two are
- * deliberately independent: a source decides what to emit, but the reader is what actually issues
- * the request, so it re-checks rather than trusting chapter text it did not produce.
- */
-private val NOVEL_IMAGE_HOSTS = listOf("docln.net", "blogspot.com", "googleusercontent.com")
-
-/**
- * True for HTTPS URLs served by a [NOVEL_IMAGE_HOSTS] operator.
- *
- * Matching is done on the parsed host, never on the raw string, so lookalikes like
- * `evilblogspot.com` are rejected where a suffix test would admit them. Anything unparseable is
- * untrusted, which keeps the failure closed.
- */
-private fun String.isTrustedNovelImageUrl(): Boolean {
-    val url = toHttpUrlOrNull() ?: return false
-    return url.scheme == "https" &&
-        NOVEL_IMAGE_HOSTS.any { url.host == it || url.host.endsWith(".$it") }
-}
 
 /** One laid-out unit of a chapter: either a paragraph of prose or an illustration. */
 private sealed interface NovelBlock {
@@ -122,7 +107,7 @@ private fun String.toNovelBlocks(): List<NovelBlock> = split("\n").mapNotNull { 
         trimmed.isEmpty() -> null
         trimmed.startsWith(NOVEL_IMAGE_SENTINEL) ->
             trimmed.removePrefix(NOVEL_IMAGE_SENTINEL).trim()
-                .takeIf(String::isTrustedNovelImageUrl)
+                .takeIf(DocLnImagePolicy::isTrusted)
                 ?.let(NovelBlock::Illustration)
         else -> NovelBlock.Prose(trimmed)
     }
@@ -211,7 +196,11 @@ fun NovelReaderScreen(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-            ) { chromeVisible = !chromeVisible },
+            ) {
+                // The settings sheet consumes its own taps, so any tap that reaches here is outside
+                // it — close the sheet first, otherwise toggle the reader chrome.
+                if (settingsVisible) settingsVisible = false else chromeVisible = !chromeVisible
+            },
     ) {
         Column(
             modifier = Modifier
@@ -343,7 +332,6 @@ fun NovelReaderScreen(
                             ),
                     )
                 }
-
             }
         }
 
@@ -423,6 +411,8 @@ private fun NovelBody(
 @Composable
 private fun NovelIllustration(url: String, muted: Color) {
     var failed by remember(url) { mutableStateOf(false) }
+    val context = LocalContext.current
+    val request = remember(context, url) { novelImageRequest(context, url) }
     if (failed) {
         Row(
             modifier = Modifier
@@ -449,7 +439,7 @@ private fun NovelIllustration(url: String, muted: Color) {
         }
     } else {
         AsyncImage(
-            model = url,
+            model = request,
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
             onState = { state -> if (state is AsyncImagePainter.State.Error) failed = true },
@@ -460,6 +450,20 @@ private fun NovelIllustration(url: String, muted: Color) {
         )
     }
 }
+
+private val DOC_LN_REFERER_HEADERS = NetworkHeaders.Builder()
+    .set("Referer", DocLnImagePolicy.REFERER)
+    .build()
+
+internal fun novelImageRequest(context: Context, url: String): ImageRequest =
+    ImageRequest.Builder(context)
+        .data(url)
+        .apply {
+            if (DocLnImagePolicy.requiresReferer(url)) {
+                httpHeaders(DOC_LN_REFERER_HEADERS)
+            }
+        }
+        .build()
 
 @Composable
 private fun NovelReaderSettingsSheet(

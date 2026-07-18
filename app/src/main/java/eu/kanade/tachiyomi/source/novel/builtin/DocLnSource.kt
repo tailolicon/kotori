@@ -21,6 +21,47 @@ import org.jsoup.nodes.Element
 import java.util.Base64
 
 /**
+ * Single trust boundary for DocLN illustration URLs.
+ *
+ * Chapter HTML is author-controlled, so only HTTPS URLs on observed image operators are allowed.
+ * Multi-tenant services stay pinned to the exact host DocLN used; only operators whose numbered
+ * subdomains are part of their delivery scheme allow subdomains.
+ */
+internal object DocLnImagePolicy {
+    const val REFERER = "https://docln.net/"
+
+    private val SUBDOMAIN_HOSTS = setOf(
+        "docln.net",
+        "blogspot.com",
+        "googleusercontent.com",
+        "hako.vip",
+    )
+    private val EXACT_HOSTS = setOf(
+        "i.ibb.co",
+        "i.postimg.cc",
+        "cdn.phototourl.com",
+        "headcanontl.wordpress.com",
+        "img.wattpad.com",
+        "images2.imgbox.com",
+    )
+
+    fun isTrusted(url: String): Boolean = url.toHttpUrlOrNull()?.let(::isTrusted) == true
+
+    fun isTrusted(url: HttpUrl): Boolean =
+        url.scheme == "https" &&
+            (
+                url.host in EXACT_HOSTS ||
+                    SUBDOMAIN_HOSTS.any { url.host == it || url.host.endsWith(".$it") }
+                )
+
+    fun requiresReferer(url: String): Boolean {
+        val parsed = url.toHttpUrlOrNull() ?: return false
+        return parsed.scheme == "https" &&
+            (parsed.host == "hako.vip" || parsed.host.endsWith(".hako.vip"))
+    }
+}
+
+/**
  * Built-in novel source for docln.net (Cổng Light Novel / Hako).
  *
  * Plain server-rendered HTML — no login is needed for reading, and chapter text sits in
@@ -161,16 +202,6 @@ class DocLnSource : BuiltInNovelSource() {
          */
         private val IMAGE_URL_ATTRS = listOf("data-src", "data-original", "data-lazy-src", "src")
 
-        /**
-         * Hosts an illustration may be fetched from: DocLN itself, plus the image hosts its real
-         * chapters use (`c6764-minh-hoa` serves all 19 pictures from `*.bp.blogspot.com`).
-         *
-         * Chapter HTML is author-controlled, so an unrestricted URL would let whoever uploads a
-         * chapter aim the reader at any host the device can reach — loopback, LAN, or cloud
-         * link-local metadata. Restricting it to these operators also bounds redirects, since only
-         * they can issue one from an allowed origin.
-         */
-        private val IMAGE_HOSTS = listOf("docln.net", "blogspot.com", "googleusercontent.com")
     }
 
     // ============================== Chapter text ==============================
@@ -254,20 +285,8 @@ class DocLnSource : BuiltInNovelSource() {
     private fun Element.imageUrl(): String? = IMAGE_URL_ATTRS
         .asSequence()
         .mapNotNull { absUrl(it).toHttpUrlOrNull() }
-        .firstOrNull { it.isTrustedImageHost() }
+        .firstOrNull(DocLnImagePolicy::isTrusted)
         ?.toString()
-
-    /**
-     * True for HTTPS URLs served by an [IMAGE_HOSTS] operator.
-     *
-     * Matching is done on the parsed [HttpUrl.host], never on the raw string: a suffix test over the
-     * whole URL would accept `https://evilblogspot.com` and `https://evil.com/?x=blogspot.com`
-     * alike. Requiring either an exact host or a dot-prefixed parent keeps subdomains such as
-     * `1.bp.blogspot.com` working while rejecting those lookalikes. HttpUrl also punycodes IDNs, so
-     * a Unicode homograph is compared in its ASCII form rather than its deceptive one.
-     */
-    private fun HttpUrl.isTrustedImageHost(): Boolean =
-        scheme == "https" && IMAGE_HOSTS.any { host == it || host.endsWith(".$it") }
 
     /** The site pads text with non-breaking spaces; normalise so descriptions wrap properly. */
     private fun String.cleanText(): String = replace(' ', ' ').trim()
