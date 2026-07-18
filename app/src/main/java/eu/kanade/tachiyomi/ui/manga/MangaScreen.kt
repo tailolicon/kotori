@@ -362,17 +362,20 @@ class MangaScreen(
      * @param genreName the search genre to the parent controller
      */
     private suspend fun performGenreSearch(navigator: Navigator, genreName: String, source: Source) {
-        if (navigator.size < 2) {
+        if (source is HttpSource) {
+            val previousController = navigator.items.getOrNull(navigator.size - 2)
+            if (previousController is BrowseSourceScreen) {
+                navigator.pop()
+                previousController.searchGenre(genreName)
+            } else {
+                val browseSourceScreen = BrowseSourceScreen(source.id, null)
+                navigator.replace(browseSourceScreen)
+                browseSourceScreen.searchGenre(genreName)
+            }
             return
         }
 
-        val previousController = navigator.items[navigator.size - 2]
-        if (previousController is BrowseSourceScreen && source is HttpSource) {
-            navigator.pop()
-            previousController.searchGenre(genreName)
-        } else {
-            performSearch(navigator, genreName, global = false)
-        }
+        performSearch(navigator, genreName, global = false)
     }
 
     /**

@@ -6,8 +6,11 @@ import androidx.compose.runtime.produceState
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.ExtensionManager
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.Source
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -26,6 +29,7 @@ import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.concurrent.Executors
@@ -38,6 +42,7 @@ abstract class SearchScreenModel(
     private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
     private val preferences: SourcePreferences = Injekt.get(),
+    private val uiPreferences: UiPreferences = Injekt.get(),
 ) : StateScreenModel<SearchScreenModel.State>(initialState) {
 
     private val coroutineDispatcher = Executors.newFixedThreadPool(5).asCoroutineDispatcher()
@@ -80,7 +85,9 @@ abstract class SearchScreenModel(
     }
 
     open fun getEnabledSources(): List<Source> {
+        val isNovelMode = uiPreferences.activeMediaMode.get() == MediaType.NOVEL
         return sourceManager.getAll()
+            .filter { (it is NovelSource) == isNovelMode || it.isLocal() }
             .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(

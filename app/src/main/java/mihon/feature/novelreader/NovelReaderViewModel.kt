@@ -49,6 +49,8 @@ class NovelReaderViewModel(
         val chapters: List<Chapter> = emptyList(),
         val content: String = "",
         val isLoading: Boolean = true,
+        /** Adjacent chapter is loading while the current chapter remains visible. */
+        val isChangingChapter: Boolean = false,
         val error: String? = null,
         /** Where to restore the reader to, 0..100. */
         val startPercent: Int = 0,
@@ -68,24 +70,41 @@ class NovelReaderViewModel(
     }
 
     private suspend fun load(chapterId: Long?) {
-        _state.update { it.copy(isLoading = true, error = null) }
+        val keepCurrentChapter = _state.value.chapter != null
+        _state.update {
+            it.copy(
+                isLoading = !keepCurrentChapter,
+                isChangingChapter = keepCurrentChapter,
+                error = null,
+            )
+        }
+
+        fun fail(message: String) {
+            _state.update {
+                if (keepCurrentChapter) {
+                    it.copy(isChangingChapter = false)
+                } else {
+                    it.copy(isLoading = false, error = message)
+                }
+            }
+        }
 
         val manga = getManga.await(mangaId)
         if (manga == null) {
-            _state.update { it.copy(isLoading = false, error = "Không tìm thấy truyện.") }
+            fail("Không tìm thấy truyện.")
             return
         }
         val chapters = getChaptersByMangaId.await(mangaId)
         val chapter = chapters.firstOrNull { it.id == chapterId }
             ?: chapters.lastOrNull()
         if (chapter == null) {
-            _state.update { it.copy(isLoading = false, error = "Truyện chưa có chương nào.") }
+            fail("Truyện chưa có chương nào.")
             return
         }
 
         val source = sourceManager.get(manga.source) as? NovelSource
         if (source == null) {
-            _state.update { it.copy(isLoading = false, error = "Nguồn truyện không khả dụng.") }
+            fail("Nguồn truyện không khả dụng.")
             return
         }
 
@@ -94,7 +113,11 @@ class NovelReaderViewModel(
         val webUrl = source.chapterWebUrl(chapter.toSChapter())
         // A downloaded chapter reads from disk, so it works offline and doesn't re-hit the source.
         val downloaded = downloadProvider.getSavedNovelText(
-            chapter.name, chapter.scanlator, chapter.url, manga.title, source,
+            chapter.name,
+            chapter.scanlator,
+            chapter.url,
+            manga.title,
+            source,
         )
         val text = when {
             webUrl != null -> ""
@@ -103,7 +126,7 @@ class NovelReaderViewModel(
                 source.getChapterText(chapter.toSChapter())
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to load novel chapter ${chapter.url}" }
-                _state.update { it.copy(isLoading = false, error = "Không tải được nội dung: ${e.message}") }
+                fail("Không tải được nội dung: ${e.message}")
                 return
             }
         }
@@ -117,6 +140,7 @@ class NovelReaderViewModel(
                 chapters = chapters,
                 content = text,
                 isLoading = false,
+                isChangingChapter = false,
                 startPercent = currentPercent,
                 webUrl = webUrl,
             )
@@ -129,8 +153,43 @@ class NovelReaderViewModel(
     }
 
     fun loadChapter(chapterId: Long) {
+        val state = _state.value
+        if (state.isChangingChapter || state.chapter?.id == chapterId) return
+        _state.update { it.copy(isChangingChapter = true, error = null) }
         flushProgress()
         scope.launchIO { load(chapterId) }
+    }
+
+    fun toggleBookmark() {
+        val chapter = _state.value.chapter ?: return
+        val bookmarked = !chapter.bookmark
+        _state.update { state ->
+            state.copy(
+                chapter = state.chapter?.copy(bookmark = bookmarked),
+                chapters = state.chapters.map {
+                    if (it.id == chapter.id) it.copy(bookmark = bookmarked) else it
+                },
+            )
+        }
+        scope.launch {
+            try {
+                updateChapter.await(ChapterUpdate(id = chapter.id, bookmark = bookmarked))
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Failed to update novel chapter bookmark" }
+                _state.update { state ->
+                    if (state.chapter?.id == chapter.id && state.chapter.bookmark == bookmarked) {
+                        state.copy(
+                            chapter = state.chapter.copy(bookmark = chapter.bookmark),
+                            chapters = state.chapters.map {
+                                if (it.id == chapter.id) it.copy(bookmark = chapter.bookmark) else it
+                            },
+                        )
+                    } else {
+                        state
+                    }
+                }
+            }
+        }
     }
 
     /** Persists the current position. Safe to call repeatedly. */

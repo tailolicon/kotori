@@ -20,6 +20,9 @@ class NovelReaderPreferences(
     val lineSpacing: Preference<NovelLineSpacing> =
         preferenceStore.getEnum("novel_line_spacing", NovelLineSpacing.NORMAL)
 
+    val readingMode: Preference<NovelReadingMode> =
+        preferenceStore.getEnum("novel_reading_mode", NovelReadingMode.SCROLL)
+
     enum class NovelFont(val label: String) {
         LITERATA("Literata"),
         NOTO_SERIF("Noto Serif"),
@@ -28,9 +31,18 @@ class NovelReaderPreferences(
 
     enum class NovelTheme(val label: String) {
         WHITE("Trắng"),
+        PINK("Hồng phấn"),
+        CREAM("Kem"),
         SEPIA("Giấy cũ"),
+        KHAKI("Kaki"),
+        ROSE("Hồng đất"),
         DARK("Tối"),
         BLACK("Đen"),
+    }
+
+    enum class NovelReadingMode(val label: String) {
+        PAGED("Lật trang"),
+        SCROLL("Cuộn dọc"),
     }
 
     enum class NovelLineSpacing(val multiplier: Float, val label: String) {

@@ -115,88 +115,90 @@ data class BrowseSourceScreen(
         }
 
         AuroraBackground {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                Column(
-                    modifier = Modifier
-                        .pointerInput(Unit) {},
-                ) {
-                    BrowseSourceToolbar(
-                        searchQuery = state.toolbarQuery,
-                        onSearchQueryChange = screenModel::setToolbarQuery,
-                        source = screenModel.source,
-                        displayMode = screenModel.displayMode,
-                        onDisplayModeChange = { screenModel.displayMode = it },
-                        navigateUp = navigateUp,
-                        onWebViewClick = onWebViewClick,
-                        onHelpClick = onHelpClick,
-                        onSettingsClick = { navigator.push(SourcePreferencesScreen(sourceId)) },
-                        onSearch = screenModel::search,
-                    )
-
-                    Row(
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    Column(
                         modifier = Modifier
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 18.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                            .pointerInput(Unit) {},
                     ) {
-                        KotoriChip(
-                            text = "🔥 " + stringResource(MR.strings.popular),
-                            selected = state.listing == Listing.Popular,
-                            onClick = {
-                                screenModel.resetFilters()
-                                screenModel.setListing(Listing.Popular)
-                            },
+                        BrowseSourceToolbar(
+                            searchQuery = state.toolbarQuery,
+                            onSearchQueryChange = screenModel::setToolbarQuery,
+                            source = screenModel.source,
+                            displayMode = screenModel.displayMode,
+                            onDisplayModeChange = { screenModel.displayMode = it },
+                            navigateUp = navigateUp,
+                            onWebViewClick = onWebViewClick,
+                            onHelpClick = onHelpClick,
+                            onSettingsClick = { navigator.push(SourcePreferencesScreen(sourceId)) },
+                            onSearch = screenModel::search,
                         )
-                        if (screenModel.source.supportsLatest) {
+
+                        Row(
+                            modifier = Modifier
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 18.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                        ) {
                             KotoriChip(
-                                text = stringResource(MR.strings.latest),
-                                selected = state.listing == Listing.Latest,
+                                text = "🔥 " + stringResource(MR.strings.popular),
+                                selected = state.listing == Listing.Popular,
                                 onClick = {
                                     screenModel.resetFilters()
-                                    screenModel.setListing(Listing.Latest)
+                                    screenModel.setListing(Listing.Popular)
                                 },
                             )
+                            if (screenModel.source.supportsLatest) {
+                                KotoriChip(
+                                    text = stringResource(MR.strings.latest),
+                                    selected = state.listing == Listing.Latest,
+                                    onClick = {
+                                        screenModel.resetFilters()
+                                        screenModel.setListing(Listing.Latest)
+                                    },
+                                )
+                            }
+                            if (state.filters.isNotEmpty()) {
+                                KotoriChip(
+                                    text = stringResource(MR.strings.action_filter),
+                                    selected = state.listing is Listing.Search,
+                                    onClick = screenModel::openFilterSheet,
+                                )
+                            }
                         }
-                        if (state.filters.isNotEmpty()) {
-                            KotoriChip(
-                                text = stringResource(MR.strings.action_filter),
-                                selected = state.listing is Listing.Search,
-                                onClick = screenModel::openFilterSheet,
-                            )
-                        }
-                    }
-                }
-            },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        ) { paddingValues ->
-            BrowseSourceContent(
-                source = screenModel.source,
-                mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems(),
-                columns = screenModel.getColumnsPreference(LocalConfiguration.current.orientation),
-                displayMode = screenModel.displayMode,
-                snackbarHostState = snackbarHostState,
-                contentPadding = paddingValues,
-                onWebViewClick = onWebViewClick,
-                onHelpClick = { uriHandler.openUri(Constants.URL_HELP) },
-                onLocalSourceHelpClick = onHelpClick,
-                onMangaClick = { navigator.push((MangaScreen(it.id, true))) },
-                onMangaLongClick = { manga ->
-                    scope.launchIO {
-                        val duplicates = screenModel.getDuplicateLibraryManga(manga)
-                        when {
-                            manga.favorite -> screenModel.setDialog(BrowseSourceScreenModel.Dialog.RemoveManga(manga))
-                            duplicates.isNotEmpty() -> screenModel.setDialog(
-                                BrowseSourceScreenModel.Dialog.AddDuplicateManga(manga, duplicates),
-                            )
-                            else -> screenModel.addFavorite(manga)
-                        }
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
                 },
-            )
-        }
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            ) { paddingValues ->
+                BrowseSourceContent(
+                    source = screenModel.source,
+                    mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems(),
+                    columns = screenModel.getColumnsPreference(LocalConfiguration.current.orientation),
+                    displayMode = screenModel.displayMode,
+                    snackbarHostState = snackbarHostState,
+                    contentPadding = paddingValues,
+                    onWebViewClick = onWebViewClick,
+                    onHelpClick = { uriHandler.openUri(Constants.URL_HELP) },
+                    onLocalSourceHelpClick = onHelpClick,
+                    onMangaClick = { navigator.push((MangaScreen(it.id, true))) },
+                    onMangaLongClick = { manga ->
+                        scope.launchIO {
+                            val duplicates = screenModel.getDuplicateLibraryManga(manga)
+                            when {
+                                manga.favorite -> screenModel.setDialog(
+                                    BrowseSourceScreenModel.Dialog.RemoveManga(manga),
+                                )
+                                duplicates.isNotEmpty() -> screenModel.setDialog(
+                                    BrowseSourceScreenModel.Dialog.AddDuplicateManga(manga, duplicates),
+                                )
+                                else -> screenModel.addFavorite(manga)
+                            }
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    },
+                )
+            }
         }
 
         val onDismissRequest = { screenModel.setDialog(null) }
@@ -267,7 +269,9 @@ data class BrowseSourceScreen(
     suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
 
     companion object {
-        private val queryEvent = Channel<SearchType>()
+        // A genre tap can replace the detail screen before this screen starts collecting. Buffer
+        // the navigation event so cancellation of the old screen cannot silently drop the filter.
+        private val queryEvent = Channel<SearchType>(Channel.BUFFERED)
     }
 
     sealed class SearchType(val txt: String) {
