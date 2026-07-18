@@ -18,6 +18,17 @@
 -keep,allowoptimization class uy.kohesive.injekt.** { public protected *; }
 -keep,allowoptimization class com.squareup.zstd.** { public protected *; }
 
+# libplayer.so invokes these callbacks by their exact JNI names. R8 cannot see
+# native-to-Java calls and otherwise removes them from minified release builds.
+-keep class is.xyz.mpv.MPVLib { *; }
+-keep class is.xyz.mpv.MPVLib$* { *; }
+
+# NewPipe's protobuf-javalite models resolve their generated fields by name.
+# Preserve those fields so YouTube playlist metadata survives R8 shrinking.
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+
 # From extensions-lib
 -keep,allowoptimization class eu.kanade.tachiyomi.network.interceptor.RateLimitInterceptorKt { public protected *; }
 -keep,allowoptimization class eu.kanade.tachiyomi.network.interceptor.SpecificHostRateLimitInterceptorKt { public protected *; }
