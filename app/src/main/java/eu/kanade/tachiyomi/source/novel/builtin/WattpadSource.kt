@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.novel.NovelChapterHtml
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -136,9 +137,18 @@ class WattpadSource : BuiltInNovelSource() {
 
     // ============================== Chapter text ==============================
 
+    /**
+     * Wattpad's `storytext` endpoint returns an HTML fragment, and an author's inline pictures come
+     * back inside it as `<img>` — usually wrapped in the same `<p>` run as the prose around them.
+     * Reading only paragraph text therefore dropped every illustration, so the fragment is walked
+     * for prose and images together and the pictures are encoded for the reader.
+     *
+     * Images are also the reason a page is not considered empty just because it has no prose: a
+     * page that is purely a full-spread illustration is legitimate and must not stop the walk.
+     */
     override suspend fun getChapterText(chapter: SChapter): String {
         val partId = chapter.url.substringAfterLast('/')
-        val builder = StringBuilder()
+        val blocks = mutableListOf<String>()
         var page = 1
         while (page <= MAX_TEXT_PAGES) {
             val url = "$baseUrl/apiv2/".toHttpUrl().newBuilder()
@@ -149,16 +159,17 @@ class WattpadSource : BuiltInNovelSource() {
             val html = client.newCall(GET(url.toString(), headers)).awaitSuccess().use { it.body.string() }
             if (html.isBlank()) break
 
-            val paragraphs = Jsoup.parseBodyFragment(html).select("p")
-                .map { it.wholeText().trim() }
-                .filter { it.isNotEmpty() }
-            if (paragraphs.isEmpty()) break
+            // Parse against the site's own base so a protocol-relative or root-relative image
+            // source (`//img.wattpad.com/...`) still resolves to an absolute URL.
+            val body = Jsoup.parseBodyFragment(html, baseUrl).body()
+            NovelChapterHtml.stripHiddenContent(body)
+            val pageBlocks = NovelChapterHtml.toBlocks(body)
+            if (pageBlocks.isEmpty()) break
 
-            if (builder.isNotEmpty()) builder.append("\n\n")
-            builder.append(paragraphs.joinToString("\n\n"))
+            blocks += pageBlocks
             page++
         }
-        return builder.toString().ifBlank {
+        return blocks.joinToString("\n\n").ifBlank {
             "Không đọc được nội dung chương (có thể cần đăng nhập hoặc là chương trả phí)."
         }
     }

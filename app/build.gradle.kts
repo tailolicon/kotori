@@ -259,6 +259,11 @@ dependencies {
     implementation(libs.seeker)
     implementation(libs.truetypeparser)
 
+    // On-device neural text-to-speech for the novel reader's listening mode. The library ships
+    // native ONNX runtimes; the voice models themselves are downloaded at runtime rather than
+    // bundled, so this adds no model weight to the APK.
+    implementation(libs.moonshine.voice)
+
     implementation(libs.androidx.sqlite.bundled)
 
     implementation(libs.kotlin.reflect)

@@ -1,11 +1,5 @@
 package mihon.feature.novelreader
 
-import android.content.Context
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -39,12 +33,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,7 +67,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -87,34 +78,27 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import coil3.compose.AsyncImagePainter
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.LiterataFamily
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
-import eu.kanade.tachiyomi.source.novel.builtin.DocLnImagePolicy
 import kotlinx.coroutines.launch
 import mihon.feature.novelreader.NovelReaderPreferences.NovelFont
 import mihon.feature.novelreader.NovelReaderPreferences.NovelLineSpacing
 import mihon.feature.novelreader.NovelReaderPreferences.NovelReadingMode
 import mihon.feature.novelreader.NovelReaderPreferences.NovelTheme
-import java.util.Locale
+import mihon.feature.novelreader.tts.NovelTtsController
+import mihon.feature.novelreader.tts.NovelTtsPreferences
+import mihon.feature.novelreader.tts.NovelTtsStatus
+import mihon.feature.novelreader.tts.buildSpeechScript
 import kotlin.math.abs
 
 /**
- * Marks a line of a chapter's text as an inline illustration rather than prose: the sentinel is
- * immediately followed by the image's absolute URL.
- *
- * `NovelSource.getChapterText` returns one String, so a source with pictures encodes them into that
- * String; this private-use code point cannot collide with real prose. Sources declare the same code
- * point themselves rather than importing it from this feature package - see `DocLnSource`.
+ * Where the sentence being read aloud is parked on screen, as a fraction of the viewport height.
+ * Kept above centre so the lines that come next stay visible, the way a lyrics view does.
  */
-private const val NOVEL_IMAGE_SENTINEL: String = "\uE000"
+private const val FOLLOW_ANCHOR = 0.32f
 
 data class NovelPaperTheme(
     val background: Color,
@@ -122,32 +106,6 @@ data class NovelPaperTheme(
     val accent: Color,
     val muted: Color,
 )
-
-/** One laid-out unit of a chapter: either a paragraph of prose or an illustration. */
-private sealed interface NovelBlock {
-    data class Prose(val text: String) : NovelBlock
-    data class Illustration(val url: String) : NovelBlock
-}
-
-/**
- * Splits chapter text into blocks.
- *
- * Chapter text is author-controlled, so this is the last gate before an illustration URL becomes a
- * network request: a sentinel line is kept only if it carries a trusted HTTPS image URL. Blank,
- * malformed and untrusted lines are dropped rather than shown, which also stops the sentinel itself
- * from leaking into the prose.
- */
-private fun String.toNovelBlocks(): List<NovelBlock> = split("\n").mapNotNull { line ->
-    val trimmed = line.trim()
-    when {
-        trimmed.isEmpty() -> null
-        trimmed.startsWith(NOVEL_IMAGE_SENTINEL) ->
-            trimmed.removePrefix(NOVEL_IMAGE_SENTINEL).trim()
-                .takeIf(DocLnImagePolicy::isTrusted)
-                ?.let(NovelBlock::Illustration)
-        else -> NovelBlock.Prose(trimmed)
-    }
-}
 
 fun NovelTheme.paper(): NovelPaperTheme = when (this) {
     NovelTheme.WHITE -> NovelPaperTheme(
@@ -219,6 +177,7 @@ fun NovelReaderScreen(
     startPercent: Int,
     onProgressChanged: (Int) -> Unit,
     preferences: NovelReaderPreferences,
+    ttsPreferences: NovelTtsPreferences,
     onNavigateUp: () -> Unit,
     bookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
@@ -271,13 +230,36 @@ fun NovelReaderScreen(
     val latestNextChapter by rememberUpdatedState(onNextChapter)
     val canOpenPrevious = previousChapterLabel != null && chapterNavigationEnabled
     val canOpenNext = nextChapterLabel != null && chapterNavigationEnabled
-    val ttsController = remember { NovelTtsController(context.applicationContext) }
+    val followPlayback by ttsPreferences.followPlayback.changes()
+        .collectAsState(initial = ttsPreferences.followPlayback.get())
+    val highlightWords by ttsPreferences.highlightWords.changes()
+        .collectAsState(initial = ttsPreferences.highlightWords.get())
 
-    DisposableEffect(ttsController) {
-        onDispose(ttsController::shutdown)
+    // Blocks and the speech script are two views of the same chapter and must stay index-aligned,
+    // so they are derived together from one parse. Illustrations contribute no sentences but keep
+    // their slot, otherwise every highlight after a picture would land a paragraph early.
+    val blocks = remember(content) { content.toNovelBlocks() }
+    val script = remember(blocks) {
+        buildSpeechScript(blocks.map { (it as? NovelBlock.Prose)?.text })
     }
-    LaunchedEffect(content) {
-        ttsController.stop()
+
+    val ttsController = remember(ttsPreferences) {
+        NovelTtsController(context.applicationContext, ttsPreferences)
+    }
+    val ttsState = ttsController.state
+    val blockOffsets = remember(blocks) { mutableStateMapOf<Int, Int>() }
+
+    DisposableEffect(ttsController) { onDispose(ttsController::release) }
+    LaunchedEffect(script) { ttsController.setScript(script) }
+
+    // Follow playback the way a lyrics view does: keep the line being read in the upper third, so
+    // the listener can see what comes next rather than reading at the very bottom of the screen.
+    LaunchedEffect(ttsState.sentence, followPlayback) {
+        if (!followPlayback || readingMode != NovelReadingMode.SCROLL) return@LaunchedEffect
+        val sentence = script[ttsState.sentence] ?: return@LaunchedEffect
+        val top = blockOffsets[sentence.blockIndex] ?: return@LaunchedEffect
+        val target = (top - viewportHeight * FOLLOW_ANCHOR).toInt()
+        scrollState.animateScrollTo(target.coerceIn(0, scrollState.maxValue))
     }
 
     val boundaryConnection = remember(
@@ -406,13 +388,30 @@ fun NovelReaderScreen(
                 color = paper.accent,
             )
             NovelBody(
-                content = content,
+                blocks = blocks,
+                script = script,
+                highlight = NovelHighlight(
+                    sentence = script[ttsState.sentence],
+                    word = ttsState.word,
+                    emphasiseWord = highlightWords,
+                    seekEnabled = ttsState.isActive,
+                ),
                 fontFamily = font.family(),
                 fontSize = fontSize,
                 lineHeightMultiplier = spacing.multiplier,
                 ink = paper.ink,
                 accent = paper.accent,
                 muted = paper.muted,
+                onSeek = { index ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    ttsControlsVisible = true
+                    ttsController.seekTo(index)
+                    if (!ttsState.isActive) ttsController.play(index)
+                },
+                onTapOutsideSeek = {
+                    if (settingsVisible) settingsVisible = false else chromeVisible = !chromeVisible
+                },
+                onBlockPositioned = { index, top -> blockOffsets[index] = top },
             )
             NovelChapterEnd(
                 paper = paper,
@@ -421,7 +420,7 @@ fun NovelReaderScreen(
                 onToggleBookmark = onToggleBookmark,
                 onListen = {
                     ttsControlsVisible = true
-                    ttsController.toggle(content)
+                    ttsController.toggle()
                 },
             )
         }
@@ -480,21 +479,19 @@ fun NovelReaderScreen(
                 IconButton(
                     onClick = {
                         ttsControlsVisible = true
-                        ttsController.toggle(content)
+                        ttsController.toggle()
+                        ttsController.refreshVoices()
                     },
                 ) {
+                    val playing = ttsState.status == NovelTtsStatus.PLAYING
                     Icon(
-                        imageVector = if (ttsController.status == NovelTtsStatus.PLAYING) {
+                        imageVector = if (playing) {
                             Icons.Filled.Pause
                         } else {
                             Icons.AutoMirrored.Filled.VolumeUp
                         },
-                        contentDescription = if (ttsController.status == NovelTtsStatus.PLAYING) {
-                            "Tạm dừng nghe"
-                        } else {
-                            "Nghe chương"
-                        },
-                        tint = if (ttsController.status == NovelTtsStatus.PLAYING) paper.accent else paper.ink,
+                        contentDescription = if (playing) "Tạm dừng nghe" else "Nghe chương",
+                        tint = if (playing) paper.accent else paper.ink,
                     )
                 }
                 IconButton(onClick = { settingsVisible = !settingsVisible }) {
@@ -565,11 +562,15 @@ fun NovelReaderScreen(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(bottom = 54.dp),
         ) {
-            NovelTtsControls(
+            NovelTtsPlayer(
+                state = ttsState,
+                script = script,
                 controller = ttsController,
-                content = content,
                 paper = paper,
-                onDismiss = { ttsControlsVisible = false },
+                onDismiss = {
+                    ttsControlsVisible = false
+                    ttsController.stop()
+                },
             )
         }
 
@@ -582,11 +583,14 @@ fun NovelReaderScreen(
         ) {
             NovelReaderSettingsSheet(
                 preferences = preferences,
+                ttsPreferences = ttsPreferences,
                 fontSize = fontSize,
                 font = font,
                 theme = theme,
                 spacing = spacing,
                 readingMode = readingMode,
+                followPlayback = followPlayback,
+                highlightWords = highlightWords,
                 onDismiss = { settingsVisible = false },
             )
         }
@@ -670,399 +674,16 @@ private fun NovelChapterEnd(
 }
 
 @Composable
-private fun NovelTtsControls(
-    controller: NovelTtsController,
-    content: String,
-    paper: NovelPaperTheme,
-    onDismiss: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(paper.background.copy(alpha = 0.97f))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        IconButton(
-            enabled = controller.status != NovelTtsStatus.ERROR,
-            onClick = { controller.toggle(content) },
-        ) {
-            Icon(
-                imageVector = if (controller.status == NovelTtsStatus.PLAYING) {
-                    Icons.Filled.Pause
-                } else {
-                    Icons.Filled.PlayArrow
-                },
-                contentDescription = if (controller.status == NovelTtsStatus.PLAYING) {
-                    "Tạm dừng"
-                } else {
-                    "Tiếp tục nghe"
-                },
-                tint = paper.accent,
-            )
-        }
-        if (controller.status == NovelTtsStatus.ERROR) {
-            Text(
-                text = "Thiết bị chưa cài giọng đọc",
-                fontFamily = BeVietnamProFamily,
-                fontSize = 11.sp,
-                color = paper.muted,
-                modifier = Modifier.weight(1f),
-            )
-        } else {
-            Text(
-                text = "${controller.rate}×",
-                fontFamily = BeVietnamProFamily,
-                fontSize = 10.sp,
-                color = paper.muted,
-            )
-            Slider(
-                value = controller.rate,
-                onValueChange = controller::updateRate,
-                valueRange = 0.7f..1.5f,
-                steps = 7,
-                modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = paper.accent,
-                    activeTrackColor = paper.accent,
-                    inactiveTrackColor = paper.ink.copy(alpha = 0.14f),
-                ),
-            )
-        }
-        IconButton(onClick = controller::stop) {
-            Icon(
-                imageVector = Icons.Filled.Stop,
-                contentDescription = "Dừng nghe",
-                tint = paper.ink,
-            )
-        }
-        Text(
-            text = "Ẩn",
-            fontFamily = BeVietnamProFamily,
-            fontSize = 11.sp,
-            color = paper.accent,
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onDismiss)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-        )
-    }
-}
-
-private enum class NovelTtsStatus {
-    INITIALIZING,
-    READY,
-    PLAYING,
-    PAUSED,
-    ERROR,
-}
-
-private class NovelTtsController(context: Context) {
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var engine: TextToSpeech? = null
-    private var initialized = false
-    private var session = 0
-    private var currentChunk = 0
-    private var chunks: List<String> = emptyList()
-    private var pendingText: String? = null
-
-    var status by mutableStateOf(NovelTtsStatus.INITIALIZING)
-        private set
-    var rate by mutableStateOf(1f)
-        private set
-
-    init {
-        engine = TextToSpeech(context) { result ->
-            mainHandler.post {
-                if (result != TextToSpeech.SUCCESS) {
-                    status = NovelTtsStatus.ERROR
-                    return@post
-                }
-                initialized = true
-                engine?.apply {
-                    val vietnamese = Locale.forLanguageTag("vi-VN")
-                    if (isLanguageAvailable(vietnamese) >= TextToSpeech.LANG_AVAILABLE) {
-                        language = vietnamese
-                    } else {
-                        language = Locale.getDefault()
-                    }
-                    setSpeechRate(rate)
-                    setOnUtteranceProgressListener(ttsListener)
-                }
-                status = NovelTtsStatus.READY
-                pendingText?.also {
-                    pendingText = null
-                    start(it)
-                }
-            }
-        }
-    }
-
-    private val ttsListener = object : UtteranceProgressListener() {
-        override fun onStart(utteranceId: String?) {
-            val (utteranceSession, index) = utteranceId.toSessionAndIndex() ?: return
-            mainHandler.post {
-                if (utteranceSession == session) {
-                    currentChunk = index
-                    status = NovelTtsStatus.PLAYING
-                }
-            }
-        }
-
-        override fun onDone(utteranceId: String?) {
-            val (utteranceSession, index) = utteranceId.toSessionAndIndex() ?: return
-            mainHandler.post {
-                if (utteranceSession == session && index == chunks.lastIndex) {
-                    currentChunk = 0
-                    status = NovelTtsStatus.READY
-                }
-            }
-        }
-
-        @Deprecated("Deprecated in Android")
-        override fun onError(utteranceId: String?) {
-            reportError(utteranceId)
-        }
-
-        override fun onError(utteranceId: String?, errorCode: Int) {
-            reportError(utteranceId)
-        }
-
-        private fun reportError(utteranceId: String?) {
-            val utteranceSession = utteranceId.toSessionAndIndex()?.first ?: return
-            mainHandler.post {
-                if (utteranceSession == session) status = NovelTtsStatus.ERROR
-            }
-        }
-    }
-
-    fun toggle(content: String) {
-        when (status) {
-            NovelTtsStatus.INITIALIZING -> pendingText = content
-            NovelTtsStatus.PLAYING -> pause()
-            NovelTtsStatus.PAUSED -> enqueueFrom(currentChunk)
-            NovelTtsStatus.READY -> start(content)
-            NovelTtsStatus.ERROR -> if (initialized) start(content)
-        }
-    }
-
-    fun updateRate(value: Float) {
-        rate = value.coerceIn(0.7f, 1.5f)
-        engine?.setSpeechRate(rate)
-        if (status == NovelTtsStatus.PLAYING) {
-            engine?.stop()
-            enqueueFrom(currentChunk)
-        }
-    }
-
-    fun stop() {
-        pendingText = null
-        session++
-        engine?.stop()
-        currentChunk = 0
-        chunks = emptyList()
-        status = if (initialized) NovelTtsStatus.READY else NovelTtsStatus.INITIALIZING
-    }
-
-    fun shutdown() {
-        pendingText = null
-        session++
-        engine?.stop()
-        engine?.shutdown()
-        engine = null
-    }
-
-    private fun start(content: String) {
-        if (!initialized) {
-            pendingText = content
-            status = NovelTtsStatus.INITIALIZING
-            return
-        }
-        chunks = content.toSpeechChunks()
-        currentChunk = 0
-        if (chunks.isEmpty()) {
-            status = NovelTtsStatus.ERROR
-            return
-        }
-        enqueueFrom(0)
-    }
-
-    private fun pause() {
-        session++
-        engine?.stop()
-        status = NovelTtsStatus.PAUSED
-    }
-
-    private fun enqueueFrom(index: Int) {
-        val tts = engine ?: return
-        if (chunks.isEmpty()) return
-        session++
-        val activeSession = session
-        status = NovelTtsStatus.PLAYING
-        chunks.drop(index).forEachIndexed { offset, chunk ->
-            val chunkIndex = index + offset
-            tts.speak(
-                chunk,
-                if (offset == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD,
-                Bundle(),
-                "novel:$activeSession:$chunkIndex",
-            )
-        }
-    }
-
-    private fun String?.toSessionAndIndex(): Pair<Int, Int>? {
-        val parts = this?.split(':') ?: return null
-        if (parts.size != 3 || parts[0] != "novel") return null
-        return (parts[1].toIntOrNull() ?: return null) to (parts[2].toIntOrNull() ?: return null)
-    }
-}
-
-private fun String.toSpeechChunks(): List<String> {
-    val maxLength = (TextToSpeech.getMaxSpeechInputLength() - 100).coerceAtLeast(500)
-    val prose = toNovelBlocks()
-        .filterIsInstance<NovelBlock.Prose>()
-        .joinToString("\n") { it.text }
-        .trim()
-    if (prose.isEmpty()) return emptyList()
-
-    val result = mutableListOf<String>()
-    var remaining = prose
-    while (remaining.isNotEmpty()) {
-        if (remaining.length <= maxLength) {
-            result += remaining
-            break
-        }
-        val window = remaining.take(maxLength)
-        val sentenceBreak = window.indexOfLast { it == '.' || it == '!' || it == '?' || it == '\n' }
-        val wordBreak = window.lastIndexOf(' ')
-        val cut = maxOf(sentenceBreak + 1, wordBreak).takeIf { it >= maxLength / 2 } ?: maxLength
-        result += remaining.take(cut).trim()
-        remaining = remaining.drop(cut).trimStart()
-    }
-    return result.filter(String::isNotEmpty)
-}
-
-@Composable
-private fun NovelBody(
-    content: String,
-    fontFamily: FontFamily,
-    fontSize: Int,
-    lineHeightMultiplier: Float,
-    ink: Color,
-    accent: Color,
-    muted: Color,
-) {
-    val blocks = remember(content) { content.toNovelBlocks() }
-    // A chapter can open on an illustration, so the drop cap follows the first prose block rather
-    // than the first block; an illustration-only chapter simply never draws one.
-    val dropCapIndex = remember(blocks) { blocks.indexOfFirst { it is NovelBlock.Prose } }
-    blocks.forEachIndexed { index, block ->
-        when (block) {
-            is NovelBlock.Illustration -> NovelIllustration(url = block.url, muted = muted)
-            is NovelBlock.Prose -> if (index == dropCapIndex) {
-                // Teal drop cap on the opening paragraph
-                Row(modifier = Modifier.padding(top = 14.dp)) {
-                    Text(
-                        text = block.text.first().uppercase(),
-                        fontFamily = UnboundedFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 44.sp,
-                        color = accent,
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
-                    Text(
-                        text = block.text.drop(1),
-                        fontFamily = fontFamily,
-                        fontSize = fontSize.sp,
-                        lineHeight = (fontSize * lineHeightMultiplier).sp,
-                        color = ink,
-                    )
-                }
-            } else {
-                Text(
-                    text = block.text,
-                    fontFamily = fontFamily,
-                    fontSize = fontSize.sp,
-                    lineHeight = (fontSize * lineHeightMultiplier).sp,
-                    color = ink,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-            }
-        }
-    }
-}
-
-/**
- * Inline illustration, sized to the column width with its aspect ratio kept. A load failure is
- * non-fatal: the chapter keeps rendering and only this block degrades to a compact placeholder.
- */
-@Composable
-private fun NovelIllustration(url: String, muted: Color) {
-    var failed by remember(url) { mutableStateOf(false) }
-    val context = LocalContext.current
-    val request = remember(context, url) { novelImageRequest(context, url) }
-    if (failed) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(muted.copy(alpha = 0.12f))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.BrokenImage,
-                contentDescription = null,
-                tint = muted,
-                modifier = Modifier.size(16.dp),
-            )
-            Text(
-                text = "Ảnh không tải được",
-                fontFamily = BeVietnamProFamily,
-                fontSize = 11.sp,
-                color = muted,
-            )
-        }
-    } else {
-        AsyncImage(
-            model = request,
-            contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            onState = { state -> if (state is AsyncImagePainter.State.Error) failed = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(6.dp)),
-        )
-    }
-}
-
-private val DOC_LN_REFERER_HEADERS = NetworkHeaders.Builder()
-    .set("Referer", DocLnImagePolicy.REFERER)
-    .build()
-
-internal fun novelImageRequest(context: Context, url: String): ImageRequest =
-    ImageRequest.Builder(context)
-        .data(url)
-        .apply {
-            if (DocLnImagePolicy.requiresReferer(url)) {
-                httpHeaders(DOC_LN_REFERER_HEADERS)
-            }
-        }
-        .build()
-
-@Composable
 private fun NovelReaderSettingsSheet(
     preferences: NovelReaderPreferences,
+    ttsPreferences: NovelTtsPreferences,
     fontSize: Int,
     font: NovelFont,
     theme: NovelTheme,
     spacing: NovelLineSpacing,
     readingMode: NovelReadingMode,
+    followPlayback: Boolean,
+    highlightWords: Boolean,
     onDismiss: () -> Unit,
 ) {
     val tealGradient = Brush.linearGradient(listOf(Color(0xFF14B8A6), Color(0xFF5EEAD4)))
@@ -1253,6 +874,48 @@ private fun NovelReaderSettingsSheet(
                 }
             }
         }
+
+        SettingsLabel("Khi nghe")
+        SettingsToggle(
+            label = "Tự cuộn theo giọng đọc",
+            checked = followPlayback,
+            onToggle = { ttsPreferences.followPlayback.set(it) },
+        )
+        SettingsToggle(
+            label = "Tô đậm từng từ đang đọc",
+            checked = highlightWords,
+            onToggle = { ttsPreferences.highlightWords.set(it) },
+        )
+    }
+}
+
+/** A labelled on/off row, styled to match the sheet's chips rather than Material's switch. */
+@Composable
+private fun SettingsToggle(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(KotoriShapes.chip)
+            .background(if (checked) Color(0x2214B8A6) else Color(0x0FFFFFFF))
+            .clickable { onToggle(!checked) }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = label,
+            fontFamily = BeVietnamProFamily,
+            fontSize = 11.sp,
+            color = if (checked) Color(0xFF5EEAD4) else KotoriColors.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = if (checked) "Bật" else "Tắt",
+            fontFamily = UnboundedFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 9.sp,
+            color = if (checked) Color(0xFF5EEAD4) else KotoriColors.textFaint,
+        )
     }
 }
 

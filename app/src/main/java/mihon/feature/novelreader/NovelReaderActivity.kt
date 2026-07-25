@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import eu.kanade.presentation.theme.TachiyomiTheme
+import mihon.feature.novelreader.tts.NovelTtsPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -34,6 +35,7 @@ class NovelReaderActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val preferences = Injekt.get<NovelReaderPreferences>()
+        val ttsPreferences = Injekt.get<NovelTtsPreferences>()
 
         val localText = intent.getStringExtra(EXTRA_TEXT)
 
@@ -47,12 +49,14 @@ class NovelReaderActivity : ComponentActivity() {
                         startPercent = 0,
                         onProgressChanged = {},
                         preferences = preferences,
+                        ttsPreferences = ttsPreferences,
                         onNavigateUp = ::finish,
                     )
                 } else {
                     NovelReaderContent(
                         viewModel = viewModel,
                         preferences = preferences,
+                        ttsPreferences = ttsPreferences,
                         onNavigateUp = ::finish,
                     )
                 }

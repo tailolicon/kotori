@@ -23,6 +23,12 @@
 -keep class is.xyz.mpv.MPVLib { *; }
 -keep class is.xyz.mpv.MPVLib$* { *; }
 
+# libmoonshine-jni.so resolves these classes, their fields and their constructors by name from
+# native code — synthesis results and word timings are built on the native side. The AAR ships no
+# consumer rules of its own, so without this R8 renames them and the novel reader's neural voice
+# fails at runtime with no build-time warning at all.
+-keep class ai.moonshine.voice.** { *; }
+
 # NewPipe's protobuf-javalite models resolve their generated fields by name.
 # Preserve those fields so YouTube playlist metadata survives R8 shrinking.
 -keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {

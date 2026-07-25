@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.novel.NovelChapterHtml
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -15,6 +16,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.jsoup.Jsoup
 import java.time.Instant
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
@@ -207,7 +209,13 @@ class NovelFeverSource : BuiltInNovelSource() {
         } catch (error: Exception) {
             throw IllegalStateException("Không giải mã được nội dung chương Novel Fever", error)
         }
-        return plaintext.trim().takeIf(String::isNotEmpty)
+        // The decrypted payload is the chapter's HTML, so run it through the shared extractor: that
+        // keeps prose and inline illustrations in document order instead of rendering raw markup.
+        val body = Jsoup.parseBodyFragment(plaintext, baseUrl).body()
+        NovelChapterHtml.stripHiddenContent(body)
+        return NovelChapterHtml.toBlocks(body)
+            .joinToString("\n\n")
+            .takeIf(String::isNotEmpty)
             ?: throw IllegalStateException("Nội dung chương Novel Fever trống")
     }
 

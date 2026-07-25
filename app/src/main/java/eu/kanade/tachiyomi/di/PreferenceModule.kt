@@ -96,6 +96,9 @@ class PreferenceModule(val app: Application) : InjektModule {
             mihon.feature.novelreader.NovelReaderPreferences(get())
         }
         addSingletonFactory {
+            mihon.feature.novelreader.tts.NovelTtsPreferences(get())
+        }
+        addSingletonFactory {
             BasePreferences(app, get())
         }
     }

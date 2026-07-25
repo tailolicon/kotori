@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import mihon.feature.novelreader.tts.NovelTtsPreferences
 import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.presentation.core.screens.LoadingScreen
 
@@ -43,6 +44,7 @@ private enum class ChapterTransitionDirection {
 fun NovelReaderContent(
     viewModel: NovelReaderViewModel,
     preferences: NovelReaderPreferences,
+    ttsPreferences: NovelTtsPreferences,
     onNavigateUp: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -131,6 +133,7 @@ fun NovelReaderContent(
                         }
                     },
                     preferences = preferences,
+                    ttsPreferences = ttsPreferences,
                     onNavigateUp = onNavigateUp,
                     bookmarked = state.chapter?.takeIf { it.id == visiblePage.chapterId }?.bookmark == true,
                     onToggleBookmark = {

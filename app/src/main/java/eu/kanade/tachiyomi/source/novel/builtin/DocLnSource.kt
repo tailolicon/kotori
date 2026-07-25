@@ -7,59 +7,17 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.novel.NovelChapterHtml
 import eu.kanade.tachiyomi.util.asJsoup
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Headers
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.util.Base64
-
-/**
- * Single trust boundary for DocLN illustration URLs.
- *
- * Chapter HTML is author-controlled, so only HTTPS URLs on observed image operators are allowed.
- * Multi-tenant services stay pinned to the exact host DocLN used; only operators whose numbered
- * subdomains are part of their delivery scheme allow subdomains.
- */
-internal object DocLnImagePolicy {
-    const val REFERER = "https://docln.net/"
-
-    private val SUBDOMAIN_HOSTS = setOf(
-        "docln.net",
-        "blogspot.com",
-        "googleusercontent.com",
-        "hako.vip",
-    )
-    private val EXACT_HOSTS = setOf(
-        "i.ibb.co",
-        "i.postimg.cc",
-        "cdn.phototourl.com",
-        "headcanontl.wordpress.com",
-        "img.wattpad.com",
-        "images2.imgbox.com",
-    )
-
-    fun isTrusted(url: String): Boolean = url.toHttpUrlOrNull()?.let(::isTrusted) == true
-
-    fun isTrusted(url: HttpUrl): Boolean =
-        url.scheme == "https" &&
-            (
-                url.host in EXACT_HOSTS ||
-                    SUBDOMAIN_HOSTS.any { url.host == it || url.host.endsWith(".$it") }
-                )
-
-    fun requiresReferer(url: String): Boolean {
-        val parsed = url.toHttpUrlOrNull() ?: return false
-        return parsed.scheme == "https" &&
-            (parsed.host == "hako.vip" || parsed.host.endsWith(".hako.vip"))
-    }
-}
 
 /**
  * Built-in novel source for docln.net (Cổng Light Novel / Hako).
@@ -187,22 +145,6 @@ class DocLnSource : BuiltInNovelSource() {
         private const val CHUNK_PREFIX_LENGTH = 4
         private val CHAPTER_NUMBER_REGEX =
             Regex("""(?:chương|chuong)\s*(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
-
-        /**
-         * Marks a line of [getChapterText]'s result as an illustration rather than prose: the
-         * sentinel is immediately followed by the image's absolute URL. `getChapterText` returns one
-         * String, so pictures have to be encoded into it; this private-use code point cannot collide
-         * with real prose. The novel reader renders any line starting with it as an image.
-         */
-        private const val IMAGE_SENTINEL = "\uE000"
-
-        /**
-         * Illustration chapters (e.g. `c6764-minh-hoa`) carry a plain absolute `src`, but the lazy
-         * attributes come first: when a page does lazy-load, `src` holds a placeholder that would
-         * otherwise win over the real image.
-         */
-        private val IMAGE_URL_ATTRS = listOf("data-src", "data-original", "data-lazy-src", "src")
-
     }
 
     // ============================== Chapter text ==============================
@@ -247,47 +189,13 @@ class DocLnSource : BuiltInNovelSource() {
 
         // Parse with baseUrl as the base URI so any relative image source resolves to an absolute URL.
         val body = Jsoup.parseBodyFragment(decodedHtml, baseUrl).body()
-        body.select("script, style, [hidden], .none, .hidden").remove()
-        body.getAllElements()
-            .filter { it.attr("style").replace(" ", "").contains("display:none", ignoreCase = true) }
-            .forEach(Element::remove)
-        // Prose sits in sibling <p> blocks and illustrations in <img>; wholeText() on the body would
-        // run the paragraphs together and drop the pictures entirely, so walk both in document
-        // order. Jsoup lists a <p> before its own children, so text keeps its place around images.
-        val nodes = body.select("p, img")
-        val blocks = if (nodes.isEmpty()) {
-            body.wholeText().toTextBlocks()
-        } else {
-            nodes.flatMap { element ->
-                if (element.tagName() == "img") {
-                    listOfNotNull(element.imageUrl()?.let { IMAGE_SENTINEL + it })
-                } else {
-                    element.wholeText().toTextBlocks()
-                }
-            }
-        }
+        NovelChapterHtml.stripHiddenContent(body)
         // Illustration-only chapters are legitimate, so images alone are enough to render.
-        return blocks
+        return NovelChapterHtml.toBlocks(body)
             .joinToString("\n\n")
             .takeIf(String::isNotEmpty)
             ?: throw IllegalStateException("DocLN chapter text is empty")
     }
-
-    /** Splits a block's text into reader paragraphs, dropping any sentinel so it can never show. */
-    private fun String.toTextBlocks(): List<String> = lineSequence()
-        .map { it.replace(IMAGE_SENTINEL, "").cleanText() }
-        .filter(String::isNotEmpty)
-        .toList()
-
-    /**
-     * First trusted source among [IMAGE_URL_ATTRS]; blank, unparseable and untrusted values are
-     * skipped, so an attribute holding a non-image destination simply yields no picture.
-     */
-    private fun Element.imageUrl(): String? = IMAGE_URL_ATTRS
-        .asSequence()
-        .mapNotNull { absUrl(it).toHttpUrlOrNull() }
-        .firstOrNull(DocLnImagePolicy::isTrusted)
-        ?.toString()
 
     /** The site pads text with non-breaking spaces; normalise so descriptions wrap properly. */
     private fun String.cleanText(): String = replace(' ', ' ').trim()
