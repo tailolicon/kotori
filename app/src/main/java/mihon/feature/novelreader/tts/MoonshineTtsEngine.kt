@@ -1,9 +1,11 @@
 package mihon.feature.novelreader.tts
 
 import ai.moonshine.voice.AssetDownloader
+import ai.moonshine.voice.GraphemeToPhonemizer
 import ai.moonshine.voice.ModelSpec
 import ai.moonshine.voice.TextToSpeech
 import ai.moonshine.voice.TranscriberOption
+import ai.moonshine.voice.TtsSynthesisResult
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -40,6 +42,13 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
     private val assetRoot: File by lazy { File(appContext.filesDir, ASSET_DIR).apply { mkdirs() } }
 
     private var synthesizer: TextToSpeech? = null
+
+    /**
+     * The same G2P the synthesizer would run internally, held separately so the phoneme string can
+     * be repaired between text and audio — see [VietnameseTonePhonemes] for why that repair is the
+     * difference between Vietnamese and fluent nonsense.
+     */
+    private var phonemizer: GraphemeToPhonemizer? = null
     private var preparedVoice: String? = null
 
     @Volatile
@@ -142,17 +151,23 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                 downloader.ensureModelPresent(assetRoot, ModelSpec.tts(LANGUAGE, voice), report)
             }
             synthesizer?.close()
+            // Note: `g2p_dialect` is NOT passed here even though the native logs print one. It is
+            // an internal value the library derives from the language ("vi" → "vi-VN") and not an
+            // accepted option key — the option parser throws `Unknown G2P option` on it, which
+            // would fail this whole prepare and silently push the reader onto the system voice.
             synthesizer = TextToSpeech(
                 LANGUAGE,
                 assetRoot.absolutePath,
-                listOf(
-                    TranscriberOption(VOICE, voice),
-                    // The library treats the language and the grapheme-to-phoneme dialect as
-                    // separate settings — its own logging prints them side by side — so naming the
-                    // voice's language does not by itself say which rules turn letters into sounds.
-                    TranscriberOption(G2P_DIALECT, LANGUAGE),
-                ),
+                listOf(TranscriberOption(VOICE, voice)),
             )
+            phonemizer?.close()
+            phonemizer = runCatching {
+                GraphemeToPhonemizer(LANGUAGE, assetRoot.absolutePath, null)
+            }.getOrElse {
+                // Losing the phonemizer only loses the tone repair below, not playback itself.
+                logcat(LogPriority.WARN, it) { "Vietnamese phonemizer unavailable; tones degrade" }
+                null
+            }
             preparedVoice = voice
             onProgress(NovelTtsPreparation.Ready)
             true
@@ -193,7 +208,7 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                     // A sentence the model chokes on becomes a silent clip rather than an error:
                     // one bad line must not end the chapter's playback.
                     val clip = runCatching {
-                        val result = engine.synthesize(sentence.text)
+                        val result = synthesizeWithTones(engine, sentence.text)
                         Clip(sentence, result.samples ?: FloatArray(0), result.sampleRateHz)
                     }.getOrElse {
                         logcat(LogPriority.WARN, it) { "Moonshine failed on sentence ${sentence.index}" }
@@ -247,6 +262,26 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         player.start()
         playback = player
         synthesiser = synthesis
+    }
+
+    /**
+     * Synthesizes a sentence with its tones translated to what the model was trained on.
+     *
+     * The pipeline is text → IPA (the library's own Vietnamese G2P) → tone repair → audio. Going
+     * through [TextToSpeech.synthesizeFromPhonemes] instead of `synthesize` is what creates the
+     * point to intervene at: the plain call runs the same G2P internally but gives no chance to fix
+     * the tone marks before they are dropped. If the phonemizer is missing, the plain call is still
+     * made — quality degrades, playback survives.
+     */
+    private fun synthesizeWithTones(engine: TextToSpeech, text: String): TtsSynthesisResult {
+        val g2p = phonemizer ?: return engine.synthesize(text)
+        return runCatching {
+            val ipa = g2p.toIpa(text)
+            engine.synthesizeFromPhonemes(VietnameseTonePhonemes.toEspeakTones(ipa))
+        }.getOrElse {
+            logcat(LogPriority.WARN, it) { "Tone-repaired synthesis failed; using plain path" }
+            engine.synthesize(text)
+        }
     }
 
     /**
@@ -349,7 +384,9 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
     override fun release() {
         stop()
         runCatching { synthesizer?.close() }
+        runCatching { phonemizer?.close() }
         synthesizer = null
+        phonemizer = null
         preparedVoice = null
     }
 
@@ -368,7 +405,6 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         const val ASSET_DIR = "novel-tts"
         const val LANGUAGE = "vi"
         const val G2P_ROOT = "g2p_root"
-        const val G2P_DIALECT = "g2p_dialect"
         const val VOICE = "voice"
         const val POLL_MS = 100L
         const val DRAIN_TICK_MS = 16L
