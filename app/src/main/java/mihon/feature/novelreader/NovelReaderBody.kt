@@ -77,8 +77,6 @@ internal fun String.toNovelBlocks(): List<NovelBlock> = split("\n").mapNotNull {
 /** What the reader should paint on top of the prose while a chapter is being read aloud. */
 internal data class NovelHighlight(
     val sentence: SpeechSentence?,
-    val word: Int,
-    val emphasiseWord: Boolean,
     val seekEnabled: Boolean,
 )
 
@@ -173,11 +171,6 @@ private fun NovelProse(
         val start = (sentence.range.first - offsetShift).coerceIn(0, text.length)
         val end = (sentence.range.last + 1 - offsetShift).coerceIn(start, text.length)
         addStyle(SpanStyle(color = accent, fontWeight = FontWeight.Medium), start, end)
-        if (!highlight.emphasiseWord) return@buildAnnotatedString
-        val word = sentence.words.getOrNull(highlight.word) ?: return@buildAnnotatedString
-        val wordStart = (start + word.first).coerceIn(start, end)
-        val wordEnd = (start + word.last + 1).coerceIn(wordStart, end)
-        addStyle(SpanStyle(fontWeight = FontWeight.Bold), wordStart, wordEnd)
     }
 
     val tapModifier = Modifier.pointerInput(sentences, highlight.seekEnabled, offsetShift) {

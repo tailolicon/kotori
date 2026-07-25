@@ -29,13 +29,14 @@ sealed interface NovelTtsPreparation {
  * All of these arrive on a background thread; the controller marshals them to the main thread. They
  * are deliberately expressed in script coordinates rather than engine ones, so the reader never has
  * to know which engine is speaking.
+ *
+ * The sentence is the only unit reported. A finer-grained one is available from the system engine
+ * and estimable from the neural one, but it made the highlight twitch word by word while the audio
+ * moved a sentence at a time, and it repainted the whole chapter on every word to do it.
  */
 interface NovelTtsListener {
     /** [index] into [SpeechScript.sentences] began playing. */
     fun onSentenceStarted(index: Int)
-
-    /** Word [word] of sentence [index] is being spoken, or -1 when the engine cannot say. */
-    fun onWordSpoken(index: Int, word: Int)
 
     /** [index] finished; the next sentence follows unless this was the last. */
     fun onSentenceFinished(index: Int)

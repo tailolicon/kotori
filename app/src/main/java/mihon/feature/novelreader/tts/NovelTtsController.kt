@@ -12,7 +12,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Everything the reader needs to draw the player and the karaoke highlight. */
+/** Everything the reader needs to draw the player and light up the sentence being read. */
 data class NovelTtsState(
     val status: NovelTtsStatus = NovelTtsStatus.IDLE,
     val engineId: NovelTtsEngineId = NovelTtsEngineId.SYSTEM,
@@ -21,8 +21,6 @@ data class NovelTtsState(
     val rate: Float = 1f,
     /** Index into [SpeechScript.sentences], or -1 when nothing is playing. */
     val sentence: Int = -1,
-    /** Index into the current sentence's words, or -1 when the engine cannot report one. */
-    val word: Int = -1,
     val preparation: NovelTtsPreparation? = null,
     val message: String? = null,
 ) {
@@ -120,7 +118,6 @@ class NovelTtsController(
                 preparation = null,
                 message = null,
                 sentence = cursor,
-                word = -1,
             )
             active.speak(script, cursor, state.rate, listener)
         }
@@ -128,7 +125,7 @@ class NovelTtsController(
 
     fun pause() {
         engine.stop()
-        state = state.copy(status = NovelTtsStatus.PAUSED, word = -1)
+        state = state.copy(status = NovelTtsStatus.PAUSED)
     }
 
     fun stop() {
@@ -139,7 +136,6 @@ class NovelTtsController(
         state = state.copy(
             status = NovelTtsStatus.IDLE,
             sentence = -1,
-            word = -1,
             preparation = null,
         )
     }
@@ -149,7 +145,7 @@ class NovelTtsController(
         if (script.isEmpty) return
         val target = index.coerceIn(0, script.size - 1)
         cursor = target
-        state = state.copy(sentence = target, word = -1)
+        state = state.copy(sentence = target)
         if (state.status == NovelTtsStatus.PLAYING || state.status == NovelTtsStatus.PREPARING) {
             engine.stop()
             play(target)
@@ -254,11 +250,7 @@ class NovelTtsController(
     private val listener = object : NovelTtsListener {
         override fun onSentenceStarted(index: Int) = post {
             cursor = index
-            state = state.copy(status = NovelTtsStatus.PLAYING, sentence = index, word = -1)
-        }
-
-        override fun onWordSpoken(index: Int, word: Int) = post {
-            if (state.sentence == index && state.word != word) state = state.copy(word = word)
+            state = state.copy(status = NovelTtsStatus.PLAYING, sentence = index)
         }
 
         override fun onSentenceFinished(index: Int) = post {
@@ -269,7 +261,7 @@ class NovelTtsController(
 
         override fun onFinished() = post {
             cursor = 0
-            state = state.copy(status = NovelTtsStatus.IDLE, sentence = -1, word = -1)
+            state = state.copy(status = NovelTtsStatus.IDLE, sentence = -1)
         }
 
         override fun onError(message: String) = post {

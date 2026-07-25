@@ -232,8 +232,6 @@ fun NovelReaderScreen(
     val canOpenNext = nextChapterLabel != null && chapterNavigationEnabled
     val followPlayback by ttsPreferences.followPlayback.changes()
         .collectAsState(initial = ttsPreferences.followPlayback.get())
-    val highlightWords by ttsPreferences.highlightWords.changes()
-        .collectAsState(initial = ttsPreferences.highlightWords.get())
 
     // Blocks and the speech script are two views of the same chapter and must stay index-aligned,
     // so they are derived together from one parse. Illustrations contribute no sentences but keep
@@ -392,8 +390,6 @@ fun NovelReaderScreen(
                 script = script,
                 highlight = NovelHighlight(
                     sentence = script[ttsState.sentence],
-                    word = ttsState.word,
-                    emphasiseWord = highlightWords,
                     seekEnabled = ttsState.isActive,
                 ),
                 fontFamily = font.family(),
@@ -590,7 +586,6 @@ fun NovelReaderScreen(
                 spacing = spacing,
                 readingMode = readingMode,
                 followPlayback = followPlayback,
-                highlightWords = highlightWords,
                 onDismiss = { settingsVisible = false },
             )
         }
@@ -683,7 +678,6 @@ private fun NovelReaderSettingsSheet(
     spacing: NovelLineSpacing,
     readingMode: NovelReadingMode,
     followPlayback: Boolean,
-    highlightWords: Boolean,
     onDismiss: () -> Unit,
 ) {
     val tealGradient = Brush.linearGradient(listOf(Color(0xFF14B8A6), Color(0xFF5EEAD4)))
@@ -880,11 +874,6 @@ private fun NovelReaderSettingsSheet(
             label = "Tự cuộn theo giọng đọc",
             checked = followPlayback,
             onToggle = { ttsPreferences.followPlayback.set(it) },
-        )
-        SettingsToggle(
-            label = "Tô đậm từng từ đang đọc",
-            checked = highlightWords,
-            onToggle = { ttsPreferences.highlightWords.set(it) },
         )
     }
 }

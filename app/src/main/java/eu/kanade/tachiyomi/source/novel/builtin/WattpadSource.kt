@@ -29,6 +29,17 @@ class WattpadSource : BuiltInNovelSource() {
 
     override val name = "Wattpad"
     override val lang = "all"
+
+    /**
+     * Hosts serving the same API. `www` is the canonical one, but Vietnamese ISPs reset the TLS
+     * handshake for it while leaving `api.wattpad.com` — which answers the identical paths — alone,
+     * so that one leads.
+     */
+    override val mirrors = listOf("api.wattpad.com", "www.wattpad.com")
+
+    /** Where the API is called. Separate from [baseUrl], which stays the address of a readable page. */
+    private val apiUrl get() = "https://$domain"
+
     override val baseUrl = "https://www.wattpad.com"
     override val supportsLatest = true
     override val iconUrl = "https://www.google.com/s2/favicons?sz=128&domain=wattpad.com"
@@ -48,7 +59,7 @@ class WattpadSource : BuiltInNovelSource() {
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
         if (query.isBlank()) return browse("hot", page)
-        val url = "$baseUrl/v4/search/stories".toHttpUrl().newBuilder()
+        val url = "$apiUrl/v4/search/stories".toHttpUrl().newBuilder()
             .addQueryParameter("query", query)
             .addQueryParameter("limit", PAGE_SIZE.toString())
             .addQueryParameter("offset", ((page - 1) * PAGE_SIZE).toString())
@@ -58,7 +69,7 @@ class WattpadSource : BuiltInNovelSource() {
     }
 
     private suspend fun browse(filter: String, page: Int): MangasPage {
-        val url = "$baseUrl/api/v3/stories".toHttpUrl().newBuilder()
+        val url = "$apiUrl/api/v3/stories".toHttpUrl().newBuilder()
             .addQueryParameter("filter", filter)
             .addQueryParameter("limit", PAGE_SIZE.toString())
             .addQueryParameter("offset", ((page - 1) * PAGE_SIZE).toString())
@@ -89,7 +100,7 @@ class WattpadSource : BuiltInNovelSource() {
 
     override suspend fun getNovelDetails(novel: SManga): SManga {
         val id = novel.storyId()
-        val url = "$baseUrl/api/v3/stories/$id".toHttpUrl().newBuilder()
+        val url = "$apiUrl/api/v3/stories/$id".toHttpUrl().newBuilder()
             .addQueryParameter("fields", DETAIL_FIELDS)
             .build()
         val body = client.newCall(GET(url.toString(), headers)).awaitSuccess().use { it.body.string() }
@@ -113,7 +124,7 @@ class WattpadSource : BuiltInNovelSource() {
 
     override suspend fun getChapterList(novel: SManga): List<SChapter> {
         val id = novel.storyId()
-        val url = "$baseUrl/api/v3/stories/$id".toHttpUrl().newBuilder()
+        val url = "$apiUrl/api/v3/stories/$id".toHttpUrl().newBuilder()
             .addQueryParameter("fields", "parts(id,title,url,deleted,draft)")
             .build()
         val body = client.newCall(GET(url.toString(), headers)).awaitSuccess().use { it.body.string() }
@@ -151,7 +162,7 @@ class WattpadSource : BuiltInNovelSource() {
         val blocks = mutableListOf<String>()
         var page = 1
         while (page <= MAX_TEXT_PAGES) {
-            val url = "$baseUrl/apiv2/".toHttpUrl().newBuilder()
+            val url = "$apiUrl/apiv2/".toHttpUrl().newBuilder()
                 .addQueryParameter("m", "storytext")
                 .addQueryParameter("id", partId)
                 .addQueryParameter("page", page.toString())

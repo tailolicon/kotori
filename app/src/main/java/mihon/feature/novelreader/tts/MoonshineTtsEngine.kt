@@ -207,7 +207,7 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                         continue
                     }
                     track = track.reusableFor(clip.sampleRate, rate)
-                    play(track, clip, sentence, listener) { active == generation }
+                    play(track, clip) { active == generation }
                     listener.onSentenceFinished(sentence.index)
                 }
                 if (active == generation) listener.onFinished()
@@ -233,48 +233,26 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
     }
 
     /**
-     * Writes [clip] to [track], reporting which word is being spoken as it goes.
+     * Writes [clip] to [track] and returns once the hardware has actually played it.
      *
-     * Moonshine hands back a whole sentence as one buffer, so unlike the system engine there is no
-     * per-word callback to listen to. The position the hardware has actually played is the next best
-     * thing: it is real playback time rather than a timer, so it stays correct across buffer
-     * underruns and a change of speaking rate.
+     * Waiting for playback rather than for the write to finish is what keeps the sentence highlight
+     * honest: `write` returns as soon as the buffer has been handed over, which is up to a sentence
+     * early, and returning there would light up the next sentence over audio still playing this one.
      */
-    private fun play(
-        track: AudioTrack,
-        clip: Clip,
-        sentence: SpeechSentence,
-        listener: NovelTtsListener,
-        active: () -> Boolean,
-    ) {
+    private fun play(track: AudioTrack, clip: Clip, active: () -> Boolean) {
         val samples = clip.samples
         track.play()
         var offset = 0
-        var lastWord = -1
         while (offset < samples.size && active()) {
             val written = track.write(samples, offset, samples.size - offset, AudioTrack.WRITE_NON_BLOCKING)
             if (written < 0) throw IllegalStateException("AudioTrack.write returned $written")
             offset += written
-            val played = track.playbackHeadPosition.coerceIn(0, samples.size)
-            val word = sentence.wordAt(played.toFloat() / samples.size)
-            if (word != lastWord) {
-                lastWord = word
-                listener.onWordSpoken(sentence.index, word)
-            }
-            if (written == 0) Thread.sleep(WORD_TICK_MS)
+            if (written == 0) Thread.sleep(DRAIN_TICK_MS)
         }
-        // Written is not played: drain the rest of the buffer, still moving the highlight, so the
-        // last words of a sentence are not skipped over the instant the write loop finishes.
         val deadline = System.nanoTime() + DRAIN_TIMEOUT_NS
         while (active() && System.nanoTime() < deadline) {
-            val played = track.playbackHeadPosition
-            if (played >= samples.size - 1) break
-            val word = sentence.wordAt(played.toFloat() / samples.size)
-            if (word != lastWord) {
-                lastWord = word
-                listener.onWordSpoken(sentence.index, word)
-            }
-            Thread.sleep(WORD_TICK_MS)
+            if (track.playbackHeadPosition >= samples.size - 1) break
+            Thread.sleep(DRAIN_TICK_MS)
         }
         track.stop()
         track.flush()
@@ -375,7 +353,7 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         const val G2P_ROOT = "g2p_root"
         const val VOICE = "voice"
         const val POLL_MS = 100L
-        const val WORD_TICK_MS = 16L
+        const val DRAIN_TICK_MS = 16L
         const val BUFFER_MULTIPLIER = 4
         val DRAIN_TIMEOUT_NS = TimeUnit.SECONDS.toNanos(60)
 

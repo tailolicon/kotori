@@ -18,44 +18,7 @@ data class SpeechSentence(
     val blockIndex: Int,
     val text: String,
     val range: IntRange,
-) {
-    /**
-     * Word spans within [text], used to bold the word currently being spoken.
-     *
-     * Computed once per sentence rather than per frame: the highlight redraws on every progress
-     * tick, and re-tokenising Vietnamese prose at that rate would show up as jank.
-     */
-    val words: List<IntRange> by lazy(LazyThreadSafetyMode.NONE) { text.wordRanges() }
-
-    /**
-     * Relative weight of each word in speaking time, normalised to sum to 1.
-     *
-     * Engines that synthesize a whole sentence at once report progress in samples, not words, so
-     * word timing has to be inferred. Vietnamese is syllable-timed and its words are short and
-     * fairly even, which makes character count a decent proxy; a small constant is added per word so
-     * that one-letter words still get a visible beat rather than flashing past.
-     */
-    val wordWeights: FloatArray by lazy(LazyThreadSafetyMode.NONE) {
-        val raw = FloatArray(words.size) { words[it].count() + WORD_WEIGHT_FLOOR }
-        val total = raw.sum().takeIf { it > 0f } ?: return@lazy FloatArray(words.size) { 0f }
-        FloatArray(raw.size) { raw[it] / total }
-    }
-
-    /** Index of the word being spoken at [fraction] (0..1) of the way through the sentence. */
-    fun wordAt(fraction: Float): Int {
-        if (words.isEmpty()) return -1
-        var accumulated = 0f
-        wordWeights.forEachIndexed { index, weight ->
-            accumulated += weight
-            if (fraction <= accumulated) return index
-        }
-        return words.lastIndex
-    }
-
-    private companion object {
-        const val WORD_WEIGHT_FLOOR = 1.6f
-    }
-}
+)
 
 /** Every sentence of a chapter, in reading order, with lookups the reader and player both need. */
 class SpeechScript(val sentences: List<SpeechSentence>) {
@@ -203,24 +166,6 @@ private fun List<IntRange>.mergeShortRuns(source: String): List<IntRange> {
             merged.last().first..leftover.last
     }
     return merged
-}
-
-/** Word spans, used for the per-word highlight. Punctuation is not a word and never lights up. */
-private fun String.wordRanges(): List<IntRange> {
-    val ranges = mutableListOf<IntRange>()
-    var start = -1
-    forEachIndexed { index, char ->
-        val isWord = char.isLetterOrDigit() || char == '_' || char == '\'' || char == '-'
-        when {
-            isWord && start < 0 -> start = index
-            !isWord && start >= 0 -> {
-                ranges += start until index
-                start = -1
-            }
-        }
-    }
-    if (start >= 0) ranges += start..lastIndex
-    return ranges
 }
 
 private const val MIN_SENTENCE = 12

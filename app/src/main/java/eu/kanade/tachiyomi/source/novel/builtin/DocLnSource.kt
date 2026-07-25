@@ -29,10 +29,18 @@ import java.util.Base64
 class DocLnSource : BuiltInNovelSource() {
 
     override val name = "DocLN"
-    override val baseUrl = "https://docln.net"
+
+    /**
+     * Same site, same markup, same `i.hako.vip` covers on each — they differ only in which one a
+     * given network lets through. `.sbs` leads because it is the one currently reachable from
+     * Vietnamese ISPs that reset the handshake for `docln.net` and `ln.hako.vn`.
+     */
+    override val mirrors = listOf("docln.sbs", "docln.net", "ln.hako.vn")
+
+    override val baseUrl get() = "https://$domain"
     override val supportsLatest = true
-    override val iconUrl = "https://docln.net/favicon.ico"
-    override val loginUrl = "https://docln.net/login"
+    override val iconUrl = "https://docln.sbs/favicon.ico"
+    override val loginUrl get() = "$baseUrl/login"
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .set("User-Agent", DESKTOP_UA)

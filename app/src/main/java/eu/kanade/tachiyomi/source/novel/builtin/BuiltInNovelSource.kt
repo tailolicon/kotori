@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.source.novel.builtin
 
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
@@ -28,9 +29,42 @@ abstract class BuiltInNovelSource : NovelHttpSource(), ConfigurableSource {
      */
     open val loginUrl: String? = null
 
+    /**
+     * Hostnames the site answers on, most-preferred first; empty when it has only one.
+     *
+     * These exist because reachability is a property of the reader's network, not of the site. A
+     * Vietnamese ISP resetting the TLS handshake for one hostname while happily serving the same
+     * content from another is routine, and it is indistinguishable in the app from the site being
+     * down. Nothing here can detect that, so the choice is the reader's to make.
+     */
+    open val mirrors: List<String> = emptyList()
+
+    /**
+     * The hostname requests actually go to.
+     *
+     * Read fresh each time rather than captured, so switching mirror takes effect on the next
+     * request instead of needing the app restarted.
+     */
+    protected val domain: String
+        get() = getSourcePreferences().getString(MIRROR_KEY, null)
+            ?.takeIf { it in mirrors }
+            ?: mirrors.firstOrNull().orEmpty()
+
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        val login = loginUrl ?: return
         val context = screen.context
+        if (mirrors.size > 1) {
+            screen.addPreference(
+                ListPreference(context).apply {
+                    key = MIRROR_KEY
+                    title = "Tên miền"
+                    entries = mirrors.toTypedArray()
+                    entryValues = mirrors.toTypedArray()
+                    setDefaultValue(mirrors.first())
+                    summary = "%s\nĐổi sang tên miền khác nếu nhà mạng chặn tên miền đang dùng."
+                },
+            )
+        }
+        val login = loginUrl ?: return
         screen.addPreference(
             Preference(context).apply {
                 title = "Đăng nhập bằng WebView"
@@ -45,6 +79,8 @@ abstract class BuiltInNovelSource : NovelHttpSource(), ConfigurableSource {
     }
 
     companion object {
+        const val MIRROR_KEY: String = "novel_mirror_domain"
+
         const val DESKTOP_UA: String =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/120.0.0.0 Safari/537.36"

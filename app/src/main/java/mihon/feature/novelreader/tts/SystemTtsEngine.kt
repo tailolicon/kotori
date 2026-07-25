@@ -14,9 +14,10 @@ import kotlin.coroutines.resume
  *
  * Always available and instant to start, which is why it stays the default and the fallback, but its
  * quality is entirely the device's: a phone with Google's neural vi-VN voices sounds good, one
- * without sounds like a satnav. The one thing it does better than the neural engine is word timing —
- * [UtteranceProgressListener.onRangeStart] reports the exact character span being spoken, so the
- * karaoke highlight here is measured rather than estimated.
+ * without sounds like a satnav.
+ *
+ * Each sentence is queued as its own utterance, which is what makes the utterance callbacks line up
+ * with the reader's sentence highlight without any bookkeeping in between.
  */
 class SystemTtsEngine(context: Context) : NovelTtsEngine {
 
@@ -140,19 +141,6 @@ class SystemTtsEngine(context: Context) : NovelTtsEngine {
             val (utteranceSession, index) = utteranceId.parse() ?: return
             if (utteranceSession != session) return
             listener?.onSentenceStarted(index)
-        }
-
-        /**
-         * The engine reports the character span it is about to speak, which is exactly the karaoke
-         * highlight — no estimation needed. The span is in sentence coordinates because each
-         * sentence was queued as its own utterance.
-         */
-        override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-            val (utteranceSession, index) = utteranceId.parse() ?: return
-            if (utteranceSession != session) return
-            val sentence = script[index] ?: return
-            val word = sentence.words.indexOfFirst { start < it.last + 1 && end > it.first }
-            listener?.onWordSpoken(index, word)
         }
 
         override fun onDone(utteranceId: String?) {

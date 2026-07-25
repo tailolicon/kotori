@@ -99,16 +99,4 @@ class SpeechScriptTest {
         }
     }
 
-    @Test
-    fun `word weights advance the highlight across the sentence`() {
-        val sentence = buildSpeechScript(listOf("Một hai ba bốn năm sáu bảy tám."))
-            .sentences
-            .first()
-
-        assertEquals(0, sentence.wordAt(0f))
-        assertEquals(sentence.words.lastIndex, sentence.wordAt(1f))
-        // Progress must be monotonic, or the bolded word would jump backwards mid-sentence.
-        val path = (0..20).map { sentence.wordAt(it / 20f) }
-        assertEquals(path.sorted(), path)
-    }
 }

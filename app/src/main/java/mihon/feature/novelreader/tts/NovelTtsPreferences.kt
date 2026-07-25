@@ -26,8 +26,4 @@ class NovelTtsPreferences(
     /** Whether the reader scrolls itself to keep the sentence being spoken on screen. */
     val followPlayback: Preference<Boolean> =
         preferenceStore.getBoolean("novel_tts_follow_playback", true)
-
-    /** Whether the word currently being spoken is emphasised inside the highlighted sentence. */
-    val highlightWords: Preference<Boolean> =
-        preferenceStore.getBoolean("novel_tts_highlight_words", true)
 }
