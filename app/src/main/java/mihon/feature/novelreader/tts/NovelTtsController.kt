@@ -61,6 +61,14 @@ class NovelTtsController(
     /** Where playback should resume from. Kept apart from [state] so a pause cannot lose it. */
     private var cursor = 0
 
+    /**
+     * Whether an engine has already been swapped for the other one on its own.
+     *
+     * Both directions of fallback exist, so a device where neither engine can read Vietnamese would
+     * otherwise hand the chapter back and forth between them forever instead of saying so.
+     */
+    private var switchedEngine = false
+
     var state by mutableStateOf(
         NovelTtsState(
             engineId = preferences.engine.get(),
@@ -103,9 +111,13 @@ class NovelTtsController(
                 }
                 // A neural voice that will not load is a bad reason to lose the chapter's audio, so
                 // fall back to the system engine rather than leaving the reader with nothing.
+                // Either engine can be the one this device cannot use — the neural voice needs a
+                // download to succeed, the system one needs a Vietnamese voice to be installed at
+                // all — so a failure moves to the other rather than ending the chapter's audio.
                 if (!ok) {
-                    if (active.id == NovelTtsEngineId.NEURAL) {
-                        fallBackToSystem()
+                    if (!switchedEngine) {
+                        switchedEngine = true
+                        fallBackTo(active.id.other())
                         return@launch
                     }
                     state = state.copy(status = NovelTtsStatus.ERROR)
@@ -170,6 +182,9 @@ class NovelTtsController(
     fun setEngine(id: NovelTtsEngineId) {
         if (id == state.engineId) return
         val wasPlaying = state.status == NovelTtsStatus.PLAYING
+        // An explicit choice re-arms the automatic fallback: the reader may well be switching
+        // because they have just installed the voice the engine was missing.
+        switchedEngine = false
         engine.stop()
         preferences.engine.set(id)
         // Voice ids are engine-specific, so carrying one across would ask the new engine for a voice
@@ -233,16 +248,19 @@ class NovelTtsController(
         }
     }
 
-    private fun fallBackToSystem() {
-        val reason = state.message ?: "Giọng AI chưa dùng được"
-        preferences.engine.set(NovelTtsEngineId.SYSTEM)
+    /** Moves to [id] after the other engine could not be readied, keeping the reason on screen. */
+    private fun fallBackTo(id: NovelTtsEngineId) {
+        val reason = state.message ?: "${state.engineId.label} chưa dùng được"
+        preferences.engine.set(id)
+        // Voice ids are engine-specific; carrying one over would ask the new engine for a voice it
+        // has never heard of.
         preferences.voiceId.set("")
         state = state.copy(
-            engineId = NovelTtsEngineId.SYSTEM,
+            engineId = id,
             voiceId = null,
             voices = emptyList(),
             preparation = null,
-            message = "$reason — tạm dùng giọng hệ thống",
+            message = "$reason — chuyển sang ${id.label.lowercase()}",
         )
         play(cursor)
     }

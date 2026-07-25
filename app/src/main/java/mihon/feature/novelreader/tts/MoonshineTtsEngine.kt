@@ -84,7 +84,10 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                 downloaded = downloaded,
                 sizeLabel = if (downloaded) null else "cần tải",
             )
-        }.sortedWith(compareBy({ !it.downloaded }, { it.label }))
+            // Best first, so the picker leads with it and defaultVoice() lands on it. Ordering by
+            // label instead put whichever voice sorted first alphabetically in front of a better
+            // one, which on a fresh install is the voice that then gets downloaded and read with.
+        }.sortedWith(compareBy({ !it.downloaded }, { -it.id.qualityRank() }, { it.label }))
     }.getOrElse {
         logcat(LogPriority.WARN, it) { "Moonshine voice catalogue unavailable" }
         emptyList()
@@ -357,7 +360,15 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         const val BUFFER_MULTIPLIER = 4
         val DRAIN_TIMEOUT_NS = TimeUnit.SECONDS.toNanos(60)
 
-        /** Turns `kokoro_vf_hue` / `piper_vi_VN-vais1000-medium` into something readable. */
+        /**
+         * Turns a catalogue id into something a reader can actually choose between.
+         *
+         * Ids come in two shapes: `kokoro_vf_hue`, where what follows the engine is a gender and a
+         * name, and `piper_vi_VN-vais1000-medium`, where it is a locale, the model's own name and
+         * the size it was trained at. Reading the second as though it were the first cut the name
+         * at its first dash, so every Vietnamese Piper voice came out as "VN · Piper" — identical
+         * rows with no way to tell the medium-quality voice from the low one.
+         */
         fun String.toLabel(): String {
             val engine = substringBefore('_').replaceFirstChar(Char::uppercase)
             val voice = substringAfter('_')
@@ -366,11 +377,38 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                 voice.startsWith("vm") || voice.contains("male") -> "Nam"
                 else -> null
             }
-            val name = voice.substringAfter('_').substringBefore('-')
+            // A dash marks the Piper shape: the locale before it is noise the language picker has
+            // already accounted for, and the last segment may be the quality tier.
+            val model = if ('-' in voice) voice.substringAfter('-') else voice.substringAfter('_')
+            val quality = QUALITIES[model.substringAfterLast('-', "")]
+            val name = (if (quality != null) model.substringBeforeLast('-') else model)
                 .replace('_', ' ')
                 .replaceFirstChar(Char::uppercase)
                 .ifEmpty { voice }
-            return listOfNotNull(name, gender, engine).joinToString(" · ")
+            return listOfNotNull(name, gender, quality, engine).joinToString(" · ")
+        }
+
+        /** Piper publishes one voice at several sizes; the tier is the last segment of its id. */
+        val QUALITIES = mapOf(
+            "x_low" to "rất thấp",
+            "low" to "thấp",
+            "medium" to "trung bình",
+            "high" to "cao",
+        )
+
+        /**
+         * How good a voice is expected to sound, for ordering the picker and choosing a default.
+         *
+         * The tiers are model size, and they are audible: Piper's `low` voices are 16 kHz while
+         * `medium` is 22.05 kHz. Ids with no tier are Kokoro's, which are not the small models, so
+         * they rank alongside `medium` rather than below everything.
+         */
+        fun String.qualityRank(): Int = when (substringAfterLast('-', "")) {
+            "high" -> 3
+            "medium" -> 2
+            "low" -> 1
+            "x_low" -> 0
+            else -> 2
         }
     }
 }

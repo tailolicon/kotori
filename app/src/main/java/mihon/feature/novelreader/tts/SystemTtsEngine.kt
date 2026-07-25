@@ -57,10 +57,20 @@ class SystemTtsEngine(context: Context) : NovelTtsEngine {
             onProgress(NovelTtsPreparation.Failed("Thiết bị chưa cài giọng đọc nào"))
             return false
         }
+        // Refusing here rather than reading anyway is the whole point: an engine set to some other
+        // locale will happily pronounce Vietnamese with English or Chinese phonetics, which comes
+        // out as noise that sounds like a broken app rather than like a missing voice.
+        if (!speaksVietnamese) {
+            onProgress(NovelTtsPreparation.Failed("Máy chưa có giọng tiếng Việt"))
+            return false
+        }
         applyVoice(voiceId)
         onProgress(NovelTtsPreparation.Ready)
         return true
     }
+
+    /** Whether the engine can pronounce Vietnamese, as opposed to merely accepting the text. */
+    private var speaksVietnamese = false
 
     /**
      * The init callback can fire before the constructor returns, so it configures the instance it is
@@ -72,12 +82,9 @@ class SystemTtsEngine(context: Context) : NovelTtsEngine {
         created = TextToSpeech(appContext) { status ->
             val ok = status == TextToSpeech.SUCCESS
             if (ok) {
-                created.language =
-                    if (created.isLanguageAvailable(VIETNAMESE) >= TextToSpeech.LANG_AVAILABLE) {
-                        VIETNAMESE
-                    } else {
-                        Locale.getDefault()
-                    }
+                speaksVietnamese =
+                    created.isLanguageAvailable(VIETNAMESE) >= TextToSpeech.LANG_AVAILABLE
+                if (speaksVietnamese) created.language = VIETNAMESE
                 created.setOnUtteranceProgressListener(progressListener)
                 engine = created
                 initialised = true

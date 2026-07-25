@@ -93,5 +93,8 @@ enum class NovelTtsEngineId(val label: String) {
     SYSTEM("Giọng hệ thống"),
 
     /** Moonshine's on-device neural voices — better prosody, but the model must be downloaded. */
-    NEURAL("Giọng AI (tự nhiên)"),
+    NEURAL("Giọng AI (tự nhiên)");
+
+    /** The engine to try when this one cannot be readied. */
+    fun other(): NovelTtsEngineId = if (this == NEURAL) SYSTEM else NEURAL
 }
