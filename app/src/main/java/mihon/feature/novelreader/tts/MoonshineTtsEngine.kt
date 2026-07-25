@@ -119,7 +119,8 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
             // cancellation does not raise by itself; runInterruptible bridges the two, so leaving
             // the reader mid-download actually stops it rather than letting it finish unseen.
             runInterruptible {
-                AssetDownloader().ensureModelPresent(assetRoot, ModelSpec.tts(LANGUAGE, voice)) {
+                val downloader = AssetDownloader()
+                val report = AssetDownloader.ProgressListener {
                         key, fileIndex, totalFiles, bytesDone, bytesTotal ->
                     onProgress(
                         NovelTtsPreparation.Downloading(
@@ -132,12 +133,25 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                         ),
                     )
                 }
+                // Two models, and both are required. The voice turns phonemes into audio and never
+                // sees the text; it is this one that turns Vietnamese letters into those phonemes.
+                // Without it the phonemizer falls back to its default dialect, and the voice then
+                // reads fluent, confident speech that is not Vietnamese — which sounds like a
+                // broken voice rather than like a missing download.
+                downloader.ensureModelPresent(assetRoot, ModelSpec.g2p(LANGUAGE), report)
+                downloader.ensureModelPresent(assetRoot, ModelSpec.tts(LANGUAGE, voice), report)
             }
             synthesizer?.close()
             synthesizer = TextToSpeech(
                 LANGUAGE,
                 assetRoot.absolutePath,
-                listOf(TranscriberOption(VOICE, voice)),
+                listOf(
+                    TranscriberOption(VOICE, voice),
+                    // The library treats the language and the grapheme-to-phoneme dialect as
+                    // separate settings — its own logging prints them side by side — so naming the
+                    // voice's language does not by itself say which rules turn letters into sounds.
+                    TranscriberOption(G2P_DIALECT, LANGUAGE),
+                ),
             )
             preparedVoice = voice
             onProgress(NovelTtsPreparation.Ready)
@@ -354,6 +368,7 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         const val ASSET_DIR = "novel-tts"
         const val LANGUAGE = "vi"
         const val G2P_ROOT = "g2p_root"
+        const val G2P_DIALECT = "g2p_dialect"
         const val VOICE = "voice"
         const val POLL_MS = 100L
         const val DRAIN_TICK_MS = 16L
