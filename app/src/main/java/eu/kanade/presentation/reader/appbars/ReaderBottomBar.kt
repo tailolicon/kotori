@@ -1,5 +1,7 @@
 package eu.kanade.presentation.reader.appbars
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -89,11 +92,21 @@ fun ReaderToolTile(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    surface: ReaderBarSurface? = null,
 ) {
-    val accent = KotoriTheme.accent
+    // Glass and its pale teal are built for the app's dark chrome. Over a cream or khaki page they
+    // read as a faint smudge, so a page that supplies its own colours gets a plain tinted tile with
+    // the page's own ink instead.
+    val tileModifier = if (surface == null) {
+        modifier.glass(shape = RoundedCornerShape(15.dp), elevated = true)
+    } else {
+        modifier
+            .clip(RoundedCornerShape(15.dp))
+            .background(surface.content.copy(alpha = 0.07f))
+            .border(1.dp, surface.content.copy(alpha = 0.12f), RoundedCornerShape(15.dp))
+    }
     Column(
-        modifier = modifier
-            .glass(shape = RoundedCornerShape(15.dp), elevated = true)
+        modifier = tileModifier
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -102,14 +115,14 @@ fun ReaderToolTile(
         Icon(
             painter = painter,
             contentDescription = label,
-            tint = accent.light,
+            tint = surface?.accent ?: KotoriTheme.accent.light,
         )
         Text(
             text = label,
             fontFamily = BeVietnamProFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 8.5.sp,
-            color = KotoriColors.textSecondary,
+            color = surface?.content?.copy(alpha = 0.85f) ?: KotoriColors.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -136,29 +138,22 @@ internal fun NovelTtsPlayer(
                 Icon(Icons.Filled.SkipNext, contentDescription = "Câu sau", tint = paper.ink)
             }
 
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                Text(
-                    text = state.headline(script),
-                    fontFamily = BeVietnamProFamily,
-                    fontSize = 11.sp,
-                    color = paper.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = state.subtitle(script),
-                    fontFamily = BeVietnamProFamily,
-                    fontSize = 9.5.sp,
-                    color = paper.muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            // The sentence being read is already lit up in the page itself, so repeating it here
+            // only crowded the row; the space goes to the speed control instead.
+            Spacer(modifier = Modifier.weight(1f))
 
-            NovelTtsRateChip(
-                rate = state.rate,
+            NovelTtsRateStep(
+                symbol = "−",
+                enabled = state.rate > NovelTtsController.MIN_RATE,
                 paper = paper,
-                onClick = { controller.setRate(state.rate.nextRate()) },
+                onClick = { controller.setRate(state.rate.stepRate(down = true)) },
+            )
+            NovelTtsRateChip(rate = state.rate, paper = paper)
+            NovelTtsRateStep(
+                symbol = "+",
+                enabled = state.rate < NovelTtsController.MAX_RATE,
+                paper = paper,
+                onClick = { controller.setRate(state.rate.stepRate(down = false)) },
             )
             IconButton(onClick = { expanded = !expanded }) {
                 Icon(
@@ -241,8 +236,9 @@ private fun NovelTtsScrubber(
     }
 }
 
+/** Reads out the current speed. Not tappable — the steppers either side of it are the control. */
 @Composable
-private fun NovelTtsRateChip(rate: Float, paper: NovelPaperTheme, onClick: () -> Unit) {
+private fun NovelTtsRateChip(rate: Float, paper: NovelPaperTheme) {
     Text(
         text = "${rate.trimmed()}×",
         fontFamily = UnboundedFamily,
@@ -252,8 +248,35 @@ private fun NovelTtsRateChip(rate: Float, paper: NovelPaperTheme, onClick: () ->
         modifier = Modifier
             .clip(CircleShape)
             .background(paper.accent.copy(alpha = 0.12f))
-            .clickable(onClick = onClick)
             .padding(horizontal = 9.dp, vertical = 5.dp),
+    )
+}
+
+/**
+ * One step of the speaking rate.
+ *
+ * A pair of these replaced a chip that cycled through the speeds, which could only ever go one
+ * way: overshooting by one meant seven more taps to come back around.
+ */
+@Composable
+private fun NovelTtsRateStep(
+    symbol: String,
+    enabled: Boolean,
+    paper: NovelPaperTheme,
+    onClick: () -> Unit,
+) {
+    Text(
+        text = symbol,
+        fontFamily = UnboundedFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 13.sp,
+        color = if (enabled) paper.ink else paper.muted.copy(alpha = 0.4f),
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .wrapContentHeight(),
     )
 }
 
@@ -402,22 +425,11 @@ private fun NovelTtsPreparationRow(progress: NovelTtsPreparation, paper: NovelPa
     }
 }
 
-private fun NovelTtsState.headline(script: SpeechScript): String = when (status) {
-    NovelTtsStatus.PREPARING -> "Đang chuẩn bị…"
-    NovelTtsStatus.ERROR -> message ?: "Không đọc được"
-    else -> script[sentence]?.text ?: "Chạm vào một đoạn để nghe từ đó"
-}
-
-private fun NovelTtsState.subtitle(script: SpeechScript): String {
-    val position = if (sentence >= 0 && !script.isEmpty) "Câu ${sentence + 1}/${script.size} · " else ""
-    return position + engineId.label
-}
-
-/** Speeds a listener actually wants, cycled by tapping the chip. */
-private fun Float.nextRate(): Float {
+/** Speeds a listener actually wants, moved through one step at a time in either direction. */
+private fun Float.stepRate(down: Boolean): Float {
     val steps = floatArrayOf(0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f, 1.75f, 2f)
     val current = steps.indexOfFirst { it >= this - 0.01f }.takeIf { it >= 0 } ?: 0
-    return steps[(current + 1) % steps.size]
+    return steps[(if (down) current - 1 else current + 1).coerceIn(0, steps.lastIndex)]
 }
 
 private fun Float.trimmed(): String =

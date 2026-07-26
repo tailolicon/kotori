@@ -272,6 +272,34 @@ fun NovelReaderScreen(
     val ttsState = ttsController.state
     val blockOffsets = remember(blocks) { mutableStateMapOf<Int, Int>() }
 
+    // The bars take the page's own paper rather than the app's dark chrome, so the reader reads as
+    // one surface instead of a cream page with a night-mode frame around it.
+    val barSurface = remember(paper) {
+        ReaderBarSurface(
+            background = paper.background,
+            content = paper.ink,
+            accent = paper.accent,
+        )
+    }
+
+    /**
+     * The sentence nearest the top of what is on screen.
+     *
+     * Pressing listen should continue from what the reader is looking at: they have usually
+     * scrolled somewhere before deciding to listen, and starting at the top of the chapter throws
+     * that away.
+     */
+    fun sentenceInView(): Int {
+        if (script.isEmpty) return 0
+        val anchor = scrollState.value + (viewportHeight * FOLLOW_ANCHOR).toInt()
+        val block = blockOffsets.entries
+            .filter { it.value <= anchor }
+            .maxByOrNull { it.value }
+            ?: blockOffsets.entries.minByOrNull { it.value }
+            ?: return 0
+        return script.sentencesIn(block.key).firstOrNull()?.index ?: 0
+    }
+
     DisposableEffect(ttsController) { onDispose(ttsController::release) }
     LaunchedEffect(script) { ttsController.setScript(script) }
 
@@ -502,11 +530,7 @@ fun NovelReaderScreen(
             continuousSlider = true,
             // The bars take the page's own paper rather than the app's dark chrome, so the reader
             // reads as one surface instead of a cream page with a night-mode frame around it.
-            surface = ReaderBarSurface(
-                background = paper.background,
-                content = paper.ink,
-                accent = paper.accent,
-            ),
+            surface = barSurface,
             bottomBar = {
                 Row(
                     modifier = Modifier
@@ -535,6 +559,7 @@ fun NovelReaderScreen(
                             )
                         },
                         modifier = Modifier.weight(1f),
+                        surface = barSurface,
                     )
                     ReaderToolTile(
                         painter = rememberVectorPainter(
@@ -547,16 +572,24 @@ fun NovelReaderScreen(
                         label = "Nghe",
                         onClick = {
                             ttsControlsVisible = true
-                            ttsController.toggle()
+                            // Resuming a pause continues where it stopped; a fresh start begins at
+                            // what is on screen rather than at the top of the chapter.
+                            if (ttsState.status == NovelTtsStatus.IDLE) {
+                                ttsController.play(sentenceInView())
+                            } else {
+                                ttsController.toggle()
+                            }
                             ttsController.refreshVoices()
                         },
                         modifier = Modifier.weight(1f),
+                        surface = barSurface,
                     )
                     ReaderToolTile(
                         painter = rememberVectorPainter(Icons.Outlined.Settings),
                         label = stringResource(MR.strings.action_settings),
                         onClick = { settingsVisible = !settingsVisible },
                         modifier = Modifier.weight(1f),
+                        surface = barSurface,
                     )
                 }
             },
