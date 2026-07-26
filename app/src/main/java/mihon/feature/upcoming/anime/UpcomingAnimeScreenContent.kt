@@ -15,6 +15,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,21 +29,33 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.relativeDateText
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.isTabletUi
 import tachiyomi.core.common.Constants
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.launch
+import mihon.feature.upcoming.KotoriTabletUpcomingBoard
+import mihon.feature.upcoming.KotoriUpcomingDay
+import mihon.feature.upcoming.KotoriUpcomingRelease
 import mihon.feature.upcoming.anime.components.UpcomingItem
 import mihon.feature.upcoming.components.calendar.Calendar
+import eu.kanade.tachiyomi.util.lang.toLocalDate
 import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.model.AnimeCover
+import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.presentation.core.util.collectAsState
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.YearMonth
 
 @Composable
@@ -57,6 +74,15 @@ fun UpcomingAnimeScreenContent(
             }
         }
     }
+    if (isKotoriTablet()) {
+        KotoriTabletUpcomingWeek(
+            items = state.items,
+            onClickUpcoming = onClickUpcoming,
+            modifier = modifier,
+        )
+        return
+    }
+
     Scaffold(
         topBar = { UpcomingToolbar() },
         modifier = modifier,
@@ -85,6 +111,95 @@ fun UpcomingAnimeScreenContent(
             )
         }
     }
+}
+
+/**
+ * T7 · Lịch mùa on tablet: the seven-column week board, with the week the arrows
+ * select and the per-release bells persisted through [LibraryPreferences].
+ */
+@Composable
+private fun KotoriTabletUpcomingWeek(
+    items: ImmutableList<UpcomingAnimeUIModel>,
+    onClickUpcoming: (Anime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val navigator = LocalNavigator.currentOrThrow
+    val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
+    val notifyIds by libraryPreferences.upcomingNotifyAnimeIds.collectAsState()
+    var weekOffset by rememberSaveable { mutableIntStateOf(0) }
+
+    val weekStart = remember(weekOffset) {
+        LocalDate.now()
+            .with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            .plusWeeks(weekOffset.toLong())
+    }
+    val anime = remember(items) { items.filterIsInstance<UpcomingAnimeUIModel.Item>().map { it.anime } }
+    val dayLabels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
+
+    val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
+    val weekAnimeIds = remember(anime, weekStart) {
+        anime.mapNotNull { entry ->
+            val date = entry.expectedNextUpdate?.toLocalDate() ?: return@mapNotNull null
+            entry.id.toString().takeIf { !date.isBefore(weekStart) && !date.isAfter(weekEnd) }
+        }
+    }
+
+    val days = remember(anime, weekStart, notifyIds) {
+        (0..6).map { index ->
+            val date = weekStart.plusDays(index.toLong())
+            KotoriUpcomingDay(
+                date = date,
+                label = dayLabels[index],
+                releases = anime
+                    .filter { it.expectedNextUpdate?.toLocalDate() == date }
+                    .sortedBy { it.expectedNextUpdate }
+                    .map { entry ->
+                        val time = entry.expectedNextUpdate
+                            ?.atZone(ZoneId.systemDefault())
+                            ?.toLocalTime()
+                        val id = entry.id.toString()
+                        KotoriUpcomingRelease(
+                            key = "upcoming-$id-$date",
+                            time = time?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "--:--",
+                            title = entry.title,
+                            itemLabel = "Tập kế",
+                            coverData = AnimeCover(
+                                animeId = entry.id,
+                                sourceId = entry.source,
+                                isAnimeFavorite = entry.favorite,
+                                url = entry.thumbnailUrl,
+                                lastModified = entry.coverLastModified,
+                            ),
+                            notify = id in notifyIds,
+                            onClick = { onClickUpcoming(entry) },
+                            onToggleNotify = {
+                                val current = libraryPreferences.upcomingNotifyAnimeIds.get()
+                                libraryPreferences.upcomingNotifyAnimeIds.set(
+                                    if (id in current) current - id else current + id,
+                                )
+                            },
+                        )
+                    },
+            )
+        }
+    }
+
+    KotoriTabletUpcomingBoard(
+        modifier = modifier,
+        title = stringResource(MR.strings.label_upcoming),
+        subtitle = "Tuần ${weekStart.dayOfMonth}–${weekEnd.dayOfMonth} tháng ${weekEnd.monthValue}",
+        days = days,
+        libraryOnly = null,
+        onToggleLibraryOnly = {},
+        onNotifyAll = {
+            libraryPreferences.upcomingNotifyAnimeIds.set(
+                libraryPreferences.upcomingNotifyAnimeIds.get() + weekAnimeIds,
+            )
+        },
+        onPreviousWeek = { weekOffset-- },
+        onNextWeek = { weekOffset++ },
+        onNavigateUp = navigator::pop,
+    )
 }
 
 @Composable

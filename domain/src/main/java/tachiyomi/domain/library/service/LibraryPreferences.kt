@@ -154,6 +154,12 @@ class LibraryPreferences(
         emptySet(),
     )
 
+    /** Same, for manga entries on the season calendar. */
+    val upcomingNotifyMangaIds: Preference<Set<String>> = preferenceStore.getStringSet(
+        "upcoming_notify_manga_ids",
+        emptySet(),
+    )
+
     // endregion
 
     // region Chapter
