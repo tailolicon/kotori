@@ -85,6 +85,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
+            // Kotori has always shipped as `app.mihon.dev` — every build a reader has ever
+            // installed, from the first test APK onwards, carries that id. Leaving it off here made
+            // `assembleRelease` produce `app.mihon` instead, which Android treats as an unrelated
+            // app: it installs alongside the real one, starts with an empty library, and cannot be
+            // updated by anything the reader already has. Two releases went out that way.
+            applicationIdSuffix = ".dev"
+
             signingConfig = debug.signingConfig
 
             isProfileable = true
