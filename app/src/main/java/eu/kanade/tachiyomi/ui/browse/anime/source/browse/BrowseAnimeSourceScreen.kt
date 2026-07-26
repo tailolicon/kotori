@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.anime.source.browse
 
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import androidx.compose.foundation.background
@@ -134,11 +136,15 @@ data class BrowseAnimeSourceScreen(
         val headerScroll = rememberBrowseHeaderScrollState()
         Scaffold(
             modifier = Modifier.nestedScroll(headerScroll.connection),
+            // Transparent so the window's aurora shows through, the same as the manga screen.
+            containerColor = Color.Transparent,
             topBar = {
                 Column(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface)
                         .then(headerScroll.headerModifier())
+                        // Frosted rather than solid, so the aurora keeps showing through while
+                        // covers passing underneath stay legible.
+                        .background(KotoriColors.bgBase.copy(alpha = 0.82f))
                         .onSizeChanged { topBarHeight = it.height },
                 ) {
                     BrowseAnimeSourceToolbar(

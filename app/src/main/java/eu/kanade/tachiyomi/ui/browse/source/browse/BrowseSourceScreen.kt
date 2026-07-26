@@ -37,6 +37,7 @@ import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.theme.kotori.AuroraBackground
+import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriChip
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
@@ -126,9 +127,10 @@ data class BrowseSourceScreen(
                 topBar = {
                     Column(
                         modifier = Modifier
-                            // Opaque, so covers pass behind the header instead of through it.
-                            .background(MaterialTheme.colorScheme.surface)
                             .then(headerScroll.headerModifier())
+                            // Frosted rather than solid: the aurora keeps showing through, which is
+                            // the point of the theme, while covers passing underneath stay legible.
+                            .background(KotoriColors.bgBase.copy(alpha = 0.82f))
                             .pointerInput(Unit) {},
                     ) {
                         BrowseSourceToolbar(

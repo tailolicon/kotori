@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.main
 
+import eu.kanade.presentation.theme.kotori.AuroraBackground
 import android.animation.ValueAnimator
 import android.app.SearchManager
 import android.app.assist.AssistContent
@@ -215,7 +216,12 @@ class MainActivity : BaseActivity() {
                 }
 
                 val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+                // One aurora for the whole window rather than one per screen: the bars and the
+                // navigation pill sit outside any screen's own area, and a scaffold painting a flat
+                // fill there is what framed the floating pill in a rectangle.
+                AuroraBackground {
                 Scaffold(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     topBar = {
                         AppStateBanners(
                             downloadedOnlyMode = downloadOnly,
@@ -248,6 +254,7 @@ class MainActivity : BaseActivity() {
                             )
                         }
                     }
+                }
                 }
 
                 // Pop source-related screens when incognito mode is turned off

@@ -181,8 +181,18 @@ data object LibraryTab : Tab {
             started
         }
 
+        val tabletUi = isKotoriTablet()
+        val resumeItems = rememberKotoriResumeItems(
+            onOpenManga = { navigator.push(MangaScreen(it)) },
+            onOpenAnime = { navigator.push(AnimeScreen(it)) },
+        )
+        val airingItems = rememberKotoriAiringToday(
+            onOpenAnime = { navigator.push(AnimeScreen(it)) },
+        )
+
         KotoriScreenScaffold(
             header = {
+                if (!tabletUi) {
                 KotoriHeader(
                     titleContent = { KotoriWordmark() },
                     actions = {
@@ -255,6 +265,7 @@ data object LibraryTab : Tab {
                         modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
                     )
                 }
+                }
             },
             bottomBar = {
                 if (state.selectionMode) {
@@ -325,6 +336,100 @@ data object LibraryTab : Tab {
             when {
                 state.isLoading -> {
                     LoadingScreen(Modifier.padding(contentPadding))
+                }
+                tabletUi -> {
+                    val displayMode = screenModel.getDisplayMode()
+                    val activeCategory = state.activeCategory
+                    val items = activeCategory?.let { state.getItemsForCategory(it) }.orEmpty()
+                    val history = lastRead
+                    val heroItem = history?.let { state.libraryData.favoritesById[it.mangaId] }
+                    KotoriTabletLibraryLayout(
+                        modifier = Modifier.padding(contentPadding),
+                        activeMode = activeMode,
+                        onSelectMode = { uiPreferences.activeMediaMode.set(it) },
+                        searchQuery = state.searchQuery.orEmpty(),
+                        onSearchChange = screenModel::search,
+                        onClearSearch = { screenModel.search("") },
+                        onOpenFilters = screenModel::showSettingsDialog,
+                        filtersActive = state.hasActiveFilters,
+                        onRefresh = { onClickRefresh(state.activeCategory) },
+                        onCycleDisplayMode = {
+                            val order = listOf(
+                                LibraryDisplayMode.CompactGrid,
+                                LibraryDisplayMode.ComfortableGrid,
+                                LibraryDisplayMode.CoverOnlyGrid,
+                                LibraryDisplayMode.List,
+                            )
+                            displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
+                        },
+                        categories = state.displayedCategories.map { it.visualName },
+                        categoryCounts = state.displayedCategories.map { state.getItemCountForCategory(it) },
+                        activeCategoryIndex = state.coercedActiveCategoryIndex,
+                        onSelectCategory = screenModel::updateActiveCategoryIndex,
+                        title = stringResource(MR.strings.label_library),
+                        subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
+                        tiles = items.map { item ->
+                            val manga = item.libraryManga.manga
+                            KotoriTabletLibraryTile(
+                                id = manga.id,
+                                title = manga.title,
+                                statusLine = libraryStatusLine(item.libraryManga),
+                                coverData = MangaCover(
+                                    mangaId = manga.id,
+                                    sourceId = manga.source,
+                                    isMangaFavorite = manga.favorite,
+                                    url = manga.thumbnailUrl,
+                                    lastModified = manga.coverLastModified,
+                                ),
+                                unreadCount = item.badges.unreadCount,
+                                downloaded = item.badges.downloadCount > 0,
+                                selected = manga.id in state.selection,
+                            )
+                        },
+                        onClickTile = { id ->
+                            val category = state.activeCategory
+                            val entry = state.libraryData.favoritesById[id]
+                            if (state.selectionMode && category != null && entry != null) {
+                                screenModel.toggleSelection(category, entry.libraryManga)
+                            } else {
+                                navigator.push(MangaScreen(id))
+                            }
+                        },
+                        onLongClickTile = { id ->
+                            val category = state.activeCategory
+                            val entry = state.libraryData.favoritesById[id]
+                            if (category != null && entry != null) {
+                                screenModel.toggleRangeSelection(category, entry.libraryManga)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        },
+                        hero = if (history != null && heroItem != null) {
+                            val libraryManga = heroItem.libraryManga
+                            KotoriTabletHero(
+                                title = history.title,
+                                meta = "Chương ${formatChapterNumber(history.chapterNumber)}" +
+                                    " · đã đọc ${libraryManga.readCount}/${libraryManga.totalChapters}",
+                                progress = if (libraryManga.totalChapters > 0) {
+                                    libraryManga.readCount.toFloat() / libraryManga.totalChapters
+                                } else {
+                                    0f
+                                },
+                                coverData = history.coverData,
+                                onClick = { navigator.push(MangaScreen(history.mangaId)) },
+                                onResume = { onContinueReading(libraryManga) },
+                            )
+                        } else {
+                            null
+                        },
+                        resumeItems = resumeItems,
+                        airingItems = airingItems,
+                        emptyContent = {
+                            KotoriEmptyState(
+                                title = "Thư viện trống",
+                                hint = "Thêm truyện từ tab Duyệt",
+                            )
+                        },
+                    )
                 }
                 state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
                     val handler = LocalUriHandler.current

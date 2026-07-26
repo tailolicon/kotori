@@ -37,14 +37,16 @@ class BrowseHeaderScrollState {
     /**
      * Measures the header and applies the current offset to it.
      *
-     * Both belong together: the offset is meaningless without the height it is clamped to.
+     * Both belong together: the offset is meaningless without the height it is clamped to. The
+     * offset comes first in the chain deliberately — placed after a background it would slide the
+     * title and chips out from under their own fill, leaving a bare rectangle behind.
      */
     fun headerModifier(): Modifier = Modifier
+        .offset { IntOffset(0, offset.roundToInt()) }
         .onSizeChanged { size ->
             height = size.height
             offset = offset.coerceIn(-height.toFloat(), 0f)
         }
-        .offset { IntOffset(0, offset.roundToInt()) }
 
     /**
      * Consumes nothing — the grid keeps every pixel of the gesture.

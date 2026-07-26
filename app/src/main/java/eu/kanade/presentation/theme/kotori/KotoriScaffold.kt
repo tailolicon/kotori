@@ -162,40 +162,45 @@ fun KotoriSearchField(
     gradientBorder: Boolean = false,
     onClear: (() -> Unit)? = null,
     onSearch: (() -> Unit)? = null,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Search,
+    shape: androidx.compose.ui.graphics.Shape = KotoriShapes.pill,
+    contentPadding: androidx.compose.ui.unit.Dp = 14.dp,
+    verticalPadding: androidx.compose.ui.unit.Dp = 10.dp,
+    textSize: androidx.compose.ui.unit.TextUnit = 12.sp,
 ) {
     val focusRequester = remember { FocusRequester() }
     val accent = KotoriTheme.accent
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .glass(shape = KotoriShapes.pill, elevated = true)
+            .glass(shape = shape, elevated = true)
             .then(
                 if (gradientBorder) {
                     Modifier.border(
                         width = 1.5.dp,
                         brush = accent.gradient,
-                        shape = KotoriShapes.pill,
+                        shape = shape,
                     )
                 } else {
                     Modifier
                 },
             )
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = contentPadding, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp),
     ) {
         Icon(
-            imageVector = Icons.Filled.Search,
+            imageVector = leadingIcon,
             contentDescription = null,
             tint = KotoriColors.textMuted,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(if (textSize.value >= 13f) 19.dp else 18.dp),
         )
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
                     text = placeholder,
                     fontFamily = BeVietnamProFamily,
-                    fontSize = 12.sp,
+                    fontSize = textSize,
                     color = KotoriColors.textMuted,
                 )
             }
@@ -205,7 +210,7 @@ fun KotoriSearchField(
                 singleLine = true,
                 textStyle = TextStyle(
                     fontFamily = BeVietnamProFamily,
-                    fontSize = 12.sp,
+                    fontSize = textSize,
                     color = KotoriColors.textPrimary,
                 ),
                 cursorBrush = SolidColor(KotoriTheme.accent.start),

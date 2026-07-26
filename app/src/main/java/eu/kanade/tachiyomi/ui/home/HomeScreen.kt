@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -21,8 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,13 +40,15 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.presentation.theme.kotori.KotoriCircleAction
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriNavBar
-import eu.kanade.presentation.theme.kotori.KotoriNavRail
-import eu.kanade.presentation.theme.kotori.KotoriNavRailScope
 import eu.kanade.presentation.theme.kotori.KotoriNavBarScope
+import eu.kanade.presentation.theme.kotori.KotoriTabletRail
+import eu.kanade.presentation.theme.kotori.KotoriTabletRailScope
+import eu.kanade.presentation.theme.kotori.KotoriTheme
+import eu.kanade.presentation.theme.kotori.isKotoriRail
 import eu.kanade.presentation.util.Screen
-import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
@@ -49,7 +56,9 @@ import eu.kanade.tachiyomi.ui.library.LibraryTab
 import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.MoreTab
+import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.updates.UpdatesTab
+import eu.kanade.domain.base.BasePreferences
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -62,6 +71,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.NavigationRail
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.pluralStringResource
+import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -96,16 +106,36 @@ object HomeScreen : Screen() {
             CompositionLocalProvider(LocalNavigator provides navigator) {
                 Scaffold(
                     startBar = {
-                        if (isTabletUi()) {
-                            KotoriNavRail {
+                        if (isKotoriRail()) {
+                            val basePreferences = remember { Injekt.get<BasePreferences>() }
+                            val downloadedOnly by basePreferences.downloadedOnly.collectAsState()
+                            KotoriTabletRail(
+                                footer = {
+                                    KotoriCircleAction(
+                                        icon = Icons.Filled.CloudOff,
+                                        contentDescription = stringResource(MR.strings.label_downloaded_only),
+                                        onClick = { basePreferences.downloadedOnly.set(!downloadedOnly) },
+                                        tint = if (downloadedOnly) {
+                                            KotoriColors.success
+                                        } else {
+                                            KotoriTheme.accent.light
+                                        },
+                                    )
+                                    KotoriCircleAction(
+                                        icon = Icons.Filled.Settings,
+                                        contentDescription = stringResource(MR.strings.label_settings),
+                                        onClick = { navigator.push(SettingsScreen()) },
+                                    )
+                                },
+                            ) {
                                 TABS.fastForEach {
-                                    KotoriNavRailItem(it)
+                                    KotoriTabletRailItem(it)
                                 }
                             }
                         }
                     },
                     bottomBar = {
-                        if (!isTabletUi()) {
+                        if (!isKotoriRail()) {
                             val bottomNavVisible by produceState(initialValue = true) {
                                 showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
                             }
@@ -122,6 +152,10 @@ object HomeScreen : Screen() {
                             }
                         }
                     },
+                    // Transparent, so the aurora the tabs paint runs behind the nav pill instead of
+                    // stopping at it. The scaffold's own opaque fill was what put a black rectangle
+                    // around a bar whose whole design is to float on the page.
+                    containerColor = Color.Transparent,
                     contentWindowInsets = WindowInsets(0),
                 ) { contentPadding ->
                     Box(
@@ -211,7 +245,7 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun KotoriNavRailScope.KotoriNavRailItem(tab: eu.kanade.presentation.util.Tab) {
+    private fun KotoriTabletRailScope.KotoriTabletRailItem(tab: eu.kanade.presentation.util.Tab) {
         val tabNavigator = LocalTabNavigator.current
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()

@@ -89,7 +89,10 @@ fun KotoriModeSwitcher(
     active: MediaType,
     onSelect: (MediaType) -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = true,
 ) {
+    val iconSize = if (compact) 17.dp else 18.dp
+    val labelSize = if (compact) 12.sp else 13.sp
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -121,21 +124,24 @@ fun KotoriModeSwitcher(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) { onSelect(segment.type) }
-                    .padding(vertical = 9.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    .padding(vertical = 9.dp, horizontal = if (compact) 0.dp else 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(
+                    if (compact) 6.dp else 7.dp,
+                    Alignment.CenterHorizontally,
+                ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = segment.icon,
                     contentDescription = null,
                     tint = if (selected) accent.onAccent else KotoriColors.textMuted,
-                    modifier = Modifier.size(17.dp),
+                    modifier = Modifier.size(iconSize),
                 )
                 Text(
                     text = segment.label,
                     fontFamily = BeVietnamProFamily,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                    fontSize = 12.sp,
+                    fontSize = labelSize,
                     color = if (selected) accent.onAccent else KotoriColors.textMuted,
                 )
             }
@@ -252,12 +258,20 @@ fun KotoriCategoryChips(
     activeIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues =
+        androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp),
+    spacing: androidx.compose.ui.unit.Dp = 8.dp,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 13.dp,
+    verticalPadding: androidx.compose.ui.unit.Dp = 7.dp,
+    cornerRadius: androidx.compose.ui.unit.Dp = 16.dp,
+    textSize: androidx.compose.ui.unit.TextUnit = 11.5.sp,
 ) {
     val accent = KotoriTheme.accent
+    val shape = RoundedCornerShape(cornerRadius)
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        contentPadding = contentPadding,
     ) {
         itemsIndexed(categories) { index, name ->
             val selected = index == activeIndex
@@ -266,17 +280,17 @@ fun KotoriCategoryChips(
                     .then(
                         if (selected) {
                             Modifier
-                                .clip(KotoriShapes.pill)
+                                .clip(shape)
                                 .background(accent.gradient)
                         } else {
-                            Modifier.glass(shape = KotoriShapes.pill, elevated = true)
+                            Modifier.glass(shape = shape, elevated = true)
                         },
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) { onSelect(index) }
-                    .padding(horizontal = 13.dp, vertical = 7.dp),
+                    .padding(horizontal = horizontalPadding, vertical = verticalPadding),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -284,7 +298,7 @@ fun KotoriCategoryChips(
                     text = name,
                     fontFamily = BeVietnamProFamily,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.5.sp,
+                    fontSize = textSize,
                     color = if (selected) accent.onAccent else KotoriColors.textSecondary,
                     maxLines = 1,
                 )
@@ -293,7 +307,7 @@ fun KotoriCategoryChips(
                         text = "$count",
                         fontFamily = BeVietnamProFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 10.sp,
+                        fontSize = textSize * 0.87f,
                         color = (if (selected) accent.onAccent else KotoriColors.textSecondary)
                             .copy(alpha = 0.75f),
                     )
