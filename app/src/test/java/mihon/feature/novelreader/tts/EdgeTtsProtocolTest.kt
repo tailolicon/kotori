@@ -58,4 +58,27 @@ class EdgeTtsProtocolTest {
         assertTrue("Sec-MS-GEC-Version=1-" in url)
         assertTrue("ConnectionId=" in url)
     }
+
+    /**
+     * The service refuses a handshake claiming a stale Edge build with `403 Forbidden`, which is
+     * exactly what an outdated constant here looks like from the app — so the version is pinned
+     * rather than left to drift silently.
+     */
+    @Test
+    fun `claims a current edge build`() {
+        assertEquals("1-143.0.3650.75", EdgeTtsProtocol.secMsGecVersion())
+        assertTrue("Edg/143.0.0.0" in EdgeTtsProtocol.USER_AGENT)
+    }
+
+    /**
+     * The SSML frame's timestamp carries a trailing `Z` on top of an already-complete date — Edge
+     * sends it that way and the service expects it.
+     */
+    @Test
+    fun `ssml frame keeps the malformed timestamp the service expects`() {
+        val frame = EdgeTtsProtocol.ssmlMessage("abc123", "<speak/>")
+        assertTrue("X-RequestId:abc123" in frame)
+        assertTrue("Path:ssml" in frame)
+        assertTrue(Regex("X-Timestamp:.*Coordinated Universal Time\\)Z\r\n").containsMatchIn(frame))
+    }
 }

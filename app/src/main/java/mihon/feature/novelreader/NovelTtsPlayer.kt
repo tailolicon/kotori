@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -276,11 +277,17 @@ private fun NovelTtsVoicePanel(
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     fontSize = 11.sp,
                     color = if (selected) paper.background else paper.ink,
+                    // One line each, even on a narrow phone: a chip that wraps grows the row tall
+                    // enough to push the voice list off the bottom of the sheet.
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
+                        .weight(1f)
                         .clip(CircleShape)
                         .background(if (selected) paper.accent else paper.ink.copy(alpha = 0.08f))
                         .clickable { controller.setEngine(engine) }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
+                    textAlign = TextAlign.Center,
                 )
             }
         }
@@ -292,6 +299,10 @@ private fun NovelTtsVoicePanel(
                 fontFamily = BeVietnamProFamily,
                 fontSize = 10.sp,
                 color = paper.muted,
+                // Two lines is enough for the sentences the engines produce; anything longer is a
+                // transport detail that has leaked, and truncating it beats shoving the picker down.
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
 

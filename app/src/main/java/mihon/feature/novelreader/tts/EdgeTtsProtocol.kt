@@ -1,6 +1,10 @@
 package mihon.feature.novelreader.tts
 
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -19,12 +23,19 @@ internal object EdgeTtsProtocol {
 
     const val TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
 
-    /** The Edge release the [secMsGecVersion] and User-Agent claim to be. */
-    private const val CHROMIUM_FULL_VERSION = "130.0.2849.68"
+    /**
+     * The Edge release the handshake claims to be.
+     *
+     * The service gates on it: a version it considers stale is refused with `403 Forbidden` before
+     * the WebSocket upgrade, so this has to be kept roughly current. It is the first thing to bump
+     * when the engine starts failing to connect.
+     */
+    private const val CHROMIUM_FULL_VERSION = "143.0.3650.75"
+    private const val CHROMIUM_MAJOR_VERSION = "143"
 
     const val USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/130.0.0.0 Safari/537.36 Edg/$CHROMIUM_FULL_VERSION"
+            "Chrome/$CHROMIUM_MAJOR_VERSION.0.0.0 Safari/537.36 Edg/$CHROMIUM_MAJOR_VERSION.0.0.0"
 
     /** Read-aloud requests carry the identity of Edge's built-in TTS extension. */
     const val ORIGIN = "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold"
@@ -58,9 +69,9 @@ internal object EdgeTtsProtocol {
     fun connectionUrl(unixMs: Long): String =
         WSS_BASE +
             "?TrustedClientToken=$TRUSTED_CLIENT_TOKEN" +
+            "&ConnectionId=${requestId()}" +
             "&Sec-MS-GEC=${secMsGec(unixMs)}" +
-            "&Sec-MS-GEC-Version=${secMsGecVersion()}" +
-            "&ConnectionId=${requestId()}"
+            "&Sec-MS-GEC-Version=${secMsGecVersion()}"
 
     fun requestId(): String = UUID.randomUUID().toString().replace("-", "")
 
@@ -81,7 +92,9 @@ internal object EdgeTtsProtocol {
     fun ssmlMessage(requestId: String, ssml: String): String =
         "X-RequestId:$requestId\r\n" +
             "Content-Type:application/ssml+xml\r\n" +
-            "X-Timestamp:${timestamp()}\r\n" +
+            // The trailing Z is not a mistake: Edge itself appends it here and the service expects
+            // the malformed value. Removing it is rejected.
+            "X-Timestamp:${timestamp()}Z\r\n" +
             "Path:ssml\r\n\r\n" +
             ssml
 
@@ -117,5 +130,15 @@ internal object EdgeTtsProtocol {
         }
     }
 
-    private fun timestamp(): String = java.util.Date().toString()
+    /**
+     * A JavaScript `Date.toString()` in UTC, which is the shape the service parses.
+     *
+     * Built explicitly rather than from the platform default because both the locale and the zone
+     * matter: a device in Vietnamese locale would otherwise send Vietnamese day names, and one in
+     * local time would send an offset the service reads as skew.
+     */
+    private fun timestamp(): String = SimpleDateFormat(
+        "EEE MMM dd yyyy HH:mm:ss 'GMT+0000 (Coordinated Universal Time)'",
+        Locale.US,
+    ).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date())
 }

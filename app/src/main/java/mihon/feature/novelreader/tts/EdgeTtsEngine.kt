@@ -3,6 +3,8 @@ package mihon.feature.novelreader.tts
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -83,16 +85,52 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
     ): Boolean {
         onProgress(NovelTtsPreparation.Starting)
         preferredVoice = voiceId
+        ready = false
+
         val connectivity = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val online = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
             ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-        ready = online
         if (!online) {
             onProgress(NovelTtsPreparation.Failed("Giọng mạng cần kết nối internet"))
             return false
         }
-        onProgress(NovelTtsPreparation.Ready)
-        return true
+
+        // Actually synthesize something rather than just checking for a network. The service can
+        // refuse a handshake that a connectivity check says should work — it gates on the Edge
+        // version this claims to be — and finding that out here is what lets the controller fall
+        // back to an on-device voice, instead of the reader pressing play and getting silence.
+        return withContext(Dispatchers.IO) {
+            runCatching { fetchMp3(PROBE_TEXT, voiceId ?: VOICES.keys.first(), rate = 1f) }
+                .onSuccess {
+                    ready = true
+                    onProgress(NovelTtsPreparation.Ready)
+                }
+                .onFailure { error ->
+                    logcat(LogPriority.WARN, error) { "Edge TTS unavailable" }
+                    onProgress(NovelTtsPreparation.Failed(error.readable()))
+                }
+                .isSuccess
+        }
+    }
+
+    /**
+     * What to tell the reader when the service will not talk to us.
+     *
+     * The raw exception is a transport detail — "Expected HTTP 101 response but was '403
+     * Forbidden'" says nothing to someone who wants to listen to a novel — so the shapes that
+     * actually occur are named, and anything else falls back to a plain statement.
+     */
+    private fun Throwable.readable(): String {
+        val detail = message.orEmpty()
+        return when {
+            "403" in detail || "401" in detail ->
+                "Dịch vụ giọng Microsoft từ chối kết nối — thử lại sau hoặc dùng giọng khác"
+            "timeout" in detail.lowercase() || this is java.net.SocketTimeoutException ->
+                "Giọng mạng phản hồi quá chậm"
+            this is java.net.UnknownHostException ->
+                "Không truy cập được dịch vụ giọng Microsoft"
+            else -> "Không dùng được giọng mạng"
+        }
     }
 
     override fun speak(
@@ -173,6 +211,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
             .header("Origin", EdgeTtsProtocol.ORIGIN)
             .header("Pragma", "no-cache")
             .header("Cache-Control", "no-cache")
+            .header("Accept-Language", "en-US,en;q=0.9")
             .build()
 
         val socket = client.newWebSocket(
@@ -237,6 +276,9 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
 
     companion object {
         private const val REQUEST_TIMEOUT_S = 20L
+
+        /** Shortest thing worth synthesizing to prove the service is reachable. */
+        private const val PROBE_TEXT = "."
 
         /** Voice id → picker label, in the order the picker should offer them. */
         private val VOICES: Map<String, String> = linkedMapOf(

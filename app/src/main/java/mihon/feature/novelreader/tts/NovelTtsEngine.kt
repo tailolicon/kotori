@@ -88,15 +88,19 @@ interface NovelTtsEngine {
     fun release()
 }
 
+/**
+ * @param label names the engine in the picker, where three of them sit side by side on a phone —
+ *   short enough to stay on one line, since a wrapped chip pushes the voice list off screen.
+ */
 enum class NovelTtsEngineId(val label: String) {
     /** Android's own [android.speech.tts.TextToSpeech]; whatever voice the device has. */
-    SYSTEM("Giọng hệ thống"),
+    SYSTEM("Hệ thống"),
 
     /** Moonshine's on-device neural voices — works offline, but the model must be downloaded. */
-    NEURAL("Giọng AI offline"),
+    NEURAL("Ngoại tuyến"),
 
     /** Microsoft's neural voices, streamed — by far the best Vietnamese, but needs the network. */
-    EDGE("Giọng mạng (hay nhất)");
+    EDGE("Microsoft");
 
     /**
      * Engines to try, best first, when this one cannot be readied.
