@@ -54,6 +54,7 @@ class NovelTtsController(
 
     private val system by lazy { SystemTtsEngine(appContext) }
     private val neural by lazy { MoonshineTtsEngine(appContext) }
+    private val edge by lazy { EdgeTtsEngine(appContext) }
 
     private var prepareJob: Job? = null
     private var script: SpeechScript = SpeechScript.Empty
@@ -62,12 +63,12 @@ class NovelTtsController(
     private var cursor = 0
 
     /**
-     * Whether an engine has already been swapped for the other one on its own.
+     * Engines that have already failed to prepare on their own.
      *
-     * Both directions of fallback exist, so a device where neither engine can read Vietnamese would
-     * otherwise hand the chapter back and forth between them forever instead of saying so.
+     * Fallback exists in every direction, so a device where no engine can read Vietnamese would
+     * otherwise hand the chapter around the circle forever instead of saying so.
      */
-    private var switchedEngine = false
+    private val failedEngines = mutableSetOf<NovelTtsEngineId>()
 
     var state by mutableStateOf(
         NovelTtsState(
@@ -79,7 +80,11 @@ class NovelTtsController(
         private set
 
     private val engine: NovelTtsEngine
-        get() = if (state.engineId == NovelTtsEngineId.NEURAL) neural else system
+        get() = when (state.engineId) {
+            NovelTtsEngineId.EDGE -> edge
+            NovelTtsEngineId.NEURAL -> neural
+            NovelTtsEngineId.SYSTEM -> system
+        }
 
     /** Replaces the chapter being read. Any current playback stops: the text under it is gone. */
     fun setScript(script: SpeechScript) {
@@ -111,13 +116,15 @@ class NovelTtsController(
                 }
                 // A neural voice that will not load is a bad reason to lose the chapter's audio, so
                 // fall back to the system engine rather than leaving the reader with nothing.
-                // Either engine can be the one this device cannot use — the neural voice needs a
-                // download to succeed, the system one needs a Vietnamese voice to be installed at
-                // all — so a failure moves to the other rather than ending the chapter's audio.
+                // Any engine can be the one this device cannot use — the online voice needs a
+                // network, the on-device one a model download, the system one an installed
+                // Vietnamese voice — so a failure moves down the chain rather than ending the
+                // chapter's audio.
                 if (!ok) {
-                    if (!switchedEngine) {
-                        switchedEngine = true
-                        fallBackTo(active.id.other())
+                    failedEngines += active.id
+                    val next = active.id.fallbacks().firstOrNull { it !in failedEngines }
+                    if (next != null) {
+                        fallBackTo(next)
                         return@launch
                     }
                     state = state.copy(status = NovelTtsStatus.ERROR)
@@ -144,6 +151,7 @@ class NovelTtsController(
         prepareJob?.cancel()
         system.stop()
         neural.stop()
+        edge.stop()
         cursor = 0
         state = state.copy(
             status = NovelTtsStatus.IDLE,
@@ -183,8 +191,8 @@ class NovelTtsController(
         if (id == state.engineId) return
         val wasPlaying = state.status == NovelTtsStatus.PLAYING
         // An explicit choice re-arms the automatic fallback: the reader may well be switching
-        // because they have just installed the voice the engine was missing.
-        switchedEngine = false
+        // because they have just fixed what an engine was missing — network, voice, model.
+        failedEngines.clear()
         engine.stop()
         preferences.engine.set(id)
         // Voice ids are engine-specific, so carrying one across would ask the new engine for a voice
@@ -235,6 +243,7 @@ class NovelTtsController(
         prepareJob?.cancel()
         system.release()
         neural.release()
+        edge.release()
         scope.cancel()
     }
 

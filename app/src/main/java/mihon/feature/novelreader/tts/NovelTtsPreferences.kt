@@ -15,8 +15,10 @@ import tachiyomi.core.common.preference.getEnum
 class NovelTtsPreferences(
     preferenceStore: PreferenceStore,
 ) {
+    // The online engine is the default because it is the only one whose Vietnamese is actually
+    // worth listening to; when it cannot run, the controller walks the fallback chain by itself.
     val engine: Preference<NovelTtsEngineId> =
-        preferenceStore.getEnum("novel_tts_engine", NovelTtsEngineId.SYSTEM)
+        preferenceStore.getEnum("novel_tts_engine", NovelTtsEngineId.EDGE)
 
     /** Engine-specific voice id; blank means "let the engine choose". */
     val voiceId: Preference<String> = preferenceStore.getString("novel_tts_voice", "")

@@ -92,9 +92,22 @@ enum class NovelTtsEngineId(val label: String) {
     /** Android's own [android.speech.tts.TextToSpeech]; whatever voice the device has. */
     SYSTEM("Giọng hệ thống"),
 
-    /** Moonshine's on-device neural voices — better prosody, but the model must be downloaded. */
-    NEURAL("Giọng AI (tự nhiên)");
+    /** Moonshine's on-device neural voices — works offline, but the model must be downloaded. */
+    NEURAL("Giọng AI offline"),
 
-    /** The engine to try when this one cannot be readied. */
-    fun other(): NovelTtsEngineId = if (this == NEURAL) SYSTEM else NEURAL
+    /** Microsoft's neural voices, streamed — by far the best Vietnamese, but needs the network. */
+    EDGE("Giọng mạng (hay nhất)");
+
+    /**
+     * Engines to try, best first, when this one cannot be readied.
+     *
+     * Each engine has a failure mode the others don't share — the online one needs a network, the
+     * on-device one a model download, the system one an installed Vietnamese voice — so the chain
+     * covers all of them before giving up.
+     */
+    fun fallbacks(): List<NovelTtsEngineId> = when (this) {
+        EDGE -> listOf(NEURAL, SYSTEM)
+        NEURAL -> listOf(EDGE, SYSTEM)
+        SYSTEM -> listOf(EDGE, NEURAL)
+    }
 }

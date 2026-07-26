@@ -7,9 +7,6 @@ import ai.moonshine.voice.TextToSpeech
 import ai.moonshine.voice.TranscriberOption
 import ai.moonshine.voice.TtsSynthesisResult
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
@@ -17,8 +14,6 @@ import logcat.LogPriority
 import org.json.JSONObject
 import tachiyomi.core.common.util.system.logcat
 import java.io.File
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 
 /**
  * On-device neural speech via Moonshine's Kokoro/Piper voices.
@@ -51,11 +46,7 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
     private var phonemizer: GraphemeToPhonemizer? = null
     private var preparedVoice: String? = null
 
-    @Volatile
-    private var playback: Thread? = null
-
-    @Volatile
-    private var synthesiser: Thread? = null
+    private var handle: SentenceClipPipeline.Handle? = null
 
     /**
      * Invalidation counter for a run of playback.
@@ -197,71 +188,24 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
 
         stop()
         val active = ++generation
-        // One clip of lookahead: enough to hide synthesis latency behind the previous sentence,
-        // small enough that a seek throws away at most one sentence of wasted work.
-        val clips = ArrayBlockingQueue<Clip>(1)
-
-        val synthesis = Thread(Runnable {
-            try {
-                script.sentences.drop(fromIndex).forEach { sentence ->
-                    if (active != generation) return@Runnable
-                    // A sentence the model chokes on becomes a silent clip rather than an error:
-                    // one bad line must not end the chapter's playback.
-                    val clip = runCatching {
-                        val result = synthesizeWithTones(engine, sentence.text)
-                        Clip(sentence, result.samples ?: FloatArray(0), result.sampleRateHz)
-                    }.getOrElse {
-                        logcat(LogPriority.WARN, it) { "Moonshine failed on sentence ${sentence.index}" }
-                        Clip(sentence, FloatArray(0), 0)
-                    }
-                    while (active == generation) {
-                        if (clips.offer(clip, POLL_MS, TimeUnit.MILLISECONDS)) break
-                    }
-                }
-                while (active == generation && !clips.offer(Clip.End, POLL_MS, TimeUnit.MILLISECONDS)) {
-                    // Keep offering the end marker until the player takes it or this run is retired.
-                }
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
+        handle = SentenceClipPipeline.start(
+            script = script,
+            fromIndex = fromIndex,
+            trackRate = rate,
+            listener = listener,
+            active = { active == generation },
+            engineName = "Moonshine",
+        ) { sentence ->
+            // A sentence the model chokes on becomes a silent clip rather than an error: one bad
+            // line must not end the chapter's playback.
+            runCatching {
+                val result = synthesizeWithTones(engine, sentence.text)
+                SentenceClipPipeline.Clip(sentence, result.samples ?: FloatArray(0), result.sampleRateHz)
+            }.getOrElse {
+                logcat(LogPriority.WARN, it) { "Moonshine failed on sentence ${sentence.index}" }
+                SentenceClipPipeline.Clip(sentence, FloatArray(0), 0)
             }
-        }, "novel-tts-synth")
-
-        val player = Thread(Runnable {
-            var track: AudioTrack? = null
-            try {
-                while (active == generation) {
-                    val clip = clips.poll(POLL_MS, TimeUnit.MILLISECONDS) ?: continue
-                    if (clip === Clip.End) break
-                    val sentence = clip.sentence ?: continue
-                    listener.onSentenceStarted(sentence.index)
-                    if (clip.samples.isEmpty() || clip.sampleRate <= 0) {
-                        listener.onSentenceFinished(sentence.index)
-                        continue
-                    }
-                    track = track.reusableFor(clip.sampleRate, rate)
-                    play(track, clip) { active == generation }
-                    listener.onSentenceFinished(sentence.index)
-                }
-                if (active == generation) listener.onFinished()
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-            } catch (error: Throwable) {
-                logcat(LogPriority.ERROR, error) { "Moonshine playback failed" }
-                if (active == generation) listener.onError(error.message ?: "Không phát được giọng AI")
-            } finally {
-                track?.let { open ->
-                    runCatching { open.stop() }
-                    open.release()
-                }
-            }
-        }, "novel-tts-play")
-
-        synthesis.isDaemon = true
-        player.isDaemon = true
-        synthesis.start()
-        player.start()
-        playback = player
-        synthesiser = synthesis
+        }
     }
 
     /**
@@ -285,89 +229,6 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
     }
 
     /**
-     * Writes [clip] to [track] and returns once the hardware has actually played it.
-     *
-     * Waiting for playback rather than for the write to finish is what keeps the sentence highlight
-     * honest: `write` returns as soon as the buffer has been handed over, which is up to a sentence
-     * early, and returning there would light up the next sentence over audio still playing this one.
-     */
-    private fun play(track: AudioTrack, clip: Clip, active: () -> Boolean) {
-        val samples = clip.samples
-        track.play()
-        var offset = 0
-        while (offset < samples.size && active()) {
-            val written = track.write(samples, offset, samples.size - offset, AudioTrack.WRITE_NON_BLOCKING)
-            if (written < 0) throw IllegalStateException("AudioTrack.write returned $written")
-            offset += written
-            if (written == 0) Thread.sleep(DRAIN_TICK_MS)
-        }
-        val deadline = System.nanoTime() + DRAIN_TIMEOUT_NS
-        while (active() && System.nanoTime() < deadline) {
-            if (track.playbackHeadPosition >= samples.size - 1) break
-            Thread.sleep(DRAIN_TICK_MS)
-        }
-        track.stop()
-        track.flush()
-    }
-
-    /**
-     * Reuses the existing track when the sample rate matches, and applies the speaking rate to it.
-     *
-     * Voices differ in sample rate, so the track cannot simply be built once; but rebuilding it per
-     * sentence would add an audible gap, which is exactly what the pipelining above exists to avoid.
-     *
-     * Rate lives here rather than in synthesis because Moonshine's `synthesize` ignores per-call
-     * options: [AudioTrack.setPlaybackParams] time-stretches instead, which keeps the voice's pitch
-     * where the model put it. Resampling would work too but would turn a slow read into a bass
-     * rumble and a fast one into a chipmunk.
-     */
-    private fun AudioTrack?.reusableFor(sampleRate: Int, rate: Float): AudioTrack {
-        if (this != null && this.sampleRate == sampleRate) return applyRate(rate)
-        this?.let { stale ->
-            runCatching { stale.stop() }
-            stale.release()
-        }
-        val minBuffer = AudioTrack.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_FLOAT,
-        )
-        require(minBuffer > 0) { "AudioTrack.getMinBufferSize failed for $sampleRate Hz" }
-        return AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build(),
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build(),
-            )
-            .setBufferSizeInBytes(minBuffer * BUFFER_MULTIPLIER)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-            .applyRate(rate)
-    }
-
-    /**
-     * Sets the track's speaking rate, leaving it alone if the device refuses the value.
-     *
-     * A failure here is cosmetic — the chapter still reads, just at the model's own pace — so it
-     * must not take down playback.
-     */
-    private fun AudioTrack.applyRate(rate: Float): AudioTrack = apply {
-        // Reading the speed back can itself throw when the track has never had one set, so the
-        // whole round trip is guarded rather than just the write.
-        runCatching {
-            if (playbackParams.speed != rate) playbackParams = playbackParams.setSpeed(rate)
-        }.onFailure { logcat(LogPriority.WARN, it) { "AudioTrack refused speed $rate" } }
-    }
-
-    /**
      * Retires the current run.
      *
      * The counter is bumped first so both workers see themselves as stale before they are nudged;
@@ -375,10 +236,8 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
      */
     override fun stop() {
         generation++
-        playback?.interrupt()
-        synthesiser?.interrupt()
-        playback = null
-        synthesiser = null
+        handle?.interrupt()
+        handle = null
     }
 
     override fun release() {
@@ -390,26 +249,11 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
         preparedVoice = null
     }
 
-    /** A synthesized sentence waiting to be played; [End] closes the queue. */
-    private class Clip(
-        val sentence: SpeechSentence?,
-        val samples: FloatArray,
-        val sampleRate: Int,
-    ) {
-        companion object {
-            val End = Clip(null, FloatArray(0), 0)
-        }
-    }
-
     private companion object {
         const val ASSET_DIR = "novel-tts"
         const val LANGUAGE = "vi"
         const val G2P_ROOT = "g2p_root"
         const val VOICE = "voice"
-        const val POLL_MS = 100L
-        const val DRAIN_TICK_MS = 16L
-        const val BUFFER_MULTIPLIER = 4
-        val DRAIN_TIMEOUT_NS = TimeUnit.SECONDS.toNanos(60)
 
         /**
          * Turns a catalogue id into something a reader can actually choose between.

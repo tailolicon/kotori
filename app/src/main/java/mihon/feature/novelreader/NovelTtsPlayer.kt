@@ -297,10 +297,13 @@ private fun NovelTtsVoicePanel(
 
         if (state.voices.isEmpty()) {
             Text(
-                text = if (state.engineId == NovelTtsEngineId.NEURAL) {
-                    "Nhấn phát để tải giọng AI tiếng Việt về máy (chỉ tải một lần)."
-                } else {
-                    "Đang lấy danh sách giọng của thiết bị…"
+                text = when (state.engineId) {
+                    NovelTtsEngineId.NEURAL ->
+                        "Nhấn phát để tải giọng AI tiếng Việt về máy (chỉ tải một lần)."
+                    NovelTtsEngineId.EDGE ->
+                        "Nhấn phát để nghe — giọng Microsoft, cần mạng, không phải tải gì."
+                    NovelTtsEngineId.SYSTEM ->
+                        "Đang lấy danh sách giọng của thiết bị…"
                 },
                 fontFamily = BeVietnamProFamily,
                 fontSize = 10.sp,
