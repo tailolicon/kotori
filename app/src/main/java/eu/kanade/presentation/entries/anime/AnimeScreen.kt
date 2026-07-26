@@ -27,6 +27,13 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Downloading
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -75,8 +82,15 @@ import eu.kanade.presentation.entries.anime.components.ExpandableAnimeDescriptio
 import eu.kanade.presentation.entries.anime.components.NextEpisodeAiringListItem
 import eu.kanade.presentation.entries.components.EntryBottomActionMenu
 import eu.kanade.presentation.entries.components.EntryToolbar
+import eu.kanade.presentation.entries.components.KotoriDetailChip
+import eu.kanade.presentation.entries.components.KotoriTabletDetailItem
+import eu.kanade.presentation.entries.components.KotoriTabletDetailLayout
 import eu.kanade.presentation.entries.components.ItemHeader
 import eu.kanade.presentation.entries.components.MissingItemCountListItem
+import androidx.compose.ui.graphics.Color
+import eu.kanade.presentation.theme.kotori.AnimeAccent
+import eu.kanade.presentation.theme.kotori.AuroraBackground
+import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.FetchType
@@ -90,6 +104,7 @@ import eu.kanade.tachiyomi.ui.entries.anime.EpisodeList
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import kotlinx.coroutines.delay
 import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.items.episode.model.Episode
 import tachiyomi.domain.items.episode.service.missingEntriesCount
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -711,6 +726,36 @@ fun AnimeScreenLargeImpl(
         }
     })
 
+    if (state.anime.fetchType == FetchType.Episodes) {
+        KotoriTabletAnimeDetail(
+            state = state,
+            snackbarHostState = snackbarHostState,
+            episodes = episodes,
+            listItem = listItem,
+            isAnySelected = isAnySelected,
+            alwaysUseExternalPlayer = alwaysUseExternalPlayer,
+            navigateUp = navigateUp,
+            onEpisodeClicked = onEpisodeClicked,
+            onDownloadEpisode = onDownloadEpisode,
+            onAddToLibraryClicked = onAddToLibraryClicked,
+            onWebViewClicked = onWebViewClicked,
+            onTrackingClicked = onTrackingClicked,
+            onFilterButtonClicked = onFilterButtonClicked,
+            onRefresh = onRefresh,
+            onContinueWatching = onContinueWatching,
+            onCoverClicked = onCoverClicked,
+            onDownloadActionClicked = onDownloadActionClicked,
+            onSettingsClicked = onSettingsClicked,
+            onMultiBookmarkClicked = onMultiBookmarkClicked,
+            onMultiFillermarkClicked = onMultiFillermarkClicked,
+            onMultiMarkAsSeenClicked = onMultiMarkAsSeenClicked,
+            onMarkPreviousAsSeenClicked = onMarkPreviousAsSeenClicked,
+            onMultiDeleteClicked = onMultiDeleteClicked,
+            onEpisodeSelected = onEpisodeSelected,
+        )
+        return
+    }
+
     BoxWithConstraints {
         val density = LocalDensity.current
         val containerHeightPx = with(density) { this@BoxWithConstraints.maxHeight.roundToPx() }
@@ -954,6 +999,216 @@ fun AnimeScreenLargeImpl(
             }
         }
     }
+}
+
+/**
+ * T2 · Chi tiết anime — tablet composition: full-height key visual on the left with
+ * every action overlaid, tabs and a two-column episode grid on the right.
+ */
+@Composable
+private fun KotoriTabletAnimeDetail(
+    state: AnimeScreenModel.State.Success,
+    snackbarHostState: SnackbarHostState,
+    episodes: List<EpisodeList.Item>,
+    listItem: List<EpisodeList>,
+    isAnySelected: Boolean,
+    alwaysUseExternalPlayer: Boolean,
+    navigateUp: () -> Unit,
+    onEpisodeClicked: (Episode, Boolean) -> Unit,
+    onDownloadEpisode: ((List<EpisodeList.Item>, EpisodeDownloadAction) -> Unit)?,
+    onAddToLibraryClicked: () -> Unit,
+    onWebViewClicked: (() -> Unit)?,
+    onTrackingClicked: (() -> Unit)?,
+    onFilterButtonClicked: () -> Unit,
+    onRefresh: () -> Unit,
+    onContinueWatching: () -> Unit,
+    onCoverClicked: () -> Unit,
+    onDownloadActionClicked: ((DownloadAction) -> Unit)?,
+    onSettingsClicked: (() -> Unit)?,
+    onMultiBookmarkClicked: (List<Episode>, bookmarked: Boolean) -> Unit,
+    onMultiFillermarkClicked: (List<Episode>, fillermarked: Boolean) -> Unit,
+    onMultiMarkAsSeenClicked: (List<Episode>, markAsSeen: Boolean) -> Unit,
+    onMarkPreviousAsSeenClicked: (Episode) -> Unit,
+    onMultiDeleteClicked: (List<Episode>) -> Unit,
+    onEpisodeSelected: (EpisodeList.Item, Boolean, Boolean, Boolean) -> Unit,
+) {
+    val accent = AnimeAccent
+    val haptic = LocalHapticFeedback.current
+    val anime = state.anime
+    val sourceName = remember(state) { state.source.getNameForAnimeInfo() }
+    val cover = remember(anime) {
+        AnimeCover(
+            animeId = anime.id,
+            sourceId = anime.source,
+            isAnimeFavorite = anime.favorite,
+            url = anime.thumbnailUrl,
+            lastModified = anime.coverLastModified,
+        )
+    }
+    val isWatching = remember(state.episodes) { state.episodes.fastAny { it.episode.seen } }
+    val detailItems = remember(listItem, isAnySelected) {
+        listItem.filterIsInstance<EpisodeList.Item>().map { item ->
+            val episode = item.episode
+            val watchProgress = if (episode.totalSeconds > 0L && !episode.seen) {
+                episode.lastSecondSeen.toFloat() / episode.totalSeconds
+            } else {
+                null
+            }
+            KotoriTabletDetailItem(
+                key = "episode-${item.id}",
+                badge = "T${formatEpisodeNumber(episode.episodeNumber)}",
+                title = episode.name,
+                subtitle = buildString {
+                    when {
+                        episode.seen -> append("đã xem")
+                        watchProgress != null && watchProgress > 0f ->
+                            append("xem dở ${(watchProgress * 100).toInt()}%")
+                        else -> append("chưa xem")
+                    }
+                    when (item.downloadState) {
+                        AnimeDownload.State.DOWNLOADED -> append(" · đã tải")
+                        AnimeDownload.State.DOWNLOADING -> append(" · đang tải ${item.downloadProgress}%")
+                        AnimeDownload.State.QUEUE -> append(" · trong hàng đợi")
+                        else -> Unit
+                    }
+                },
+                thumbData = episode.previewUrl ?: cover,
+                progress = watchProgress?.takeIf { it > 0f },
+                stateIcon = when (item.downloadState) {
+                    AnimeDownload.State.DOWNLOADED -> Icons.Filled.DownloadDone
+                    AnimeDownload.State.DOWNLOADING, AnimeDownload.State.QUEUE -> Icons.Filled.Downloading
+                    AnimeDownload.State.ERROR -> Icons.Filled.ErrorOutline
+                    else -> when {
+                        episode.bookmark -> Icons.Filled.Bookmark
+                        episode.seen -> Icons.Filled.CheckCircle
+                        watchProgress != null && watchProgress > 0f -> Icons.Filled.PlayCircle
+                        else -> Icons.Filled.Download
+                    }
+                },
+                stateTint = when {
+                    item.downloadState == AnimeDownload.State.DOWNLOADED -> KotoriColors.success
+                    item.downloadState == AnimeDownload.State.ERROR -> KotoriColors.danger
+                    item.downloadState != AnimeDownload.State.NOT_DOWNLOADED -> accent.light
+                    episode.bookmark -> KotoriColors.warning
+                    episode.seen -> KotoriColors.textFaint
+                    watchProgress != null && watchProgress > 0f -> Color(0xFFF472B6)
+                    else -> KotoriColors.textMuted
+                },
+                dimmed = episode.seen,
+                highlighted = watchProgress != null && watchProgress > 0f,
+                selected = item.selected,
+                onClick = {
+                    onEpisodeItemClick(
+                        episodeItem = item,
+                        isAnyEpisodeSelected = isAnySelected,
+                        onToggleSelection = { onEpisodeSelected(item, !item.selected, true, it) },
+                        onEpisodeClicked = onEpisodeClicked,
+                    )
+                },
+                onLongClick = {
+                    onEpisodeSelected(item, !item.selected, true, true)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                },
+                onStateClick = onDownloadEpisode?.let {
+                    {
+                        it(
+                            listOf(item),
+                            if (item.isDownloaded) {
+                                EpisodeDownloadAction.DELETE
+                            } else {
+                                EpisodeDownloadAction.START
+                            },
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    AuroraBackground(accent = accent) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0),
+            bottomBar = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.BottomEnd,
+                ) {
+                    val selectedEpisodes = remember(episodes) { episodes.filter { it.selected } }
+                    SharedAnimeBottomActionMenu(
+                        selected = selectedEpisodes,
+                        onEpisodeClicked = onEpisodeClicked,
+                        onMultiBookmarkClicked = onMultiBookmarkClicked,
+                        onMultiFillermarkClicked = onMultiFillermarkClicked,
+                        onMultiMarkAsSeenClicked = onMultiMarkAsSeenClicked,
+                        onMarkPreviousAsSeenClicked = onMarkPreviousAsSeenClicked,
+                        onDownloadEpisode = onDownloadEpisode,
+                        onMultiDeleteClicked = onMultiDeleteClicked,
+                        fillFraction = 0.5f,
+                        alwaysUseExternalPlayer = alwaysUseExternalPlayer,
+                    )
+                }
+            },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        ) { contentPadding ->
+            PullRefresh(
+                refreshing = state.isRefreshingData,
+                onRefresh = onRefresh,
+                enabled = !isAnySelected,
+            ) {
+                KotoriTabletDetailLayout(
+                    modifier = Modifier.padding(contentPadding),
+                    accent = accent,
+                    title = anime.title,
+                    coverData = cover,
+                    chips = buildList {
+                        add(KotoriDetailChip(animeStatusLabel(anime.status), highlighted = true))
+                        add(KotoriDetailChip(sourceName))
+                        add(KotoriDetailChip("${episodes.size} tập"))
+                    },
+                    metaLine = listOfNotNull(
+                        anime.author?.takeIf { it.isNotBlank() },
+                        anime.artist?.takeIf { it.isNotBlank() && it != anime.author },
+                        anime.genre?.take(3)?.joinToString(", ")?.takeIf { it.isNotBlank() },
+                    ).joinToString(" · "),
+                    rating = null,
+                    trackerLine = state.trackingCount.takeIf { it > 0 }?.let { "Đã liên kết · $it dịch vụ" },
+                    description = anime.description,
+                    favorite = anime.favorite,
+                    trackingCount = state.trackingCount,
+                    ctaLabel = stringResource(
+                        if (isWatching) MR.strings.action_resume else MR.strings.action_start,
+                    ),
+                    ctaIcon = Icons.Filled.PlayArrow,
+                    onNavigateUp = navigateUp,
+                    onCta = onContinueWatching,
+                    onFavorite = onAddToLibraryClicked,
+                    onTracking = { onTrackingClicked?.invoke() },
+                    onDownload = onDownloadActionClicked?.let { { it(DownloadAction.NEXT_5_ITEMS) } },
+                    onMore = { onSettingsClicked?.invoke() ?: onFilterButtonClicked() },
+                    onCoverClick = onCoverClicked,
+                    tabs = listOf("${episodes.size} tập", stringResource(MR.strings.action_web_view)),
+                    activeTab = 0,
+                    onSelectTab = { if (it == 1) onWebViewClicked?.invoke() },
+                    onFilter = onFilterButtonClicked,
+                    quickDownloadLabel = "Tải 5 tập kế".takeIf { onDownloadActionClicked != null },
+                    onQuickDownload = onDownloadActionClicked?.let { { it(DownloadAction.NEXT_5_ITEMS) } },
+                    items = detailItems,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun animeStatusLabel(status: Long): String = when (status) {
+    SAnime.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
+    SAnime.COMPLETED.toLong() -> stringResource(MR.strings.completed)
+    SAnime.LICENSED.toLong() -> stringResource(MR.strings.licensed)
+    SAnime.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
+    SAnime.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
+    SAnime.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
+    else -> stringResource(MR.strings.unknown)
 }
 
 @Composable

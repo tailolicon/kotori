@@ -41,7 +41,7 @@ import eu.kanade.presentation.more.settings.screen.player.PlayerSettingsGestures
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.formatEpisodeNumber
-import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.model.FetchType
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
@@ -127,7 +127,7 @@ class AnimeScreen(
             state = successState,
             snackbarHostState = screenModel.snackbarHostState,
             nextUpdate = successState.anime.expectedNextUpdate,
-            isTabletUi = isTabletUi(),
+            isTabletUi = isKotoriTablet(),
             episodeSwipeStartAction = screenModel.episodeSwipeStartAction,
             episodeSwipeEndAction = screenModel.episodeSwipeEndAction,
             showNextEpisodeAirTime = screenModel.showNextEpisodeAirTime,
