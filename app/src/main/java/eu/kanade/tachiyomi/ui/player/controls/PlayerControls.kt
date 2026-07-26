@@ -46,9 +46,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -57,9 +59,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import eu.kanade.presentation.more.settings.screen.player.custombutton.getButtons
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.theme.playerRippleConfiguration
 import eu.kanade.tachiyomi.ui.player.Dialogs
 import eu.kanade.tachiyomi.ui.player.Panels
+import eu.kanade.tachiyomi.ui.player.KotoriTabletEpisodeDrawer
 import eu.kanade.tachiyomi.ui.player.PlayerActivity
 import eu.kanade.tachiyomi.ui.player.PlayerUpdates
 import eu.kanade.tachiyomi.ui.player.PlayerViewModel
@@ -188,6 +192,13 @@ fun PlayerControls(
                 val thumbnail = createRef()
                 val seekbar = createRef()
                 val (playerUpdates) = createRefs()
+                val episodeDrawer = createRef()
+
+                // T3: on tablet the episode list is docked, not a sheet — so the transport
+                // cluster centres in what is left of the canvas instead of the whole width.
+                val tabletDrawer = isKotoriTablet() && !portrait
+                var drawerVisible by rememberSaveable { mutableStateOf(true) }
+                val drawerShown = tabletDrawer && drawerVisible
 
                 val hasPreviousEpisode by viewModel.hasPreviousEpisode.collectAsState()
                 val hasNextEpisode by viewModel.hasNextEpisode.collectAsState()
@@ -348,7 +359,7 @@ fun PlayerControls(
                     enter = fadeIn(playerControlsEnterAnimationSpec()),
                     exit = fadeOut(playerControlsExitAnimationSpec()),
                     modifier = Modifier.constrainAs(centerControls) {
-                        end.linkTo(parent.absoluteRight)
+                        end.linkTo(parent.absoluteRight, if (drawerShown) 340.dp else 0.dp)
                         start.linkTo(parent.absoluteLeft)
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
@@ -572,6 +583,25 @@ fun PlayerControls(
                         bottom.linkTo(seekbar.top, spacing.medium)
                     },
                 )
+
+                AnimatedVisibility(
+                    visible = drawerShown && controlsShown && !areControlsLocked,
+                    enter = fadeIn(playerControlsEnterAnimationSpec()),
+                    exit = fadeOut(playerControlsExitAnimationSpec()),
+                    modifier = Modifier.constrainAs(episodeDrawer) {
+                        end.linkTo(parent.absoluteRight)
+                        top.linkTo(parent.top, 88.dp)
+                        bottom.linkTo(seekbar.top, 34.dp)
+                        height = Dimension.fillToConstraints
+                    },
+                ) {
+                    val activity = LocalContext.current as? PlayerActivity
+                    KotoriTabletEpisodeDrawer(
+                        viewModel = viewModel,
+                        onSwitchEpisode = { activity?.changeEpisode(it) },
+                        onDismiss = { drawerVisible = false },
+                    )
+                }
             }
         }
 
