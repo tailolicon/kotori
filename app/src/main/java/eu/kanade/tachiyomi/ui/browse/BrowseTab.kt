@@ -17,6 +17,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.components.TabbedScreen
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.browse.anime.extension.AnimeExtensionsScreenModel
@@ -80,13 +81,17 @@ data object BrowseTab : Tab {
                 migrateAnimeSourceTab(),
             )
             val animeState = rememberPagerState { animeTabs.size }
-            TabbedScreen(
-                titleRes = MR.strings.browse,
-                tabs = animeTabs,
-                state = animeState,
-                searchQuery = animeExtensionsState.searchQuery,
-                onChangeSearchQuery = animeExtensionsScreenModel::search,
-            )
+            if (isKotoriTablet()) {
+                KotoriTabletAnimeBrowse(tabs = animeTabs, state = animeState)
+            } else {
+                TabbedScreen(
+                    titleRes = MR.strings.browse,
+                    tabs = animeTabs,
+                    state = animeState,
+                    searchQuery = animeExtensionsState.searchQuery,
+                    onChangeSearchQuery = animeExtensionsScreenModel::search,
+                )
+            }
             LaunchedEffect(Unit) {
                 switchToExtensionTabChannel.receiveAsFlow()
                     .collectLatest { animeState.scrollToPage(1) }
@@ -102,11 +107,15 @@ data object BrowseTab : Tab {
             // manga extensions since they share this screen).
             val novelTabs = listOf(sourcesTab())
             val novelState = rememberPagerState { novelTabs.size }
-            TabbedScreen(
-                titleRes = MR.strings.browse,
-                tabs = novelTabs,
-                state = novelState,
-            )
+            if (isKotoriTablet()) {
+                KotoriTabletMangaBrowse(tabs = novelTabs, state = novelState)
+            } else {
+                TabbedScreen(
+                    titleRes = MR.strings.browse,
+                    tabs = novelTabs,
+                    state = novelState,
+                )
+            }
             LaunchedEffect(Unit) {
                 (context as? MainActivity)?.ready = true
             }
@@ -127,13 +136,17 @@ data object BrowseTab : Tab {
 
         val state = rememberPagerState { tabs.size }
 
-        TabbedScreen(
-            titleRes = MR.strings.browse,
-            tabs = tabs,
-            state = state,
-            searchQuery = extensionsState.searchQuery,
-            onChangeSearchQuery = extensionsScreenModel::search,
-        )
+        if (isKotoriTablet()) {
+            KotoriTabletMangaBrowse(tabs = tabs, state = state)
+        } else {
+            TabbedScreen(
+                titleRes = MR.strings.browse,
+                tabs = tabs,
+                state = state,
+                searchQuery = extensionsState.searchQuery,
+                onChangeSearchQuery = extensionsScreenModel::search,
+            )
+        }
         LaunchedEffect(Unit) {
             switchToExtensionTabChannel.receiveAsFlow()
                 .collectLatest { state.scrollToPage(1) }
