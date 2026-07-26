@@ -98,10 +98,10 @@ internal object EdgeTtsProtocol {
             "Path:ssml\r\n\r\n" +
             ssml
 
-    fun ssml(text: String, voice: String, rate: Float): String =
+    fun ssml(text: String, voice: String, rate: Float, pitch: String = "+0Hz"): String =
         "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='vi-VN'>" +
             "<voice name='$voice'>" +
-            "<prosody pitch='+0Hz' rate='${ratePercent(rate)}' volume='+0%'>" +
+            "<prosody pitch='$pitch' rate='${ratePercent(rate)}' volume='+0%'>" +
             escape(text) +
             "</prosody></voice></speak>"
 

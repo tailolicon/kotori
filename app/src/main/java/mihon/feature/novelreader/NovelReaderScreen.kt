@@ -81,6 +81,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.reader.appbars.ReaderBarSurface
 import eu.kanade.presentation.reader.appbars.ReaderToolTile
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
@@ -499,6 +500,13 @@ fun NovelReaderScreen(
             },
             onPageIndexChangeFinished = {},
             continuousSlider = true,
+            // The bars take the page's own paper rather than the app's dark chrome, so the reader
+            // reads as one surface instead of a cream page with a night-mode frame around it.
+            surface = ReaderBarSurface(
+                background = paper.background,
+                content = paper.ink,
+                accent = paper.accent,
+            ),
             bottomBar = {
                 Row(
                     modifier = Modifier

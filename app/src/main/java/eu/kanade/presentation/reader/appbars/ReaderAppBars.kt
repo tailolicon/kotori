@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -76,11 +77,18 @@ fun ReaderAppBars(
     topBarExtraActions: List<AppBar.AppBarAction> = emptyList(),
     pageLabel: (Int) -> String = Int::toString,
     continuousSlider: Boolean = false,
+    surface: ReaderBarSurface? = null,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme
-        .surfaceColorAtElevation(3.dp)
-        .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
+    val backgroundColor = surface?.background
+        ?: MaterialTheme.colorScheme
+            .surfaceColorAtElevation(3.dp)
+            .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
 
+    // Recolouring through the theme rather than per-widget: the bars are built from AppBar,
+    // ChapterNavigator and Slider, each of which reads the scheme for a different role, so passing
+    // colours down by hand would mean threading them through three components that the manga
+    // reader shares.
+    ReaderBarTheme(surface) {
     Column(modifier = Modifier.fillMaxHeight()) {
         AnimatedVisibility(
             visible = visible,
@@ -179,4 +187,47 @@ fun ReaderAppBars(
             }
         }
     }
+    }
+}
+
+/**
+ * Colours the reader bars adopt instead of the app's own chrome.
+ *
+ * The novel reader paints its page from a chosen paper — cream, sepia, black — and dark chrome
+ * bars sitting on cream paper read as a different app bolted on top. The manga reader passes
+ * nothing and keeps the surface it always had.
+ */
+data class ReaderBarSurface(
+    val background: Color,
+    val content: Color,
+    val accent: Color,
+)
+
+/**
+ * Applies [surface] to everything the bars draw.
+ *
+ * Only the roles the bars actually read are overridden, so a widget reaching for some other colour
+ * still gets a coherent scheme rather than a hole.
+ */
+@Composable
+private fun ReaderBarTheme(surface: ReaderBarSurface?, content: @Composable () -> Unit) {
+    if (surface == null) return content()
+    val base = MaterialTheme.colorScheme
+    MaterialTheme(
+        colorScheme = base.copy(
+            surface = surface.background,
+            surfaceVariant = surface.background,
+            background = surface.background,
+            onSurface = surface.content,
+            onSurfaceVariant = surface.content.copy(alpha = 0.72f),
+            onBackground = surface.content,
+            primary = surface.accent,
+            onPrimary = surface.background,
+            secondaryContainer = surface.accent.copy(alpha = 0.18f),
+            onSecondaryContainer = surface.content,
+        ),
+        typography = MaterialTheme.typography,
+        shapes = MaterialTheme.shapes,
+        content = content,
+    )
 }

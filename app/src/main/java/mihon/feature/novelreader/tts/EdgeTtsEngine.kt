@@ -75,8 +75,8 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
      * with the most expressive delivery the service has. Nothing is downloaded, so every voice is
      * immediately playable.
      */
-    override fun voices(): List<NovelVoice> = VOICES.map { (voiceId, label) ->
-        NovelVoice(id = voiceId, label = label, downloaded = true)
+    override fun voices(): List<NovelVoice> = CATALOGUE.map { voice ->
+        NovelVoice(id = voice.id(), label = voice.label, downloaded = true)
     }
 
     override suspend fun prepare(
@@ -100,7 +100,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
         // version this claims to be — and finding that out here is what lets the controller fall
         // back to an on-device voice, instead of the reader pressing play and getting silence.
         return withContext(Dispatchers.IO) {
-            runCatching { fetchMp3(PROBE_TEXT, voiceId ?: VOICES.keys.first(), rate = 1f) }
+            runCatching { fetchMp3(PROBE_TEXT, resolve(voiceId), rate = 1f) }
                 .onSuccess {
                     ready = true
                     onProgress(NovelTtsPreparation.Ready)
@@ -142,7 +142,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
         if (script.isEmpty) return listener.onFinished()
         stop()
         val active = ++generation
-        val voice = VOICES.keys.firstOrNull { it == preferredVoice } ?: VOICES.keys.first()
+        val voice = resolve(preferredVoice)
         var delivered = false
 
         handle = SentenceClipPipeline.start(
@@ -170,6 +170,10 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
         }
     }
 
+    /** The picker's choice, or the leading native Vietnamese voice when it names nothing known. */
+    private fun resolve(voiceId: String?): EdgeVoice =
+        BY_ID[voiceId] ?: CATALOGUE.first()
+
     override fun stop() {
         generation++
         handle?.interrupt()
@@ -187,7 +191,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
      * A connection per sentence mirrors how the service is meant to be used (Edge opens one per
      * utterance) and keeps failure isolated; the pipeline's lookahead hides the handshake latency.
      */
-    private fun fetchMp3(text: String, voice: String, rate: Float): ByteArray {
+    private fun fetchMp3(text: String, voice: EdgeVoice, rate: Float): ByteArray {
         var lastError: IOException? = null
         repeat(2) { attempt ->
             try {
@@ -200,7 +204,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
         throw lastError ?: IOException("Edge TTS failed")
     }
 
-    private fun requestOnce(text: String, voice: String, rate: Float): ByteArray {
+    private fun requestOnce(text: String, voice: EdgeVoice, rate: Float): ByteArray {
         val audio = ByteArrayOutputStream()
         val done = CountDownLatch(1)
         var failure: IOException? = null
@@ -222,7 +226,7 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
                     webSocket.send(
                         EdgeTtsProtocol.ssmlMessage(
                             EdgeTtsProtocol.requestId(),
-                            EdgeTtsProtocol.ssml(text, voice, rate),
+                            EdgeTtsProtocol.ssml(text, voice.name, rate, voice.pitch),
                         ),
                     )
                 }
@@ -277,26 +281,56 @@ class EdgeTtsEngine(context: Context) : NovelTtsEngine {
     companion object {
         private const val REQUEST_TIMEOUT_S = 20L
 
-        /** Shortest thing worth synthesizing to prove the service is reachable. */
-        private const val PROBE_TEXT = "."
+        /**
+         * What the readiness probe synthesizes.
+         *
+         * Real words, because the service returns a successful but empty stream for input with no
+         * pronounceable content — a probe of "." therefore looked exactly like an outage and sent
+         * every reader to the offline voice.
+         */
+        private const val PROBE_TEXT = "Xin chào."
 
-        /** Voice id → picker label, in the order the picker should offer them. */
-        private val VOICES: Map<String, String> = linkedMapOf(
-            "vi-VN-HoaiMyNeural" to "Hoài My · Nữ · Tiếng Việt",
-            "vi-VN-NamMinhNeural" to "Nam Minh · Nam · Tiếng Việt",
-            "en-US-AvaMultilingualNeural" to "Ava · Nữ · Đa ngôn ngữ",
-            "en-US-EmmaMultilingualNeural" to "Emma · Nữ · Đa ngôn ngữ",
-            "en-US-AndrewMultilingualNeural" to "Andrew · Nam · Đa ngôn ngữ",
-            "en-US-BrianMultilingualNeural" to "Brian · Nam · Đa ngôn ngữ",
-            "de-DE-SeraphinaMultilingualNeural" to "Seraphina · Nữ · Đa ngôn ngữ",
-            "fr-FR-VivienneMultilingualNeural" to "Vivienne · Nữ · Đa ngôn ngữ",
-            "pt-BR-ThalitaMultilingualNeural" to "Thalita · Nữ · Đa ngôn ngữ",
-            "de-DE-FlorianMultilingualNeural" to "Florian · Nam · Đa ngôn ngữ",
-            "fr-FR-RemyMultilingualNeural" to "Rémy · Nam · Đa ngôn ngữ",
-            "it-IT-GiuseppeMultilingualNeural" to "Giuseppe · Nam · Đa ngôn ngữ",
-            "ko-KR-HyunsuMultilingualNeural" to "Hyunsu · Nam · Đa ngôn ngữ",
-            "en-AU-WilliamMultilingualNeural" to "William · Nam · Đa ngôn ngữ",
+        /**
+         * A pickable voice: a Microsoft voice plus the pitch it is read at.
+         *
+         * Microsoft publishes exactly two Vietnamese voices — its voice catalogue lists no others —
+         * so the range of native-accent choices comes from reading those two at different pitches.
+         * That is not a gimmick: a few semitones is the difference between a narrator and a young
+         * character, and every one of these still has the Vietnamese accent the multilingual voices
+         * only approximate.
+         */
+        private data class EdgeVoice(val name: String, val pitch: String, val label: String)
+
+        private val CATALOGUE: List<EdgeVoice> = listOf(
+            // Native Vietnamese, warmest first — these are what a Vietnamese listener should hear.
+            EdgeVoice("vi-VN-HoaiMyNeural", "+0Hz", "Hoài My · Nữ · Việt"),
+            EdgeVoice("vi-VN-NamMinhNeural", "+0Hz", "Nam Minh · Nam · Việt"),
+            EdgeVoice("vi-VN-HoaiMyNeural", "-10Hz", "Hoài My · Nữ trầm · Việt"),
+            EdgeVoice("vi-VN-NamMinhNeural", "-12Hz", "Nam Minh · Nam trầm · Việt"),
+            EdgeVoice("vi-VN-HoaiMyNeural", "+12Hz", "Hoài My · Nữ trẻ · Việt"),
+            EdgeVoice("vi-VN-NamMinhNeural", "+10Hz", "Nam Minh · Nam trẻ · Việt"),
+            EdgeVoice("vi-VN-HoaiMyNeural", "-20Hz", "Hoài My · Nữ kể chuyện · Việt"),
+            EdgeVoice("vi-VN-NamMinhNeural", "-22Hz", "Nam Minh · Nam kể chuyện · Việt"),
+            // Multilingual voices read Vietnamese with a trace of their own accent; kept for the
+            // delivery, listed last because the accent is the thing most listeners notice first.
+            EdgeVoice("en-US-AvaMultilingualNeural", "+0Hz", "Ava · Nữ · Đa ngôn ngữ"),
+            EdgeVoice("en-US-EmmaMultilingualNeural", "+0Hz", "Emma · Nữ · Đa ngôn ngữ"),
+            EdgeVoice("en-US-AndrewMultilingualNeural", "+0Hz", "Andrew · Nam · Đa ngôn ngữ"),
+            EdgeVoice("en-US-BrianMultilingualNeural", "+0Hz", "Brian · Nam · Đa ngôn ngữ"),
+            EdgeVoice("de-DE-SeraphinaMultilingualNeural", "+0Hz", "Seraphina · Nữ · Đa ngôn ngữ"),
+            EdgeVoice("fr-FR-VivienneMultilingualNeural", "+0Hz", "Vivienne · Nữ · Đa ngôn ngữ"),
+            EdgeVoice("pt-BR-ThalitaMultilingualNeural", "+0Hz", "Thalita · Nữ · Đa ngôn ngữ"),
+            EdgeVoice("de-DE-FlorianMultilingualNeural", "+0Hz", "Florian · Nam · Đa ngôn ngữ"),
+            EdgeVoice("fr-FR-RemyMultilingualNeural", "+0Hz", "Rémy · Nam · Đa ngôn ngữ"),
+            EdgeVoice("it-IT-GiuseppeMultilingualNeural", "+0Hz", "Giuseppe · Nam · Đa ngôn ngữ"),
+            EdgeVoice("ko-KR-HyunsuMultilingualNeural", "+0Hz", "Hyunsu · Nam · Đa ngôn ngữ"),
+            EdgeVoice("en-AU-WilliamMultilingualNeural", "+0Hz", "William · Nam · Đa ngôn ngữ"),
         )
+
+        /** Stable id for a choice — the voice alone would collide across its pitch variants. */
+        private fun EdgeVoice.id(): String = "$name@$pitch"
+
+        private val BY_ID: Map<String, EdgeVoice> = CATALOGUE.associateBy { it.id() }
     }
 
 }
