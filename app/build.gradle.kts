@@ -33,7 +33,11 @@ android {
         applicationId = "app.mihon"
 
         versionCode = getLatestCommitCount().toInt()
-        versionName = "0.20.1-72"
+
+        // Derived, never written down: a hardcoded name goes stale on the very next commit — the
+        // last one said 72 while the tree it shipped from was already at 74, which is exactly the
+        // kind of drift that makes it impossible to tell which build carries which fix.
+        versionName = "0.20.1-${getLatestCommitCount()}"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
