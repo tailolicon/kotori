@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -109,6 +110,42 @@ fun NovelReaderContent(
             viewModel.flushProgress()
         }
     }
+
+    // T5: on tablet the chapter list and the display settings are permanent panes flanking
+    // the page instead of a sheet and a push, so the reader is one canvas.
+    val tabletPanes = isKotoriTablet() && state.webUrl == null && state.chapter != null
+    val fontSize by preferences.fontSize.changes().collectAsState(initial = preferences.fontSize.get())
+    val font by preferences.fontFamily.changes().collectAsState(initial = preferences.fontFamily.get())
+    val theme by preferences.theme.changes().collectAsState(initial = preferences.theme.get())
+    val readingMode by preferences.readingMode.changes().collectAsState(initial = preferences.readingMode.get())
+
+    KotoriNovelPaneFrame(
+        enabled = tabletPanes,
+        start = {
+            KotoriNovelChapterPane(
+                title = state.manga?.title.orEmpty(),
+                chapters = remember(state.manga, state.chapters) {
+                    val manga = state.manga
+                    if (manga == null) state.chapters else state.chapters.sortedWith(
+                        getChapterSort(manga, sortDescending = false),
+                    )
+                },
+                currentChapterId = state.chapter?.id,
+                progressPercent = state.startPercent,
+                onNavigateUp = onNavigateUp,
+                onSelectChapter = { viewModel.loadChapter(it.id) },
+            )
+        },
+        end = {
+            KotoriNovelSettingsSidebar(
+                preferences = preferences,
+                fontSize = fontSize,
+                font = font,
+                theme = theme,
+                readingMode = readingMode,
+            )
+        },
+    ) {
 
     when {
         state.isLoading -> LoadingScreen(Modifier.fillMaxSize())
@@ -196,6 +233,29 @@ fun NovelReaderContent(
                 )
             }
         }
+    }
+    }
+}
+
+/**
+ * Wraps the reading area in the T5 side panes when [enabled]; otherwise renders the
+ * page alone, so the phone composition is untouched.
+ */
+@Composable
+private fun KotoriNovelPaneFrame(
+    enabled: Boolean,
+    start: @Composable () -> Unit,
+    end: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (!enabled) {
+        content()
+        return
+    }
+    Row(modifier = Modifier.fillMaxSize()) {
+        start()
+        Box(modifier = Modifier.weight(1f)) { content() }
+        end()
     }
 }
 
