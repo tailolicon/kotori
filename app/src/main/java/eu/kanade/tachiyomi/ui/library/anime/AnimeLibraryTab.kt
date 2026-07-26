@@ -52,11 +52,11 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.EntryDownloadDropdownMenu
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.anime.AnimeLibraryContent
 import eu.kanade.presentation.library.anime.AnimeLibrarySettingsDialog
-import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.components.KotoriModeSwitcher
 import eu.kanade.presentation.library.components.KotoriResumeHeroCard
 import eu.kanade.presentation.library.components.KotoriTabletHero
@@ -97,15 +97,15 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.anime.model.Anime
 import tachiyomi.domain.entries.anime.model.AnimeCover
-import tachiyomi.domain.library.model.LibraryDisplayMode
-import tachiyomi.source.local.entries.anime.isLocal
 import tachiyomi.domain.history.anime.interactor.GetAnimeHistory
 import tachiyomi.domain.history.anime.model.AnimeHistoryWithRelations
 import tachiyomi.domain.items.episode.model.Episode
 import tachiyomi.domain.library.anime.LibraryAnime
+import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import tachiyomi.source.local.entries.anime.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -184,78 +184,78 @@ data object AnimeLibraryTab : Tab {
         KotoriScreenScaffold(
             header = {
                 if (!tabletUi) {
-                KotoriHeader(
-                    titleContent = { KotoriWordmark() },
-                    actions = {
-                        KotoriHeaderAction(
-                            icon = Icons.Filled.Search,
-                            contentDescription = stringResource(MR.strings.action_search),
-                            onClick = {
-                                if (state.searchQuery == null) screenModel.search("") else screenModel.search(null)
-                            },
-                        )
-                        KotoriHeaderAction(
-                            icon = Icons.Filled.Tune,
-                            contentDescription = stringResource(MR.strings.action_filter),
-                            onClick = screenModel::showSettingsDialog,
-                            tint = if (state.hasActiveFilters) {
-                                KotoriTheme.accent.light
-                            } else {
-                                KotoriColors.textPrimary.copy(alpha = 0.85f)
-                            },
-                        )
-                        Box {
-                            var menuOpen by remember { mutableStateOf(false) }
+                    KotoriHeader(
+                        titleContent = { KotoriWordmark() },
+                        actions = {
                             KotoriHeaderAction(
-                                icon = Icons.Filled.MoreVert,
-                                contentDescription = null,
-                                onClick = { menuOpen = true },
+                                icon = Icons.Filled.Search,
+                                contentDescription = stringResource(MR.strings.action_search),
+                                onClick = {
+                                    if (state.searchQuery == null) screenModel.search("") else screenModel.search(null)
+                                },
                             )
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_update_library)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onClickRefresh(null)
-                                    },
+                            KotoriHeaderAction(
+                                icon = Icons.Filled.Tune,
+                                contentDescription = stringResource(MR.strings.action_filter),
+                                onClick = screenModel::showSettingsDialog,
+                                tint = if (state.hasActiveFilters) {
+                                    KotoriTheme.accent.light
+                                } else {
+                                    KotoriColors.textPrimary.copy(alpha = 0.85f)
+                                },
+                            )
+                            Box {
+                                var menuOpen by remember { mutableStateOf(false) }
+                                KotoriHeaderAction(
+                                    icon = Icons.Filled.MoreVert,
+                                    contentDescription = null,
+                                    onClick = { menuOpen = true },
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_update_category)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onClickRefresh(activeCategory)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_open_random_manga)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        scope.launch {
-                                            val randomItem = screenModel.getRandomAnimelibItemForCurrentCategory()
-                                            if (randomItem != null) {
-                                                navigator.push(AnimeScreen(randomItem.libraryAnime.anime.id))
-                                            } else {
-                                                snackbarHostState.showSnackbar(
-                                                    context.stringResource(MR.strings.information_no_entries_found),
-                                                )
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_update_library)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            onClickRefresh(null)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_update_category)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            onClickRefresh(activeCategory)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_open_random_manga)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            scope.launch {
+                                                val randomItem = screenModel.getRandomAnimelibItemForCurrentCategory()
+                                                if (randomItem != null) {
+                                                    navigator.push(AnimeScreen(randomItem.libraryAnime.anime.id))
+                                                } else {
+                                                    snackbarHostState.showSnackbar(
+                                                        context.stringResource(MR.strings.information_no_entries_found),
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                )
+                                        },
+                                    )
+                                }
                             }
-                        }
-                    },
-                )
-                if (state.searchQuery != null) {
-                    KotoriSearchField(
-                        value = state.searchQuery.orEmpty(),
-                        onValueChange = screenModel::search,
-                        placeholder = "Tìm trong thư viện…",
-                        autoFocus = true,
-                        onClear = { screenModel.search("") },
-                        modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
+                        },
                     )
-                }
+                    if (state.searchQuery != null) {
+                        KotoriSearchField(
+                            value = state.searchQuery.orEmpty(),
+                            onValueChange = screenModel::search,
+                            placeholder = "Tìm trong thư viện…",
+                            autoFocus = true,
+                            onClear = { screenModel.search("") },
+                            modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
+                        )
+                    }
                 }
             },
             bottomBar = {
@@ -330,7 +330,7 @@ data object AnimeLibraryTab : Tab {
                     LoadingScreen(Modifier.padding(contentPadding))
                 }
                 tabletUi -> {
-                    val displayMode = screenModel.getDisplayMode()
+                    val displayMode = remember(screenModel) { screenModel.getDisplayMode() }
                     val items = state.getAnimelibItemsByPage(screenModel.activeCategoryIndex)
                     val history = lastWatched
                     val heroItem = history?.let { h ->

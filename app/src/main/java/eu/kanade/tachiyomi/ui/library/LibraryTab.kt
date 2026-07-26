@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Delete
@@ -52,12 +54,12 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.KotoriModeSwitcher
-import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.presentation.library.components.KotoriResumeHeroCard
 import eu.kanade.presentation.library.components.KotoriTabletHero
 import eu.kanade.presentation.library.components.KotoriTabletLibraryLayout
@@ -67,7 +69,6 @@ import eu.kanade.presentation.library.components.LibraryContent
 import eu.kanade.presentation.library.components.libraryStatusLine
 import eu.kanade.presentation.library.components.rememberKotoriAiringToday
 import eu.kanade.presentation.library.components.rememberKotoriResumeItems
-import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.manga.DownloadAction
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.theme.kotori.GradientButton
@@ -88,6 +89,7 @@ import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
+import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
@@ -95,8 +97,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import mihon.feature.localmedia.LocalMediaColumn
 import mihon.feature.localmedia.LocalMediaDetailScreen
 import mihon.feature.localmedia.LocalMediaEntry
@@ -204,78 +204,78 @@ data object LibraryTab : Tab {
         KotoriScreenScaffold(
             header = {
                 if (!tabletUi) {
-                KotoriHeader(
-                    titleContent = { KotoriWordmark() },
-                    actions = {
-                        KotoriHeaderAction(
-                            icon = Icons.Filled.Search,
-                            contentDescription = stringResource(MR.strings.action_search),
-                            onClick = {
-                                if (state.searchQuery == null) screenModel.search("") else screenModel.search(null)
-                            },
-                        )
-                        KotoriHeaderAction(
-                            icon = Icons.Filled.Tune,
-                            contentDescription = stringResource(MR.strings.action_filter),
-                            onClick = screenModel::showSettingsDialog,
-                            tint = if (state.hasActiveFilters) {
-                                KotoriTheme.accent.light
-                            } else {
-                                KotoriColors.textPrimary.copy(alpha = 0.85f)
-                            },
-                        )
-                        Box {
-                            var menuOpen by remember { mutableStateOf(false) }
+                    KotoriHeader(
+                        titleContent = { KotoriWordmark() },
+                        actions = {
                             KotoriHeaderAction(
-                                icon = Icons.Filled.MoreVert,
-                                contentDescription = null,
-                                onClick = { menuOpen = true },
+                                icon = Icons.Filled.Search,
+                                contentDescription = stringResource(MR.strings.action_search),
+                                onClick = {
+                                    if (state.searchQuery == null) screenModel.search("") else screenModel.search(null)
+                                },
                             )
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_update_library)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onClickRefresh(null)
-                                    },
+                            KotoriHeaderAction(
+                                icon = Icons.Filled.Tune,
+                                contentDescription = stringResource(MR.strings.action_filter),
+                                onClick = screenModel::showSettingsDialog,
+                                tint = if (state.hasActiveFilters) {
+                                    KotoriTheme.accent.light
+                                } else {
+                                    KotoriColors.textPrimary.copy(alpha = 0.85f)
+                                },
+                            )
+                            Box {
+                                var menuOpen by remember { mutableStateOf(false) }
+                                KotoriHeaderAction(
+                                    icon = Icons.Filled.MoreVert,
+                                    contentDescription = null,
+                                    onClick = { menuOpen = true },
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_update_category)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onClickRefresh(state.activeCategory)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(MR.strings.action_open_random_manga)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        scope.launch {
-                                            val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
-                                            if (randomItem != null) {
-                                                navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
-                                            } else {
-                                                snackbarHostState.showSnackbar(
-                                                    context.stringResource(MR.strings.information_no_entries_found),
-                                                )
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_update_library)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            onClickRefresh(null)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_update_category)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            onClickRefresh(state.activeCategory)
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(MR.strings.action_open_random_manga)) },
+                                        onClick = {
+                                            menuOpen = false
+                                            scope.launch {
+                                                val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
+                                                if (randomItem != null) {
+                                                    navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                                } else {
+                                                    snackbarHostState.showSnackbar(
+                                                        context.stringResource(MR.strings.information_no_entries_found),
+                                                    )
+                                                }
                                             }
-                                        }
-                                    },
-                                )
+                                        },
+                                    )
+                                }
                             }
-                        }
-                    },
-                )
-                if (state.searchQuery != null) {
-                    KotoriSearchField(
-                        value = state.searchQuery.orEmpty(),
-                        onValueChange = screenModel::search,
-                        placeholder = "Tìm trong thư viện…",
-                        autoFocus = true,
-                        onClear = { screenModel.search("") },
-                        modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
+                        },
                     )
-                }
+                    if (state.searchQuery != null) {
+                        KotoriSearchField(
+                            value = state.searchQuery.orEmpty(),
+                            onValueChange = screenModel::search,
+                            placeholder = "Tìm trong thư viện…",
+                            autoFocus = true,
+                            onClear = { screenModel.search("") },
+                            modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
+                        )
+                    }
                 }
             },
             bottomBar = {
@@ -349,7 +349,7 @@ data object LibraryTab : Tab {
                     LoadingScreen(Modifier.padding(contentPadding))
                 }
                 tabletUi -> {
-                    val displayMode = screenModel.getDisplayMode()
+                    val displayMode = remember(screenModel) { screenModel.getDisplayMode() }
                     val activeCategory = state.activeCategory
                     val items = activeCategory?.let { state.getItemsForCategory(it) }.orEmpty()
                     val history = lastRead

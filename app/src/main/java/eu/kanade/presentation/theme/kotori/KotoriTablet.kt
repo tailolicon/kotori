@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import eu.kanade.tachiyomi.util.system.isTabletUi
 
 /**
  * Kotori window classes, per the tablet handoff: the tablet composition is applied at
@@ -70,7 +71,7 @@ fun kotoriWindowWidth(): KotoriWindowWidth {
 /** True when the re-composed tablet layouts (T1–T8) should be used. */
 @Composable
 @ReadOnlyComposable
-fun isKotoriTablet(): Boolean = kotoriWindowWidth() == KotoriWindowWidth.Expanded
+fun isKotoriTablet(): Boolean = LocalConfiguration.current.isTabletUi()
 
 /** True when the vertical navigation rail replaces the floating bottom nav. */
 @Composable
@@ -498,12 +499,14 @@ fun KotoriTabletChip(
             .then(
                 when {
                     selected -> Modifier.background(accent.gradient)
-                    tinted -> Modifier
-                        .background(accent.start.copy(alpha = 0.14f))
-                        .border(1.dp, accent.light.copy(alpha = 0.45f), shape)
-                    else -> Modifier
-                        .background(Color(0x0FFFFFFF))
-                        .border(1.dp, Color(0x1CFFFFFF), shape)
+                    tinted ->
+                        Modifier
+                            .background(accent.start.copy(alpha = 0.14f))
+                            .border(1.dp, accent.light.copy(alpha = 0.45f), shape)
+                    else ->
+                        Modifier
+                            .background(Color(0x0FFFFFFF))
+                            .border(1.dp, Color(0x1CFFFFFF), shape)
                 },
             )
             .clickable(
@@ -519,7 +522,13 @@ fun KotoriTabletChip(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (selected) accent.onAccent else if (tinted) accent.light else Color(0xFFCFC7E8),
+                tint = if (selected) {
+                    accent.onAccent
+                } else if (tinted) {
+                    accent.light
+                } else {
+                    Color(0xFFCFC7E8)
+                },
                 modifier = Modifier.size(16.dp),
             )
         }
