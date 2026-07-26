@@ -145,6 +145,15 @@ class LibraryPreferences(
         emptySet(),
     )
 
+    /**
+     * Anime ids the user asked to be reminded about from the season calendar
+     * (`Lịch mùa` bells / the `HÔM NAY LÊN SÓNG` panel).
+     */
+    val upcomingNotifyAnimeIds: Preference<Set<String>> = preferenceStore.getStringSet(
+        "upcoming_notify_anime_ids",
+        emptySet(),
+    )
+
     // endregion
 
     // region Chapter

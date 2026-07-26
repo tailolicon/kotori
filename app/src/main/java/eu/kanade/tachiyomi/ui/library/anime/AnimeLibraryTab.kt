@@ -56,9 +56,15 @@ import eu.kanade.presentation.components.EntryDownloadDropdownMenu
 import eu.kanade.presentation.library.DeleteLibraryEntryDialog
 import eu.kanade.presentation.library.anime.AnimeLibraryContent
 import eu.kanade.presentation.library.anime.AnimeLibrarySettingsDialog
+import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.components.KotoriModeSwitcher
 import eu.kanade.presentation.library.components.KotoriResumeHeroCard
+import eu.kanade.presentation.library.components.KotoriTabletHero
+import eu.kanade.presentation.library.components.KotoriTabletLibraryLayout
+import eu.kanade.presentation.library.components.KotoriTabletLibraryTile
 import eu.kanade.presentation.library.components.KotoriWordmark
+import eu.kanade.presentation.library.components.rememberKotoriAiringToday
+import eu.kanade.presentation.library.components.rememberKotoriResumeItems
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.theme.kotori.GradientButton
 import eu.kanade.presentation.theme.kotori.KotoriColors
@@ -69,6 +75,7 @@ import eu.kanade.presentation.theme.kotori.KotoriScreenScaffold
 import eu.kanade.presentation.theme.kotori.KotoriSearchField
 import eu.kanade.presentation.theme.kotori.KotoriSelectionBar
 import eu.kanade.presentation.theme.kotori.KotoriTheme
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.tachiyomi.R
@@ -79,6 +86,7 @@ import eu.kanade.tachiyomi.ui.category.anime.AnimeCategoryScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
+import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -88,6 +96,8 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.model.AnimeCover
+import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.source.local.entries.anime.isLocal
 import tachiyomi.domain.history.anime.interactor.GetAnimeHistory
 import tachiyomi.domain.history.anime.model.AnimeHistoryWithRelations
@@ -162,8 +172,18 @@ data object AnimeLibraryTab : Tab {
 
         val activeCategory = state.categories.getOrNull(screenModel.activeCategoryIndex)
 
+        val tabletUi = isKotoriTablet()
+        val resumeItems = rememberKotoriResumeItems(
+            onOpenManga = { navigator.push(MangaScreen(it)) },
+            onOpenAnime = { navigator.push(AnimeScreen(it)) },
+        )
+        val airingItems = rememberKotoriAiringToday(
+            onOpenAnime = { navigator.push(AnimeScreen(it)) },
+        )
+
         KotoriScreenScaffold(
             header = {
+                if (!tabletUi) {
                 KotoriHeader(
                     titleContent = { KotoriWordmark() },
                     actions = {
@@ -236,6 +256,7 @@ data object AnimeLibraryTab : Tab {
                         modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp),
                     )
                 }
+                }
             },
             bottomBar = {
                 if (state.selectionMode) {
@@ -307,6 +328,99 @@ data object AnimeLibraryTab : Tab {
             when {
                 state.isLoading -> {
                     LoadingScreen(Modifier.padding(contentPadding))
+                }
+                tabletUi -> {
+                    val displayMode = screenModel.getDisplayMode()
+                    val items = state.getAnimelibItemsByPage(screenModel.activeCategoryIndex)
+                    val history = lastWatched
+                    val heroItem = history?.let { h ->
+                        state.library.values.flatten().firstOrNull { it.libraryAnime.anime.id == h.animeId }
+                    }
+                    val selectedIds = state.selection.map { it.id }.toSet()
+                    KotoriTabletLibraryLayout(
+                        modifier = Modifier.padding(contentPadding),
+                        activeMode = activeMode,
+                        onSelectMode = { uiPreferences.activeMediaMode.set(it) },
+                        searchQuery = state.searchQuery.orEmpty(),
+                        onSearchChange = screenModel::search,
+                        onClearSearch = { screenModel.search("") },
+                        onOpenFilters = screenModel::showSettingsDialog,
+                        filtersActive = state.hasActiveFilters,
+                        onRefresh = { onClickRefresh(activeCategory) },
+                        onCycleDisplayMode = {
+                            val order = listOf(
+                                LibraryDisplayMode.CompactGrid,
+                                LibraryDisplayMode.ComfortableGrid,
+                                LibraryDisplayMode.CoverOnlyGrid,
+                                LibraryDisplayMode.List,
+                            )
+                            displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
+                        },
+                        categories = state.categories.map { it.visualName },
+                        categoryCounts = state.categories.map { state.getAnimeCountForCategory(it) },
+                        activeCategoryIndex = screenModel.activeCategoryIndex,
+                        onSelectCategory = { screenModel.activeCategoryIndex = it },
+                        title = stringResource(MR.strings.label_library),
+                        subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
+                        tiles = items.map { item ->
+                            val anime = item.libraryAnime.anime
+                            KotoriTabletLibraryTile(
+                                id = anime.id,
+                                title = anime.title,
+                                statusLine = "Tập ${item.libraryAnime.totalCount}",
+                                coverData = AnimeCover(
+                                    animeId = anime.id,
+                                    sourceId = anime.source,
+                                    isAnimeFavorite = anime.favorite,
+                                    url = anime.thumbnailUrl,
+                                    lastModified = anime.coverLastModified,
+                                ),
+                                unreadCount = item.unseenCount.coerceAtLeast(0),
+                                downloaded = item.downloadCount > 0,
+                                selected = anime.id in selectedIds,
+                            )
+                        },
+                        onClickTile = { id ->
+                            val entry = items.firstOrNull { it.libraryAnime.anime.id == id }
+                            if (state.selectionMode && entry != null) {
+                                screenModel.toggleSelection(entry.libraryAnime)
+                            } else {
+                                navigator.push(AnimeScreen(id))
+                            }
+                        },
+                        onLongClickTile = { id ->
+                            items.firstOrNull { it.libraryAnime.anime.id == id }?.let {
+                                screenModel.toggleRangeSelection(it.libraryAnime)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        },
+                        hero = if (history != null && heroItem != null) {
+                            val libraryAnime = heroItem.libraryAnime
+                            KotoriTabletHero(
+                                title = history.title,
+                                meta = "Tập ${formatEpisodeNumber(history.episodeNumber)}" +
+                                    " · đã xem ${libraryAnime.seenCount}/${libraryAnime.totalCount}",
+                                progress = if (libraryAnime.totalCount > 0) {
+                                    libraryAnime.seenCount.toFloat() / libraryAnime.totalCount
+                                } else {
+                                    0f
+                                },
+                                coverData = history.coverData,
+                                onClick = { navigator.push(AnimeScreen(history.animeId)) },
+                                onResume = { onContinueWatching(libraryAnime) },
+                            )
+                        } else {
+                            null
+                        },
+                        resumeItems = resumeItems,
+                        airingItems = airingItems,
+                        emptyContent = {
+                            KotoriEmptyState(
+                                title = "Thư viện trống",
+                                hint = "Thêm anime từ tab Duyệt",
+                            )
+                        },
+                    )
                 }
                 state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
                     val handler = LocalUriHandler.current
