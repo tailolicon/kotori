@@ -1,6 +1,12 @@
 package eu.kanade.tachiyomi.ui.setting
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.only
@@ -9,6 +15,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -20,8 +28,9 @@ import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.util.DefaultNavigatorScreenTransition
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
-import eu.kanade.presentation.util.isTabletUi
-import tachiyomi.presentation.core.components.TwoPanelBox
+import eu.kanade.presentation.theme.kotori.AuroraBackground
+import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 
 class SettingsScreen(
     private val destination: Int? = null,
@@ -32,7 +41,7 @@ class SettingsScreen(
     @Composable
     override fun Content() {
         val parentNavigator = LocalNavigator.currentOrThrow
-        if (!isTabletUi()) {
+        if (!isKotoriTablet()) {
             Navigator(
                 screen = when (destination) {
                     Destination.About.id -> AboutScreen
@@ -63,18 +72,31 @@ class SettingsScreen(
                 },
                 onBackPressed = null,
             ) {
+                // T8: a 330dp settings column against a detail pane, both over one aurora.
                 val insets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)
-                TwoPanelBox(
-                    modifier = Modifier
-                        .windowInsetsPadding(insets)
-                        .consumeWindowInsets(insets),
-                    startContent = {
-                        CompositionLocalProvider(LocalBackPress provides parentNavigator::pop) {
-                            SettingsMainScreen.Content(twoPane = true)
+                AuroraBackground {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(insets)
+                            .consumeWindowInsets(insets),
+                    ) {
+                        Box(modifier = Modifier.width(KotoriTabletTokens.settingsListPane)) {
+                            CompositionLocalProvider(LocalBackPress provides parentNavigator::pop) {
+                                SettingsMainScreen.Content(twoPane = true)
+                            }
                         }
-                    },
-                    endContent = { DefaultNavigatorScreenTransition(navigator = it) },
-                )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(1.dp)
+                                .background(Color(0x12FFFFFF)),
+                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            DefaultNavigatorScreenTransition(navigator = it)
+                        }
+                    }
+                }
             }
         }
     }

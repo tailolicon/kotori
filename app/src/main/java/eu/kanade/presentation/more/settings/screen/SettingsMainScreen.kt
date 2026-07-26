@@ -1,6 +1,20 @@
 package eu.kanade.presentation.more.settings.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +22,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ChromeReaderMode
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.CollectionsBookmark
@@ -19,20 +34,26 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.ColorUtils
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
@@ -42,6 +63,13 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
+import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.KotoriCircleAction
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
+import eu.kanade.presentation.theme.kotori.KotoriTheme
+import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
 import tachiyomi.i18n.MR
@@ -76,6 +104,15 @@ object SettingsMainScreen : Screen() {
     fun Content(twoPane: Boolean) {
         val navigator = LocalNavigator.currentOrThrow
         val backPress = LocalBackPress.currentOrThrow
+
+        if (twoPane && isKotoriTablet()) {
+            KotoriSettingsList(
+                navigator = navigator,
+                onNavigateUp = backPress::invoke,
+            )
+            return
+        }
+
         val containerColor = if (twoPane) getPalerSurface() else MaterialTheme.colorScheme.surface
         val topBarState = rememberTopAppBarState()
 
@@ -156,6 +193,139 @@ object SettingsMainScreen : Screen() {
                 }
             },
         )
+    }
+
+    /**
+     * T8 · Cài đặt — the 330 dp settings column: back arrow, title and search circle,
+     * then rows whose icon tile turns into the mode gradient when the row is active.
+     */
+    @Composable
+    private fun KotoriSettingsList(
+        navigator: Navigator,
+        onNavigateUp: () -> Unit,
+    ) {
+        val accent = KotoriTheme.accent
+        val currentScreen = navigator.items.firstOrNull()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(11.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = KotoriColors.textPrimary,
+                    modifier = Modifier
+                        .size(21.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onNavigateUp,
+                        ),
+                )
+                Text(
+                    text = stringResource(MR.strings.label_settings),
+                    fontFamily = UnboundedFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    color = KotoriColors.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                KotoriCircleAction(
+                    icon = Icons.Outlined.Search,
+                    contentDescription = stringResource(MR.strings.action_search),
+                    onClick = { navigator.replaceAll(SettingsSearchScreen()) },
+                    size = 38.dp,
+                    iconSize = 18.dp,
+                )
+            }
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.padding(top = 6.dp),
+            ) {
+                items(items = items, key = { it.hashCode() }) { item ->
+                    val selected = currentScreen?.let { it::class == item.screen::class } == true
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(KotoriTabletShapes.listRow)
+                            .then(
+                                if (selected) {
+                                    Modifier
+                                        .background(accent.start.copy(alpha = 0.16f))
+                                        .border(1.dp, accent.light.copy(alpha = 0.5f), KotoriTabletShapes.listRow)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { navigator.replaceAll(item.screen) }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(KotoriTabletShapes.settingsTile)
+                                .then(
+                                    if (selected) {
+                                        Modifier.background(accent.gradient)
+                                    } else {
+                                        Modifier
+                                            .background(accent.start.copy(alpha = 0.13f))
+                                            .border(
+                                                1.dp,
+                                                accent.light.copy(alpha = 0.28f),
+                                                KotoriTabletShapes.settingsTile,
+                                            )
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = null,
+                                tint = if (selected) accent.onAccent else accent.light,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(item.titleRes),
+                                fontFamily = BeVietnamProFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.5.sp,
+                                color = KotoriColors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            item.formatSubtitle()?.let { subtitle ->
+                                Text(
+                                    text = subtitle,
+                                    fontFamily = BeVietnamProFamily,
+                                    fontSize = 10.sp,
+                                    color = KotoriColors.textMuted,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun Navigator.navigate(screen: VoyagerScreen, twoPane: Boolean) {

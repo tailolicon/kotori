@@ -167,6 +167,14 @@ object KotoriTabletShapes {
         bottomStart = 5.dp,
     )
 
+    /** Settings row icon tiles: 12 12 12 4 */
+    val settingsTile = RoundedCornerShape(
+        topStart = 12.dp,
+        topEnd = 12.dp,
+        bottomEnd = 12.dp,
+        bottomStart = 4.dp,
+    )
+
     /** Novel chapter rows: 13 13 13 4 */
     val chapterRow = RoundedCornerShape(
         topStart = 13.dp,

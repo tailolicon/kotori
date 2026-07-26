@@ -1,20 +1,35 @@
 package eu.kanade.presentation.more.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
 import eu.kanade.presentation.more.settings.widget.PreferenceGroupHeader
+import eu.kanade.presentation.theme.kotori.KotoriPanelLabel
+import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import kotlinx.coroutines.delay
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
+import tachiyomi.presentation.core.util.plus
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -39,6 +54,16 @@ fun PreferenceScreen(
             }
             SearchableSettings.highlightKey = null
         }
+    }
+
+    if (isKotoriTablet()) {
+        KotoriTabletPreferenceGrid(
+            items = items,
+            highlightKey = highlightKey,
+            modifier = modifier,
+            contentPadding = contentPadding,
+        )
+        return
     }
 
     ScrollbarLazyColumn(
@@ -79,6 +104,69 @@ fun PreferenceScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * T8 detail pane: every preference group becomes a glass card (radius 22 22 22 7)
+ * laid out in a two-column grid, with its title as the tracked-out Unbounded label.
+ */
+@Composable
+private fun KotoriTabletPreferenceGrid(
+    items: List<Preference>,
+    highlightKey: String?,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+) {
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(2),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = contentPadding + PaddingValues(horizontal = 30.dp, vertical = 22.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalItemSpacing = 14.dp,
+    ) {
+        items.fastForEachIndexed { index, preference ->
+            when (preference) {
+                is Preference.PreferenceGroup -> {
+                    if (!preference.enabled) return@fastForEachIndexed
+                    item(key = "group-$index-${preference.title}") {
+                        KotoriPreferenceCard(label = preference.title) {
+                            preference.preferenceItems.forEach { item ->
+                                PreferenceItem(item = item, highlightKey = highlightKey)
+                            }
+                        }
+                    }
+                }
+                is Preference.PreferenceItem<*, *> -> item(key = "item-$index-${preference.title}") {
+                    KotoriPreferenceCard(label = null) {
+                        PreferenceItem(item = preference, highlightKey = highlightKey)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KotoriPreferenceCard(
+    label: String?,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(KotoriTabletShapes.settingsCard)
+            .background(Color(0x0DFFFFFF))
+            .border(1.dp, Color(0x1AFFFFFF), KotoriTabletShapes.settingsCard)
+            .padding(vertical = 16.dp),
+    ) {
+        if (!label.isNullOrBlank()) {
+            KotoriPanelLabel(
+                text = label.uppercase(),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
+            )
+        }
+        content()
     }
 }
 
