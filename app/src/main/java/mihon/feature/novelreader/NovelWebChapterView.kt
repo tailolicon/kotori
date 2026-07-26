@@ -9,7 +9,9 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.toArgb
@@ -35,7 +37,13 @@ fun NovelWebChapterView(
     startPercent: Int,
     onProgressChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onTap: () -> Unit = {},
+    onScrollDelta: (Int) -> Unit = {},
+    onWebViewReady: (WebView) -> Unit = {},
 ) {
+    val latestProgress by rememberUpdatedState(onProgressChanged)
+    val latestTap by rememberUpdatedState(onTap)
+    val latestScrollDelta by rememberUpdatedState(onScrollDelta)
     val fontSize = preferences.fontSize.get()
     val font = preferences.fontFamily.get()
     val paper = preferences.theme.get().paper()
@@ -63,13 +71,28 @@ fun NovelWebChapterView(
                     )
                     setDefaultSettings()
                     setBackgroundColor(paper.background.toArgb())
+                    // Bridge callbacks arrive on the WebView's JS thread; the chrome they drive
+                    // touches window state, so hop to the main thread first.
                     addJavascriptInterface(
                         object {
                             @JavascriptInterface
-                            fun onScroll(percent: Int) = onProgressChanged(percent)
+                            fun onScroll(percent: Int) {
+                                post { latestProgress(percent) }
+                            }
+
+                            @JavascriptInterface
+                            fun onScrollDelta(dy: Int) {
+                                post { latestScrollDelta(dy) }
+                            }
+
+                            @JavascriptInterface
+                            fun onTap() {
+                                post { latestTap() }
+                            }
                         },
                         "KotoriReader",
                     )
+                    onWebViewReady(this)
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             // Hide early so the site's own layout never flashes through.
@@ -172,9 +195,25 @@ private fun restyleScript(css: String, startPercent: Int): String = """
     var h = document.documentElement.scrollHeight - window.innerHeight;
     return h > 0 ? Math.round(window.scrollY * 100 / h) : 0;
   }
+  var lastY = window.scrollY;
   window.addEventListener('scroll', function() {
-    if (window.KotoriReader) window.KotoriReader.onScroll(percent());
+    if (window.KotoriReader) {
+      window.KotoriReader.onScroll(percent());
+      window.KotoriReader.onScrollDelta(Math.round(window.scrollY - lastY));
+    }
+    lastY = window.scrollY;
   }, { passive: true });
+
+  // Taps toggle the reader chrome, exactly as they do in the native readers.
+  document.addEventListener('click', function() {
+    if (window.KotoriReader) window.KotoriReader.onTap();
+  });
+
+  // Lets the reader's page slider drive the page, the counterpart of onScroll above.
+  window.kotoriScrollToPercent = function(p) {
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    if (h > 0) window.scrollTo(0, h * p / 100);
+  };
 
   var start = $startPercent;
   if (start > 0) {

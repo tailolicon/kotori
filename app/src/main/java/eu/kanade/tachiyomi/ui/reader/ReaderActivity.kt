@@ -56,6 +56,7 @@ import eu.kanade.presentation.reader.ReaderPageActionsDialog
 import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
 import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.reader.appbars.ReaderBottomBar
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
 import eu.kanade.presentation.reader.settings.ReaderSettingsDialog
 import eu.kanade.tachiyomi.R
@@ -542,21 +543,25 @@ class ReaderActivity : BaseActivity() {
                 isScrollingThroughPages = false
             },
 
-            readingMode = ReadingMode.fromPreference(
-                viewModel.getMangaReadingMode(resolveDefault = false),
-            ),
-            onClickReadingMode = viewModel::openReadingModeSelectDialog,
-            orientation = ReaderOrientation.fromPreference(
-                viewModel.getMangaOrientation(resolveDefault = false),
-            ),
-            onClickOrientation = viewModel::openOrientationModeSelectDialog,
-            cropEnabled = cropEnabled,
-            onClickCropBorder = {
-                val enabled = viewModel.toggleCropBorders()
-                menuToggleToast?.cancel()
-                menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
+            bottomBar = {
+                ReaderBottomBar(
+                    readingMode = ReadingMode.fromPreference(
+                        viewModel.getMangaReadingMode(resolveDefault = false),
+                    ),
+                    onClickReadingMode = viewModel::openReadingModeSelectDialog,
+                    orientation = ReaderOrientation.fromPreference(
+                        viewModel.getMangaOrientation(resolveDefault = false),
+                    ),
+                    onClickOrientation = viewModel::openOrientationModeSelectDialog,
+                    cropEnabled = cropEnabled,
+                    onClickCropBorder = {
+                        val enabled = viewModel.toggleCropBorders()
+                        menuToggleToast?.cancel()
+                        menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
+                    },
+                    onClickSettings = viewModel::openSettingsDialog,
+                )
             },
-            onClickSettings = viewModel::openSettingsDialog,
         )
     }
 

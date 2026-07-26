@@ -72,13 +72,15 @@ fun ChapterNavigator(
     onPageIndexChange: (Int) -> Unit,
     onPageIndexChangeFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    pageLabel: (Int) -> String = Int::toString,
+    continuousSlider: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
 
-    val state = remember(totalPages) {
+    val state = remember(totalPages, continuousSlider) {
         SliderState(
             value = currentPage.toFloat(),
-            steps = totalPages - 2,
+            steps = if (continuousSlider) 0 else totalPages - 2,
             valueRange = 1f..totalPages.toFloat(),
         )
     }
@@ -121,6 +123,7 @@ fun ChapterNavigator(
             backgroundColor = backgroundColor,
             buttonColor = buttonColor,
             modifier = modifier,
+            pageLabel = pageLabel,
         )
     } else {
         VerticalChapterNavigator(
@@ -136,6 +139,7 @@ fun ChapterNavigator(
             backgroundColor = backgroundColor,
             buttonColor = buttonColor,
             modifier = modifier,
+            pageLabel = pageLabel,
         )
     }
 }
@@ -155,6 +159,7 @@ fun HorizontalChapterNavigator(
     backgroundColor: Color,
     buttonColor: IconButtonColors,
     modifier: Modifier = Modifier,
+    pageLabel: (Int) -> String = Int::toString,
 ) {
     val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
@@ -190,9 +195,9 @@ fun HorizontalChapterNavigator(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(contentAlignment = Alignment.CenterEnd) {
-                            Text(text = currentPage.toString())
+                            Text(text = pageLabel(currentPage))
                             // Taking up full length so the slider doesn't shift when 'currentPage' length changes
-                            Text(text = totalPages.toString(), color = Color.Transparent)
+                            Text(text = pageLabel(totalPages), color = Color.Transparent)
                         }
 
                         Slider(
@@ -203,7 +208,7 @@ fun HorizontalChapterNavigator(
                             interactionSource = interactionSource,
                         )
 
-                        Text(text = totalPages.toString())
+                        Text(text = pageLabel(totalPages))
                     }
                 }
             } else {
@@ -240,6 +245,7 @@ fun VerticalChapterNavigator(
     backgroundColor: Color,
     buttonColor: IconButtonColors,
     modifier: Modifier = Modifier,
+    pageLabel: (Int) -> String = Int::toString,
 ) {
     Column(
         modifier = modifier
@@ -268,7 +274,7 @@ fun VerticalChapterNavigator(
                     .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(text = currentPage.toString())
+                Text(text = pageLabel(currentPage))
 
                 VerticalSlider(
                     state = state,
@@ -278,7 +284,7 @@ fun VerticalChapterNavigator(
                     interactionSource = interactionSource,
                 )
 
-                Text(text = totalPages.toString())
+                Text(text = pageLabel(totalPages))
             }
         } else {
             Spacer(Modifier.weight(1f))

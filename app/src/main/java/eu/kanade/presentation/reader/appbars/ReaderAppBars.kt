@@ -33,15 +33,20 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
-import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
-import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import tachiyomi.presentation.core.components.material.padding
 
 private val readerBarsSlideAnimationSpec = tween<IntOffset>(200)
 private val readerBarsFadeAnimationSpec = tween<Float>(150)
 
+/**
+ * The reader chrome shared by the manga reader, the novel reader and the anime player: a top
+ * app bar sliding in from the top and a chapter navigator plus tool row sliding in from the
+ * bottom. What each medium shows inside the bars differs; the bars themselves — layout,
+ * background, animation — must not, so this is the single implementation all three use.
+ */
 @Composable
 fun ReaderAppBars(
     visible: Boolean,
@@ -51,7 +56,7 @@ fun ReaderAppBars(
     navigateUp: () -> Unit,
     onClickTopAppBar: () -> Unit,
     bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
+    onToggleBookmarked: (() -> Unit)?,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -67,13 +72,10 @@ fun ReaderAppBars(
     onPageIndexChange: (Int) -> Unit,
     onPageIndexChangeFinished: () -> Unit,
 
-    readingMode: ReadingMode,
-    onClickReadingMode: () -> Unit,
-    orientation: ReaderOrientation,
-    onClickOrientation: () -> Unit,
-    cropEnabled: Boolean,
-    onClickCropBorder: () -> Unit,
-    onClickSettings: () -> Unit,
+    bottomBar: @Composable () -> Unit,
+    topBarExtraActions: List<AppBar.AppBarAction> = emptyList(),
+    pageLabel: (Int) -> String = Int::toString,
+    continuousSlider: Boolean = false,
 ) {
     val backgroundColor = MaterialTheme.colorScheme
         .surfaceColorAtElevation(3.dp)
@@ -97,6 +99,7 @@ fun ReaderAppBars(
                 onOpenInWebView = onOpenInWebView,
                 onOpenInBrowser = onOpenInBrowser,
                 onShare = onShare,
+                extraActions = topBarExtraActions,
             )
         }
 
@@ -130,6 +133,8 @@ fun ReaderAppBars(
                                     totalPages = totalPages,
                                     onPageIndexChange = onPageIndexChange,
                                     onPageIndexChangeFinished = onPageIndexChangeFinished,
+                                    pageLabel = pageLabel,
+                                    continuousSlider = continuousSlider,
                                 )
                             }
                         }
@@ -158,22 +163,19 @@ fun ReaderAppBars(
                         totalPages = totalPages,
                         onPageIndexChange = onPageIndexChange,
                         onPageIndexChangeFinished = onPageIndexChangeFinished,
+                        pageLabel = pageLabel,
+                        continuousSlider = continuousSlider,
                     )
                 }
-                ReaderBottomBar(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(backgroundColor)
                         .padding(horizontal = MaterialTheme.padding.small)
                         .windowInsetsPadding(WindowInsets.navigationBars),
-                    readingMode = readingMode,
-                    onClickReadingMode = onClickReadingMode,
-                    orientation = orientation,
-                    onClickOrientation = onClickOrientation,
-                    cropEnabled = cropEnabled,
-                    onClickCropBorder = onClickCropBorder,
-                    onClickSettings = onClickSettings,
-                )
+                ) {
+                    bottomBar()
+                }
             }
         }
     }

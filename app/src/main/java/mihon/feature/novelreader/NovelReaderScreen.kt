@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -30,15 +31,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -62,6 +61,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -71,6 +71,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,11 +79,17 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import eu.kanade.presentation.reader.ReaderPageIndicator
+import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.reader.appbars.ReaderToolTile
+import eu.kanade.presentation.reader.components.ChapterNavigatorType
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.LiterataFamily
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import kotlinx.coroutines.launch
 import mihon.feature.novelreader.NovelReaderPreferences.NovelFont
 import mihon.feature.novelreader.NovelReaderPreferences.NovelLineSpacing
@@ -92,6 +99,10 @@ import mihon.feature.novelreader.tts.NovelTtsController
 import mihon.feature.novelreader.tts.NovelTtsPreferences
 import mihon.feature.novelreader.tts.NovelTtsStatus
 import mihon.feature.novelreader.tts.buildSpeechScript
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import kotlin.math.abs
 
 /**
@@ -179,8 +190,11 @@ fun NovelReaderScreen(
     preferences: NovelReaderPreferences,
     ttsPreferences: NovelTtsPreferences,
     onNavigateUp: () -> Unit,
+    menuVisible: Boolean,
+    onSetMenuVisible: (Boolean) -> Unit,
     bookmarked: Boolean = false,
     onToggleBookmark: () -> Unit = {},
+    onOpenEntry: () -> Unit = {},
     previousChapterLabel: String? = null,
     nextChapterLabel: String? = null,
     chapterNavigationEnabled: Boolean = true,
@@ -215,7 +229,6 @@ fun NovelReaderScreen(
     val readingMode by preferences.readingMode.changes().collectAsState(initial = preferences.readingMode.get())
 
     val paper = theme.paper()
-    var chromeVisible by remember { mutableStateOf(true) }
     var settingsVisible by remember { mutableStateOf(false) }
     var viewportHeight by remember { mutableStateOf(0) }
     var horizontalDrag by remember { mutableStateOf(0f) }
@@ -230,6 +243,17 @@ fun NovelReaderScreen(
     val latestNextChapter by rememberUpdatedState(onNextChapter)
     val canOpenPrevious = previousChapterLabel != null && chapterNavigationEnabled
     val canOpenNext = nextChapterLabel != null && chapterNavigationEnabled
+
+    // Same chrome rules as the manga reader, from the same preferences: a quick scroll past the
+    // hide threshold dismisses the menu (a slow deliberate swipe does not), and running out of
+    // chapters brings it back because the reader is probably about to leave.
+    val readerPreferences = remember { Injekt.get<ReaderPreferences>() }
+    val menuHideThreshold = remember { readerPreferences.readerHideThreshold.get().threshold }
+    val showPageNumber by readerPreferences.showPageNumber.changes()
+        .collectAsState(initial = readerPreferences.showPageNumber.get())
+    val currentMenuVisible by rememberUpdatedState(menuVisible)
+    val setMenuVisible by rememberUpdatedState(onSetMenuVisible)
+    val isFinalChapter by rememberUpdatedState(nextChapterLabel == null)
     val followPlayback by ttsPreferences.followPlayback.changes()
         .collectAsState(initial = ttsPreferences.followPlayback.get())
 
@@ -273,6 +297,17 @@ fun NovelReaderScreen(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
+                // Mirror of the webtoon viewer's scroll listener: only movement past the threshold
+                // (a fling or a fast swipe) hides the menu, and the end of the final chapter shows
+                // it again. Runs for fling deltas too, which arrive as NestedScrollSource.SideEffect.
+                val dy = consumed.y
+                if ((dy > menuHideThreshold || dy < -menuHideThreshold) && currentMenuVisible) {
+                    setMenuVisible(false)
+                }
+                if (scrollState.maxValue > 0 && scrollState.value >= scrollState.maxValue && isFinalChapter) {
+                    if (!currentMenuVisible) setMenuVisible(true)
+                }
+
                 if (readingMode != NovelReadingMode.SCROLL || source != NestedScrollSource.UserInput) {
                     return Offset.Zero
                 }
@@ -341,13 +376,19 @@ fun NovelReaderScreen(
                                         distance > 0 && scrollState.value <= 0 &&
                                             canOpenPrevious -> latestPreviousChapter()
                                         else -> {
-                                            val target = if (distance < 0) {
-                                                scrollState.value + step
-                                            } else {
-                                                scrollState.value - step
+                                            // Turning a page hides the menu, the same as the manga
+                                            // pager does on a page change; hitting the end of the
+                                            // final chapter shows it again.
+                                            val delta = if (distance < 0) step else -step
+                                            val target = (scrollState.value + delta)
+                                                .coerceIn(0, scrollState.maxValue)
+                                            if (target >= scrollState.maxValue && isFinalChapter) {
+                                                setMenuVisible(true)
+                                            } else if (currentMenuVisible) {
+                                                setMenuVisible(false)
                                             }
                                             scope.launch {
-                                                scrollState.animateScrollTo(target.coerceIn(0, scrollState.maxValue))
+                                                scrollState.animateScrollTo(target)
                                             }
                                         }
                                     }
@@ -365,7 +406,7 @@ fun NovelReaderScreen(
             ) {
                 // The settings sheet consumes its own taps, so any tap that reaches here is outside
                 // it — close the sheet first, otherwise toggle the reader chrome.
-                if (settingsVisible) settingsVisible = false else chromeVisible = !chromeVisible
+                if (settingsVisible) settingsVisible = false else onSetMenuVisible(!menuVisible)
             },
     ) {
         Column(
@@ -405,7 +446,7 @@ fun NovelReaderScreen(
                     if (!ttsState.isActive) ttsController.play(index)
                 },
                 onTapOutsideSeek = {
-                    if (settingsVisible) settingsVisible = false else chromeVisible = !chromeVisible
+                    if (settingsVisible) settingsVisible = false else onSetMenuVisible(!menuVisible)
                 },
                 onBlockPositioned = { index, top -> blockOffsets[index] = top },
             )
@@ -421,133 +462,97 @@ fun NovelReaderScreen(
             )
         }
 
-        // Top chrome
-        AnimatedVisibility(
-            visible = chromeVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter),
-        ) {
-            Row(
+        // Reader chrome: the exact same app bars as the manga reader, wired to prose.
+        if (!menuVisible && showPageNumber) {
+            ReaderPageIndicator(
+                currentPage = progressPercent,
+                totalPages = 100,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(paper.background.copy(alpha = 0.95f), paper.background.copy(alpha = 0f)),
-                        ),
-                    )
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(11.dp),
-            ) {
-                IconButton(onClick = onNavigateUp) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Quay lại",
-                        tint = paper.ink,
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        fontFamily = BeVietnamProFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = paper.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = chapterLabel,
-                        fontFamily = BeVietnamProFamily,
-                        fontSize = 10.5.sp,
-                        color = paper.accent,
-                    )
-                }
-                IconButton(onClick = onToggleBookmark) {
-                    Icon(
-                        imageVector = if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        contentDescription = if (bookmarked) "Bỏ đánh dấu chương" else "Đánh dấu chương",
-                        tint = if (bookmarked) paper.accent else paper.ink,
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        ttsControlsVisible = true
-                        ttsController.toggle()
-                        ttsController.refreshVoices()
-                    },
-                ) {
-                    val playing = ttsState.status == NovelTtsStatus.PLAYING
-                    Icon(
-                        imageVector = if (playing) {
-                            Icons.Filled.Pause
-                        } else {
-                            Icons.AutoMirrored.Filled.VolumeUp
-                        },
-                        contentDescription = if (playing) "Tạm dừng nghe" else "Nghe chương",
-                        tint = if (playing) paper.accent else paper.ink,
-                    )
-                }
-                IconButton(onClick = { settingsVisible = !settingsVisible }) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = "Cài đặt đọc",
-                        tint = paper.ink,
-                    )
-                }
-            }
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding(),
+            )
         }
 
-        // Bottom progress chrome
-        AnimatedVisibility(
-            visible = chromeVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(paper.background.copy(alpha = 0f), paper.background.copy(alpha = 0.95f)),
-                        ),
-                    )
-                    .padding(horizontal = 18.dp, vertical = 14.dp)
-                    .windowInsetsPadding(WindowInsets.navigationBars),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = "$progressPercent%",
-                    fontFamily = UnboundedFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.5.sp,
-                    color = paper.accent,
-                )
-                Box(
+        ReaderAppBars(
+            visible = menuVisible,
+            mangaTitle = title,
+            chapterTitle = chapterLabel,
+            navigateUp = onNavigateUp,
+            onClickTopAppBar = onOpenEntry,
+            bookmarked = bookmarked,
+            onToggleBookmarked = onToggleBookmark,
+            onOpenInWebView = null,
+            onOpenInBrowser = null,
+            onShare = null,
+            chapterNavigatorType = ChapterNavigatorType.HORIZONTAL_LTR,
+            verticalNavigatorHeight = 1f,
+            onNextChapter = { if (canOpenNext) latestNextChapter() },
+            enabledNext = canOpenNext,
+            onPreviousChapter = { if (canOpenPrevious) latestPreviousChapter() },
+            enabledPrevious = canOpenPrevious,
+            currentPage = progressPercent.coerceAtLeast(1),
+            totalPages = 100,
+            onPageIndexChange = { index ->
+                scope.launch {
+                    scrollState.scrollTo(scrollState.maxValue * (index + 1) / 100)
+                }
+            },
+            onPageIndexChangeFinished = {},
+            continuousSlider = true,
+            bottomBar = {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(paper.ink.copy(alpha = 0.15f)),
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .pointerInput(Unit) {},
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progressPercent / 100f)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xFF14B8A6), Color(0xFF5EEAD4)),
-                                ),
-                            ),
+                    ReaderToolTile(
+                        painter = painterResource(
+                            if (readingMode == NovelReadingMode.SCROLL) {
+                                ReadingMode.WEBTOON.iconRes
+                            } else {
+                                ReadingMode.LEFT_TO_RIGHT.iconRes
+                            },
+                        ),
+                        label = stringResource(MR.strings.viewer),
+                        onClick = {
+                            preferences.readingMode.set(
+                                if (readingMode == NovelReadingMode.SCROLL) {
+                                    NovelReadingMode.PAGED
+                                } else {
+                                    NovelReadingMode.SCROLL
+                                },
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(
+                            if (ttsState.status == NovelTtsStatus.PLAYING) {
+                                Icons.Filled.Pause
+                            } else {
+                                Icons.AutoMirrored.Filled.VolumeUp
+                            },
+                        ),
+                        label = "Nghe",
+                        onClick = {
+                            ttsControlsVisible = true
+                            ttsController.toggle()
+                            ttsController.refreshVoices()
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(Icons.Outlined.Settings),
+                        label = stringResource(MR.strings.action_settings),
+                        onClick = { settingsVisible = !settingsVisible },
+                        modifier = Modifier.weight(1f),
                     )
                 }
-            }
-        }
+            },
+        )
 
         AnimatedVisibility(
             visible = ttsControlsVisible,
@@ -556,7 +561,8 @@ fun NovelReaderScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = 54.dp),
+                // Sits above the reader's bottom bars while they are shown, drops down when not.
+                .padding(bottom = if (menuVisible) 118.dp else 24.dp),
         ) {
             NovelTtsPlayer(
                 state = ttsState,
@@ -669,7 +675,7 @@ private fun NovelChapterEnd(
 }
 
 @Composable
-private fun NovelReaderSettingsSheet(
+internal fun NovelReaderSettingsSheet(
     preferences: NovelReaderPreferences,
     ttsPreferences: NovelTtsPreferences,
     fontSize: Int,

@@ -17,11 +17,12 @@ fun ReaderTopBar(
     chapterTitle: String?,
     navigateUp: () -> Unit,
     bookmarked: Boolean,
-    onToggleBookmarked: () -> Unit,
+    onToggleBookmarked: (() -> Unit)?,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    extraActions: List<AppBar.AppBarAction> = emptyList(),
 ) {
     AppBar(
         modifier = modifier,
@@ -32,23 +33,26 @@ fun ReaderTopBar(
         actions = {
             AppBarActions(
                 actions = buildList {
-                    add(
-                        AppBar.Action(
-                            title = stringResource(
-                                if (bookmarked) {
-                                    MR.strings.action_remove_bookmark
+                    onToggleBookmarked?.let {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(
+                                    if (bookmarked) {
+                                        MR.strings.action_remove_bookmark
+                                    } else {
+                                        MR.strings.action_bookmark
+                                    },
+                                ),
+                                icon = if (bookmarked) {
+                                    Icons.Outlined.Bookmark
                                 } else {
-                                    MR.strings.action_bookmark
+                                    Icons.Outlined.BookmarkBorder
                                 },
+                                onClick = it,
                             ),
-                            icon = if (bookmarked) {
-                                Icons.Outlined.Bookmark
-                            } else {
-                                Icons.Outlined.BookmarkBorder
-                            },
-                            onClick = onToggleBookmarked,
-                        ),
-                    )
+                        )
+                    }
+                    addAll(extraActions)
                     onOpenInWebView?.let {
                         add(
                             AppBar.OverflowAction(

@@ -82,8 +82,9 @@ fun ReaderBottomBar(
     }
 }
 
+/** One glass tile (icon + label) of the reader's bottom tool row, shared by every reading mode's chrome. */
 @Composable
-private fun ReaderToolTile(
+fun ReaderToolTile(
     painter: Painter,
     label: String,
     onClick: () -> Unit,

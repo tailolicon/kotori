@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,18 +14,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
@@ -36,8 +31,6 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,26 +39,29 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.reader.appbars.ReaderToolTile
+import eu.kanade.presentation.reader.components.ChapterNavigatorType
 import eu.kanade.presentation.theme.kotori.AnimeAccent
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriSectionLabel
-import eu.kanade.presentation.theme.kotori.UnboundedFamily
 import eu.kanade.presentation.theme.kotori.glass
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -80,9 +76,9 @@ private fun formatTime(ms: Long): String {
 }
 
 /**
- * Anime player UI (design screen 03): glass controls, gradient play button,
- * skip-intro chip, gradient seek bar with pink time, quick-setting chips,
- * gesture seek/brightness/volume, lock and PiP.
+ * Anime video player (design screen 03) wearing the shared reader chrome: the same top app bar
+ * and bottom navigator/tool bars as the manga and novel readers, wired to playback. Gesture
+ * seek/brightness/volume, the gradient play cluster, skip-intro chip, lock and PiP stay.
  */
 @Composable
 fun AnimePlayerScreen(
@@ -90,6 +86,8 @@ fun AnimePlayerScreen(
     title: String,
     episodeLabel: String,
     sourceLabel: String?,
+    menuVisible: Boolean,
+    onSetMenuVisible: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
     onEnterPip: () -> Unit,
 ) {
@@ -99,16 +97,16 @@ fun AnimePlayerScreen(
     var isPlaying by remember { mutableStateOf(player.playWhenReady) }
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    var bufferedMs by remember { mutableLongStateOf(0L) }
-    var controlsVisible by remember { mutableStateOf(true) }
     var locked by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(1.0f) }
+
+    val currentMenuVisible by rememberUpdatedState(menuVisible)
+    val setMenuVisible by rememberUpdatedState(onSetMenuVisible)
 
     LaunchedEffect(Unit) {
         while (true) {
             positionMs = player.currentPosition
             durationMs = player.duration.coerceAtLeast(0)
-            bufferedMs = player.bufferedPosition
             isPlaying = player.isPlaying
             delay(500)
         }
@@ -123,7 +121,7 @@ fun AnimePlayerScreen(
             .pointerInput(locked) {
                 if (!locked) {
                     detectTapGestures(
-                        onTap = { controlsVisible = !controlsVisible },
+                        onTap = { setMenuVisible(!currentMenuVisible) },
                         onDoubleTap = { offset ->
                             // Double-tap edges = ±10s
                             if (offset.x < size.width / 3f) {
@@ -134,14 +132,16 @@ fun AnimePlayerScreen(
                         },
                     )
                 } else {
-                    detectTapGestures(onTap = { controlsVisible = !controlsVisible })
+                    detectTapGestures(onTap = { setMenuVisible(!currentMenuVisible) })
                 }
             }
             .pointerInput(locked) {
                 if (!locked) {
-                    // Vertical swipe left = brightness, right = volume
+                    // Vertical swipe left = brightness, right = volume; the adjust gesture also
+                    // dismisses the menu, the counterpart of the manga reader hiding it on zoom.
                     detectVerticalDragGestures { change, dragAmount ->
                         if (abs(dragAmount) > 4f) {
+                            if (currentMenuVisible) setMenuVisible(false)
                             val isLeft = change.position.x < size.width / 2f
                             if (isLeft) {
                                 val activity = context as? AnimePlayerActivity ?: return@detectVerticalDragGestures
@@ -179,7 +179,7 @@ fun AnimePlayerScreen(
 
                 // Center controls
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = controlsVisible && !locked,
+                    visible = menuVisible && !locked,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.Center),
@@ -242,47 +242,6 @@ fun AnimePlayerScreen(
                     }
                 }
 
-                // Top bar overlay
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = controlsVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(11.dp),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clickable(onClick = onNavigateUp),
-                        )
-                        Text(
-                            text = "$title · $episodeLabel",
-                            fontFamily = BeVietnamProFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Icon(
-                            Icons.Filled.Subtitles,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-
                 // Skip intro chip (bottom-right of video)
                 androidx.compose.animation.AnimatedVisibility(
                     visible = showIntroSkip && !locked,
@@ -290,7 +249,7 @@ fun AnimePlayerScreen(
                     exit = fadeOut(),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(end = 14.dp, bottom = 44.dp),
+                        .padding(end = 14.dp, bottom = 14.dp),
                 ) {
                     Box(
                         modifier = Modifier
@@ -307,144 +266,95 @@ fun AnimePlayerScreen(
                         )
                     }
                 }
-
-                // Seek bar overlay (bottom of video)
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = controlsVisible && !locked,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(
-                            text = formatTime(positionMs),
-                            fontFamily = UnboundedFamily,
-                            fontSize = 10.sp,
-                            color = KotoriColors.highlightPink,
-                        )
-                        Slider(
-                            value = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f,
-                            onValueChange = { fraction ->
-                                if (durationMs > 0) player.seekTo((fraction * durationMs).toLong())
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(20.dp),
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = accent.start,
-                                inactiveTrackColor = Color(0x47FFFFFF),
-                            ),
-                        )
-                        Text(
-                            text = formatTime(durationMs),
-                            fontFamily = UnboundedFamily,
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.8f),
-                        )
-                    }
-                }
             }
 
-            // Below-video: quick-setting chips + meta (portrait mode)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp),
-                ) {
-                    item {
-                        PlayerChip(icon = { Icon(Icons.Filled.Subtitles, null, tint = accent.light, modifier = Modifier.size(16.dp)) }, label = "Phụ đề · Việt") {}
-                    }
-                    item {
-                        PlayerChip(
-                            icon = { Icon(Icons.Filled.Speed, null, tint = KotoriColors.textSecondary, modifier = Modifier.size(16.dp)) },
-                            label = "${speed}x",
-                        ) { speed = player.cycleSpeed() }
-                    }
-                    item {
-                        PlayerChip(icon = { Icon(Icons.Filled.HighQuality, null, tint = KotoriColors.textSecondary, modifier = Modifier.size(16.dp)) }, label = "Auto") {}
-                    }
-                    item {
-                        PlayerChip(
-                            icon = {
-                                Icon(
-                                    if (locked) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                                    null,
-                                    tint = if (locked) accent.light else KotoriColors.textSecondary,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                            },
-                            label = "Khóa",
-                        ) { locked = !locked }
-                    }
-                    item {
-                        PlayerChip(
-                            icon = { Icon(Icons.Filled.PictureInPictureAlt, null, tint = KotoriColors.textSecondary, modifier = Modifier.size(16.dp)) },
-                            label = "PiP",
-                        ) { onEnterPip() }
-                    }
-                }
-
-                Column(modifier = Modifier.padding(horizontal = 18.dp)) {
-                    KotoriSectionLabel(text = "Cử chỉ", accent = accent)
+            // Below-video meta (portrait mode)
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                KotoriSectionLabel(text = "Cử chỉ", accent = accent)
+                Text(
+                    text = "Chạm đôi mép trái/phải: ±10s · vuốt dọc trái: độ sáng · phải: âm lượng",
+                    fontFamily = BeVietnamProFamily,
+                    fontSize = 10.5.sp,
+                    color = KotoriColors.textFaint,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+                if (sourceLabel != null) {
                     Text(
-                        text = "Chạm đôi mép trái/phải: ±10s · vuốt dọc trái: độ sáng · phải: âm lượng",
+                        text = "Nguồn: $sourceLabel",
                         fontFamily = BeVietnamProFamily,
                         fontSize = 10.5.sp,
-                        color = KotoriColors.textFaint,
-                        modifier = Modifier.padding(top = 6.dp),
+                        color = KotoriColors.textMuted,
+                        modifier = Modifier.padding(top = 10.dp),
                     )
-                    if (sourceLabel != null) {
-                        Text(
-                            text = "Nguồn: $sourceLabel",
-                            fontFamily = BeVietnamProFamily,
-                            fontSize = 10.5.sp,
-                            color = KotoriColors.textMuted,
-                            modifier = Modifier.padding(top = 10.dp),
-                        )
-                    }
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun PlayerChip(
-    icon: @Composable () -> Unit,
-    label: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .glass(shape = RoundedCornerShape(14.dp), elevated = true)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 13.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        icon()
-        Text(
-            text = label,
-            fontFamily = BeVietnamProFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 11.5.sp,
-            color = KotoriColors.textSecondary,
+        // Player chrome: the exact same app bars as the manga reader, wired to playback. The
+        // navigator's slider seeks, its side buttons will move between episodes once the player
+        // receives a playlist; until then they render disabled exactly like a single chapter.
+        ReaderAppBars(
+            visible = menuVisible,
+            mangaTitle = title,
+            chapterTitle = episodeLabel,
+            navigateUp = onNavigateUp,
+            onClickTopAppBar = {},
+            bookmarked = false,
+            onToggleBookmarked = null,
+            onOpenInWebView = null,
+            onOpenInBrowser = null,
+            onShare = null,
+            chapterNavigatorType = ChapterNavigatorType.HORIZONTAL_LTR,
+            verticalNavigatorHeight = 1f,
+            onNextChapter = {},
+            enabledNext = false,
+            onPreviousChapter = {},
+            enabledPrevious = false,
+            currentPage = (positionMs / 1000).toInt().coerceAtLeast(1),
+            totalPages = (durationMs / 1000).toInt(),
+            onPageIndexChange = { index ->
+                val target = (index + 1) * 1000L
+                player.seekTo(target)
+                positionMs = target
+            },
+            onPageIndexChangeFinished = {},
+            pageLabel = { seconds -> formatTime(seconds * 1000L) },
+            continuousSlider = true,
+            bottomBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .pointerInput(Unit) {},
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(Icons.Filled.Subtitles),
+                        label = "Phụ đề",
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(Icons.Filled.Speed),
+                        label = "${speed}x",
+                        onClick = { speed = player.cycleSpeed() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(if (locked) Icons.Filled.Lock else Icons.Filled.LockOpen),
+                        label = "Khóa",
+                        onClick = { locked = !locked },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderToolTile(
+                        painter = rememberVectorPainter(Icons.Filled.PictureInPictureAlt),
+                        label = "PiP",
+                        onClick = onEnterPip,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            },
         )
     }
 }
