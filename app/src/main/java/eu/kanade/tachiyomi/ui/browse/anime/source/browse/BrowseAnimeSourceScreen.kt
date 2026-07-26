@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.anime.source.browse
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -129,11 +131,14 @@ data class BrowseAnimeSourceScreen(
         }
 
         var topBarHeight by remember { mutableIntStateOf(0) }
+        val headerScroll = rememberBrowseHeaderScrollState()
         Scaffold(
+            modifier = Modifier.nestedScroll(headerScroll.connection),
             topBar = {
                 Column(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surface)
+                        .then(headerScroll.headerModifier())
                         .onSizeChanged { topBarHeight = it.height },
                 ) {
                     BrowseAnimeSourceToolbar(

@@ -47,6 +47,11 @@ class WattpadSource : BuiltInNovelSource() {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** ISO-8601 as the API writes it; an unparseable value dates the chapter as unknown, not now. */
+    private fun String?.toEpochMillis(): Long = this?.let { value ->
+        runCatching { java.time.Instant.parse(value).toEpochMilli() }.getOrDefault(0L)
+    } ?: 0L
+
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .set("User-Agent", DESKTOP_UA)
         .set("Referer", "$baseUrl/")
@@ -125,7 +130,7 @@ class WattpadSource : BuiltInNovelSource() {
     override suspend fun getChapterList(novel: SManga): List<SChapter> {
         val id = novel.storyId()
         val url = "$apiUrl/api/v3/stories/$id".toHttpUrl().newBuilder()
-            .addQueryParameter("fields", "parts(id,title,url,deleted,draft)")
+            .addQueryParameter("fields", "parts(id,title,url,deleted,draft,createDate,modifyDate)")
             .build()
         val body = client.newCall(GET(url.toString(), headers)).awaitSuccess().use { it.body.string() }
         val parts = json.parseToJsonElement(body).jsonObject["parts"]?.jsonArray.orEmpty()
@@ -140,6 +145,12 @@ class WattpadSource : BuiltInNovelSource() {
                     this.url = "/part/$partId"
                     name = part["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
                     chapter_number = (index + 1).toFloat()
+                    // When the part was last edited is what a reader means by "updated"; the
+                    // creation date stands in for parts that have never been touched since.
+                    date_upload = (
+                        part["modifyDate"]?.jsonPrimitive?.contentOrNull
+                            ?: part["createDate"]?.jsonPrimitive?.contentOrNull
+                        ).toEpochMillis()
                 }
             }
             // Site lists oldest-first; the app expects newest-first.

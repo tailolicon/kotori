@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.ui.browse.source.browse
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.background
+import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -114,12 +117,18 @@ data class BrowseSourceScreen(
             assistUrl = (screenModel.source as? HttpSource)?.getHomeUrl()
         }
 
+        val headerScroll = rememberBrowseHeaderScrollState()
+
         AuroraBackground {
             Scaffold(
+                modifier = Modifier.nestedScroll(headerScroll.connection),
                 containerColor = Color.Transparent,
                 topBar = {
                     Column(
                         modifier = Modifier
+                            // Opaque, so covers pass behind the header instead of through it.
+                            .background(MaterialTheme.colorScheme.surface)
+                            .then(headerScroll.headerModifier())
                             .pointerInput(Unit) {},
                     ) {
                         BrowseSourceToolbar(

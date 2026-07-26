@@ -138,19 +138,38 @@ class DocLnSource : BuiltInNovelSource() {
     override suspend fun getChapterList(novel: SManga): List<SChapter> {
         val document = client.newCall(GET(baseUrl + novel.url, headers)).awaitSuccess().asJsoup()
         // Site lists oldest-first; the app expects newest-first.
-        return document.select("div.chapter-name a").map { it.toSChapter() }.reversed()
+        // Walked per row rather than per link because the posting date is the row's sibling: the
+        // link alone cannot reach it, which is why every chapter used to be dated "today".
+        return document.select("ul.list-chapters li")
+            .mapNotNull { it.toSChapter() }
+            .reversed()
     }
 
-    private fun Element.toSChapter(): SChapter = SChapter.create().apply {
-        setUrlWithoutDomain(absUrl("href"))
-        name = text().trim()
-        chapter_number = CHAPTER_NUMBER_REGEX.find(name)?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
+    private fun Element.toSChapter(): SChapter? {
+        val link = selectFirst("div.chapter-name a") ?: return null
+        return SChapter.create().apply {
+            setUrlWithoutDomain(link.absUrl("href"))
+            name = link.text().trim()
+            chapter_number = CHAPTER_NUMBER_REGEX.find(name)?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
+            date_upload = selectFirst("div.chapter-time")?.text()?.toEpochMillis() ?: 0L
+        }
     }
+
+    /**
+     * Parses the site's `dd/MM/yyyy` posting date.
+     *
+     * A failure yields 0 rather than the current time: the reader's list then shows no date at all,
+     * which is honest, where "now" would put an eight-year-old chapter at the top of Updates.
+     */
+    private fun String.toEpochMillis(): Long =
+        runCatching { CHAPTER_DATE_FORMAT.parse(trim())?.time ?: 0L }.getOrDefault(0L)
 
     private companion object {
         private val GENRE_NAMES = arrayOf("Bất kỳ", "Action", "Adapted to Anime", "Adapted to Drama CD", "Adapted to Manga", "Adapted to Manhua", "Adapted to Manhwa", "Adventure", "Age Gap", "Boys Love", "Character Growth", "Chinese Novel", "Comedy", "Cooking", "Different Social Status", "Drama", "Ecchi", "English Novel", "Fanfiction", "Fantasy", "Female Protagonist", "Game", "Gender Bender", "Harem", "Historical", "Horror", "Isekai", "Josei", "Korean Novel", "Magic", "Martial Arts", "Mecha", "Military", "Misunderstanding", "Mystery", "Netorare", "Obsession", "One shot", "Otome Game", "Parody", "Psychological", "Reverse Harem", "Romance", "Satire", "School Life", "Science Fiction", "Seinen", "Shoujo", "Shoujo ai", "Shounen", "Shounen ai", "Slice of Life", "Slow Life", "Sports", "Super Power", "Supernatural", "Suspense", "Tragedy", "Wars", "Web Novel", "Workplace", "Wuxia", "Xianxia", "Yandere", "Yuri")
         private val GENRE_SLUGS = listOf("", "action", "adapted-to-anime", "adapted-to-drama-cd", "adapted-to-manga", "adapted-to-manhua", "adapted-to-manhwa", "adventure", "age-gap", "boys-love", "character-growth", "chinese-novel", "comedy", "cooking", "different-social-status", "drama", "ecchi", "english-novel", "fanfiction", "fantasy", "female-protagonist", "game", "gender-bender", "harem", "historical", "horror", "isekai", "josei", "korean-novel", "magic", "martial-arts", "mecha", "military", "misunderstanding", "mystery", "netorare", "obsession", "one-shot", "otome-game", "parody", "psychological", "reverse-harem", "romance", "satire", "school-life", "science-fiction", "seinen", "shoujo", "shoujo-ai", "shounen", "shounen-ai", "slice-of-life", "slow-life", "sports", "super-power", "supernatural", "suspense", "tragedy", "wars", "web-novel", "workplace", "wuxia", "xianxia", "yandere", "yuri")
         private const val CHUNK_PREFIX_LENGTH = 4
+        private val CHAPTER_DATE_FORMAT =
+            java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.US)
         private val CHAPTER_NUMBER_REGEX =
             Regex("""(?:chương|chuong)\s*(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
     }

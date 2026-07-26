@@ -12,6 +12,10 @@ import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
+import eu.kanade.tachiyomi.source.NovelSource
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -56,6 +60,7 @@ class HistoryScreenModel(
     private val updateManga: UpdateManga = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
     private val sourceManager: SourceManager = Injekt.get(),
+    private val uiPreferences: UiPreferences = Injekt.get(),
 ) : StateScreenModel<HistoryScreenModel.State>(State()) {
 
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
@@ -63,16 +68,28 @@ class HistoryScreenModel(
 
     init {
         screenModelScope.launch {
-            state.map { it.searchQuery }
-                .distinctUntilChanged()
-                .flatMapLatest { query ->
+            combine(
+                state.map { it.searchQuery }.distinctUntilChanged(),
+                // Manga and novels share this screen's whole stack, so which of the two belongs
+                // here is a property of the active mode rather than of the rows themselves.
+                uiPreferences.activeMediaMode.changes().distinctUntilChanged(),
+                ::Pair,
+            )
+                .flatMapLatest { (query, activeMode) ->
                     getHistory.subscribe(query ?: "")
                         .distinctUntilChanged()
                         .catch { error ->
                             logcat(LogPriority.ERROR, error)
                             _events.send(Event.InternalError)
                         }
-                        .map { it.toHistoryUiModels() }
+                        .map { history ->
+                            history
+                                .filter {
+                                    (sourceManager.get(it.coverData.sourceId) is NovelSource) ==
+                                        (activeMode == MediaType.NOVEL)
+                                }
+                                .toHistoryUiModels()
+                        }
                         .flowOn(Dispatchers.IO)
                 }
                 .collect { newList -> mutableState.update { it.copy(list = newList) } }

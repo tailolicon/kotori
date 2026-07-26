@@ -22,6 +22,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
+import eu.kanade.tachiyomi.source.NovelSource
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -62,6 +65,9 @@ class UpdatesScreenModel(
     private val getChapter: GetChapter = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
     private val updatesPreferences: UpdatesPreferences = Injekt.get(),
+    // Manga and novels share this screen's whole stack, so which of the two is being shown is a
+    // property of the active mode rather than of the data — without it both lists arrive together.
+    private val uiPreferences: UiPreferences = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
 ) : StateScreenModel<UpdatesScreenModel.State>(State()) {
 
@@ -98,8 +104,10 @@ class UpdatesScreenModel(
                 getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
                     old.filterDownloaded == new.filterDownloaded
                 },
-            ) { updates, _, _, itemPreferences ->
+                uiPreferences.activeMediaMode.changes().distinctUntilChanged(),
+            ) { updates, _, _, itemPreferences, activeMode ->
                 updates
+                    .filter { (sourceManager.get(it.sourceId) is NovelSource) == (activeMode == MediaType.NOVEL) }
                     .toUpdateItems()
                     .applyFilters(itemPreferences)
             }
