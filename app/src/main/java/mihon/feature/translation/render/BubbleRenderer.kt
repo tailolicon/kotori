@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import mihon.feature.translation.model.TextLineBox
 import mihon.feature.translation.model.TranslatedBubble
 import tachiyomi.core.common.util.system.logcat
 import kotlin.math.max
@@ -104,6 +105,7 @@ class BubbleRenderer(private val context: Context) {
                     inkColor = plan.inkColor,
                     paperColor = plan.paperColor,
                     typeface = typeface,
+                    alignLeft = plan.alignLeft,
                 )
                 if (!lettered) logcat { "Skipping ${plan.slot}: text cannot fit even at minimum size" }
                 canvas.restore()
@@ -137,7 +139,54 @@ class BubbleRenderer(private val context: Context) {
         val text: String,
         val inkColor: Int,
         val paperColor: Int,
+        /** The original was set flush left — a status window or caption, not a speech bubble. */
+        val alignLeft: Boolean = false,
     )
+
+    /**
+     * True when the original lettering was set flush left rather than centred.
+     *
+     * Speech bubbles are centred; the game-style status windows these series are full of are not —
+     * they are ragged-right blocks of stat lines, and re-centring them destroys the one visual cue
+     * that says "this is an interface, not someone talking". The test compares how tightly the line
+     * starts agree against how tightly their centres agree: on centred text the centres line up and
+     * the left edges do not, and on flush-left text it is the other way round.
+     *
+     * OCR emits one box per word, so boxes are grouped into lines by vertical overlap first.
+     */
+    private fun looksLeftAligned(lines: List<TextLineBox>): Boolean {
+        if (lines.size < MIN_LINES_FOR_ALIGNMENT) return false
+
+        val rows = ArrayList<Rect>()
+        for (line in lines.sortedBy { it.rect.top }) {
+            val row = rows.lastOrNull()
+            val height = line.rect.height()
+            // Same row when the vertical overlap is most of a line's height.
+            if (row != null && line.rect.top < row.bottom - height * ROW_OVERLAP) {
+                row.union(line.rect)
+            } else {
+                rows += Rect(line.rect)
+            }
+        }
+        if (rows.size < MIN_LINES_FOR_ALIGNMENT) return false
+
+        // Short rows carry no alignment information — a one-word last line sits left under centred
+        // text just as it does under flush-left text — and including them muddies both measures.
+        val widest = rows.maxOf { it.width() }
+        val usable = rows.filter { it.width() >= widest * MIN_ROW_WIDTH_RATIO }
+        if (usable.size < MIN_LINES_FOR_ALIGNMENT) return false
+
+        val leftSpread = spreadOf(usable.map { it.left })
+        val centreSpread = spreadOf(usable.map { it.centerX() })
+        return leftSpread < centreSpread - ALIGNMENT_MARGIN
+    }
+
+    /** Mean absolute deviation: robust enough here, and cheaper than a real standard deviation. */
+    private fun spreadOf(values: List<Int>): Float {
+        if (values.size < 2) return 0f
+        val mean = values.sum().toFloat() / values.size
+        return values.sumOf { kotlin.math.abs(it - mean).toDouble() }.toFloat() / values.size
+    }
 
     /**
      * Trims [slot] clear of text already laid down on this page.
@@ -194,6 +243,9 @@ class BubbleRenderer(private val context: Context) {
             Rect(line.rect).apply { offset(-regionLeft, -regionTop) }
         }
 
+        // Measured from the original lettering, before any of it is erased.
+        val leftAligned = looksLeftAligned(bubble.lines)
+
         val flat = BubbleFill.detect(pixels, width, height, searchArea, textLines)
         if (flat != null) {
             for (i in pixels.indices) if (flat.region[i]) pixels[i] = flat.fillColor
@@ -221,7 +273,7 @@ class BubbleRenderer(private val context: Context) {
                 "bubble=${bubble.box} flat-fill bounds=${flat.bounds} slot=$slot page=$page " +
                     "fill=${Integer.toHexString(flat.fillColor)} ink=${Integer.toHexString(flat.textColor)}"
             }
-            return Plan(page, bubble.translated, flat.textColor, flat.fillColor)
+            return Plan(page, bubble.translated, flat.textColor, flat.fillColor, leftAligned)
         }
 
         val mask = GlyphMask.detect(pixels, width, height, searchArea)
@@ -292,7 +344,7 @@ class BubbleRenderer(private val context: Context) {
         }
 
         val page = Rect(textArea).apply { offset(regionLeft, regionTop) }
-        return Plan(page, bubble.translated, inkColor, paperColor)
+        return Plan(page, bubble.translated, inkColor, paperColor, leftAligned)
     }
 
     /**
@@ -413,11 +465,15 @@ class BubbleRenderer(private val context: Context) {
     }
 
     /**
-     * Fits [text] into the rectangle, shrinking until it fits, then centres it.
+     * Fits [text] into the rectangle, shrinking until it fits, then lays it out.
      *
      * A contrasting halo is added only when ink and reconstructed paper are too close in luminance —
      * which happens with coloured dialogue over busy artwork. Adding it unconditionally would look
      * wrong on ordinary white bubbles.
+     *
+     * @param alignLeft set the block flush left instead of centred, and honour the line breaks the
+     *   translation came with. Status windows and stat blocks are written as one item per line; run
+     *   together into a centred paragraph they stop reading as an interface at all.
      */
     private fun drawText(
         canvas: Canvas,
@@ -429,6 +485,7 @@ class BubbleRenderer(private val context: Context) {
         inkColor: Int,
         paperColor: Int,
         typeface: Typeface,
+        alignLeft: Boolean = false,
     ): Boolean {
         val padX = max(3, (width * TEXT_PADDING_RATIO).roundToInt())
         val padY = max(3, (height * TEXT_PADDING_RATIO).roundToInt())
@@ -440,7 +497,15 @@ class BubbleRenderer(private val context: Context) {
             color = inkColor
         }
 
-        val normalized = text.trim().replace(WHITESPACE_RUN, " ")
+        // Collapsing every run of whitespace is right for a speech bubble, where the line breaks are
+        // an artefact of how the original was fitted. It is wrong for a stat block, where they are
+        // the structure — so there, only spaces and tabs collapse and the newlines survive.
+        val normalized = if (alignLeft) {
+            text.trim().lines().joinToString("\n") { it.replace(SPACE_RUN, " ").trim() }
+                .replace(BLANK_LINE_RUN, "\n")
+        } else {
+            text.trim().replace(WHITESPACE_RUN, " ")
+        }
 
         // Start from the largest size the box could possibly hold and walk down to the first that
         // fits, so the text ends up as large as the bubble allows. Starting from an area-based
@@ -512,7 +577,11 @@ class BubbleRenderer(private val context: Context) {
         }
 
         for (line in lines) {
-            val x = left + padX + (usableWidth - paint.measureText(line)) / 2f
+            val x = if (alignLeft) {
+                (left + padX).toFloat()
+            } else {
+                left + padX + (usableWidth - paint.measureText(line)) / 2f
+            }
             halo?.let { canvas.drawText(line, x, baseline, it) }
             canvas.drawText(line, x, baseline, paint)
             baseline += lineHeight
@@ -528,8 +597,29 @@ class BubbleRenderer(private val context: Context) {
      *
      * The character fallback matters for CJK output and for Vietnamese compounds that exceed a narrow
      * bubble: without it a single long token would overflow the clip and be cut off mid-word.
+     *
+     * Newlines in [text] are hard breaks — each is wrapped on its own, so a stat line too long for
+     * the box still continues on the next line rather than running into the following stat.
      */
     private fun wrap(text: String, paint: Paint, maxWidth: Int): Wrapped {
+        if ('\n' in text) {
+            val all = mutableListOf<String>()
+            var broke = false
+            for (paragraph in text.split('\n')) {
+                if (paragraph.isBlank()) {
+                    all += ""
+                    continue
+                }
+                val wrapped = wrapOne(paragraph, paint, maxWidth)
+                all += wrapped.lines
+                broke = broke || wrapped.brokeWord
+            }
+            return Wrapped(all.ifEmpty { listOf(text) }, broke)
+        }
+        return wrapOne(text, paint, maxWidth)
+    }
+
+    private fun wrapOne(text: String, paint: Paint, maxWidth: Int): Wrapped {
         if (text.isEmpty()) return Wrapped(listOf(""), false)
         val lines = mutableListOf<String>()
         val current = StringBuilder()
@@ -583,6 +673,17 @@ class BubbleRenderer(private val context: Context) {
     private companion object {
         val WHITESPACE_RUN = Regex("\\s+")
         val WORD_SPLIT = Regex("[^\\p{L}\\p{N}]+")
+        /** Horizontal whitespace only: collapses runs of spaces without touching line breaks. */
+        val SPACE_RUN = Regex("[ \\t\\x0B\\f\\r]+")
+        val BLANK_LINE_RUN = Regex("\n{2,}")
+        /** Fewer lines than this and the alignment measurement has nothing to work with. */
+        const val MIN_LINES_FOR_ALIGNMENT = 3
+        /** Fraction of a line's height that must overlap for two OCR boxes to be the same row. */
+        const val ROW_OVERLAP = 0.5f
+        /** Rows narrower than this fraction of the widest carry no alignment information. */
+        const val MIN_ROW_WIDTH_RATIO = 0.5f
+        /** Pixels by which line starts must agree better than line centres to call it flush left. */
+        const val ALIGNMENT_MARGIN = 2f
         /** Word overlap above which two overlapping bubbles are treated as one line reworded. */
         const val SAME_LINE_OVERLAP = 0.6f
 

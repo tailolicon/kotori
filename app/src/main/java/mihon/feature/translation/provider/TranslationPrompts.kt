@@ -99,6 +99,10 @@ internal object TranslationPrompts {
      */
     private fun vietnameseOutputContract(count: Int): String = buildString {
         appendLine("Ô trống, chỉ có hiệu ứng âm thanh không cần dịch, hoặc không đọc được → \"translation\": \"\".")
+        appendLine(
+            "Nếu ô là bảng thông số / cửa sổ hệ thống (\"Kỹ năng cấp D:\", \"Hiệu ứng kỹ năng:\"...), " +
+                "giữ NGUYÊN cách xuống dòng của bản gốc: mỗi mục một dòng, ngăn cách bằng \\n.",
+        )
         appendLine("CHỈ trả về JSON array đúng dạng này, không thêm chữ nào khác:")
         appendLine("""[{"id": 1, "text": "text gốc đọc được", "translation": "bản dịch tiếng Việt"}, ...]""")
         appendLine("- Phải có ĐỦ $count phần tử, id chạy từ 1 đến $count, không bỏ sót, không gộp ô.")
@@ -108,6 +112,10 @@ internal object TranslationPrompts {
 
     private fun genericOutputContract(count: Int): String = buildString {
         appendLine("Empty, sound-effect-only or unreadable bubbles → \"translation\": \"\".")
+        appendLine(
+            "When a box is a stat block or system window (\"Level D Skill:\", \"Skill effect:\"...), " +
+                "KEEP the original line breaks: one item per line, separated by \\n.",
+        )
         appendLine("Return ONLY a JSON array shaped exactly like this, with no other prose:")
         appendLine("""[{"id": 1, "text": "source text you read", "translation": "your translation"}, ...]""")
         appendLine("- Exactly $count entries, ids 1 through $count, none skipped or merged.")
