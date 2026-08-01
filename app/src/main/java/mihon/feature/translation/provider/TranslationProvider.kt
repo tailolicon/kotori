@@ -1,0 +1,112 @@
+package mihon.feature.translation.provider
+
+import android.graphics.Bitmap
+import mihon.feature.translation.model.BubbleBox
+
+/** Language pair plus tone instructions shared by every provider call. */
+data class TranslationContext(
+    val sourceLanguage: String,
+    val targetLanguage: String,
+    val styleHint: String = "",
+) {
+    val sourceName: String get() = LANGUAGE_NAMES[sourceLanguage] ?: sourceLanguage
+    val targetName: String get() = LANGUAGE_NAMES[targetLanguage] ?: targetLanguage
+
+    companion object {
+        val LANGUAGE_NAMES = mapOf(
+            "en" to "English",
+            "ja" to "Japanese",
+            "zh" to "Chinese",
+            "ko" to "Korean",
+            "vi" to "Vietnamese",
+            "th" to "Thai",
+            "id" to "Indonesian",
+            "fr" to "French",
+            "de" to "German",
+            "es" to "Spanish",
+            "ru" to "Russian",
+        )
+    }
+}
+
+/**
+ * Continuity carried between light-novel chapters: without it a long series drifts, renaming
+ * characters and switching pronoun register halfway through.
+ */
+data class ProseContext(
+    val seriesTitle: String,
+    /** Source term to agreed translation, accumulated as chapters are translated. */
+    val glossary: Map<String, String> = emptyMap(),
+    /** Tail of the previous chapter's translation, for tone and unresolved references. */
+    val previousChapterTail: String = "",
+)
+
+/** A named entity the model chose a rendering for, so later chapters stay consistent. */
+data class GlossaryEntry(val source: String, val target: String)
+
+data class ProseTranslation(
+    val text: String,
+    val glossary: List<GlossaryEntry> = emptyList(),
+)
+
+/**
+ * One bubble's result: what the model reports it read, and what it translated that into.
+ *
+ * [source] is carried back rather than discarded because it is the only independent evidence that the
+ * model paired its answer with the right bubble. Nothing downstream displays it.
+ */
+data class BubbleTranslation(
+    val source: String,
+    val translation: String,
+)
+
+/**
+ * The provider refused the call because a rate or usage quota is exhausted.
+ *
+ * Typed rather than a generic failure because the caller's response is different in kind: retrying a
+ * quota error does not merely fail again, it *spends the next day's budget on failures* — every page
+ * view and every prefetch pass costs one doomed request. The manager uses this to stop calling the
+ * provider entirely until the quota window has passed.
+ */
+class ProviderRateLimited(
+    message: String,
+    /** Server-suggested pause, when the response carried one. */
+    val retryAfterSeconds: Long? = null,
+    /** True when the quota resets daily; the pause is then hours, not seconds. */
+    val dailyQuota: Boolean = false,
+) : Exception(message)
+
+interface TranslationProvider {
+
+    /** Human-readable name for error messages. */
+    val displayName: String
+
+    /**
+     * True when this provider can read the artwork itself. Vision providers are given the page and the
+     * bubble geometry and return translations directly, skipping local OCR — noticeably more accurate
+     * because the model sees who is speaking.
+     */
+    val supportsVisionOcr: Boolean get() = false
+
+    /** Translates already-extracted bubble strings. Returns one entry per input, blanks allowed. */
+    suspend fun translateLines(texts: List<String>, context: TranslationContext): List<BubbleTranslation>
+
+    /** Vision path: read and translate in one call. Only called when [supportsVisionOcr]. */
+    suspend fun ocrAndTranslate(
+        bitmap: Bitmap,
+        boxes: List<BubbleBox>,
+        context: TranslationContext,
+    ): List<BubbleTranslation> = throw UnsupportedOperationException("$displayName cannot read images")
+
+    /**
+     * Translates a light-novel chapter as continuous prose.
+     *
+     * Implementations must preserve paragraph breaks, because the reader's scroll position and
+     * progress percentage are derived from paragraph count.
+     */
+    suspend fun translateProse(
+        paragraphs: List<String>,
+        context: TranslationContext,
+        prose: ProseContext,
+    ): ProseTranslation
+}

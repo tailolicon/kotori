@@ -42,6 +42,7 @@ import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.cacheImageDir
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +55,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import mihon.feature.translation.TRANSLATION_PREFETCH_CHAPTERS
+import mihon.feature.translation.TranslationManager
+import mihon.feature.translation.TranslationStatus
 import logcat.LogPriority
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.util.lang.launchIO
@@ -101,6 +106,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val setMangaViewerFlags: SetMangaViewerFlags = Injekt.get(),
     private val getIncognitoState: GetIncognitoState = Injekt.get(),
     private val libraryPreferences: LibraryPreferences = Injekt.get(),
+    private val translationManager: TranslationManager = Injekt.get(),
 ) : ViewModel() {
 
     private val mutableState = MutableStateFlow(State())
@@ -253,6 +259,8 @@ class ReaderViewModel @JvmOverloads constructor(
                 downloadManager.addDownloadsToStartOfQueue(listOf(it))
             }
         }
+        translationPrefetchJob?.cancel()
+        manga?.let { translationManager.onReaderClosed(it.id) }
     }
 
     /**
@@ -303,6 +311,120 @@ class ReaderViewModel @JvmOverloads constructor(
         }
     }
 
+    private var translationPrefetchJob: Job? = null
+
+    /**
+     * Turns translation on or off for the manga being read.
+     *
+     * The loader has to be rebuilt because whether pages are translated is decided when the page
+     * loader is constructed. The current chapter is reset to [ReaderChapter.State.Wait] first so the
+     * viewer re-decodes through the new path instead of keeping the pages it already holds.
+     */
+    fun setTranslationEnabled(enabled: Boolean) {
+        val manga = manga ?: return
+        translationManager.setEnabled(manga.id, enabled)
+        if (!enabled) translationPrefetchJob?.cancel()
+
+        viewModelScope.launchIO {
+            val context = Injekt.get<Application>()
+            val source = sourceManager.getOrStub(manga.source)
+            val current = state.value.viewerChapters?.currChapter?.chapter?.id ?: chapterId
+
+            val newLoader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
+            loader = newLoader
+
+            val chapter = chapterList.firstOrNull { it.chapter.id == current } ?: return@launchIO
+            chapter.pageLoader?.recycle()
+            chapter.pageLoader = null
+            chapter.state = ReaderChapter.State.Wait
+
+            try {
+                loadChapter(newLoader, chapter)
+                eventChannel.send(Event.ReloadViewerChapters)
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                logcat(LogPriority.ERROR, e) { "Failed to reload chapter after translation toggle" }
+            }
+            // No explicit prefetch call here: loadChapter arms the lookahead itself, and doing it
+            // twice would only cancel and restart the job that was already running.
+        }
+    }
+
+    /**
+     * Translates the chapter on screen and the following [TRANSLATION_PREFETCH_CHAPTERS] chapters.
+     *
+     * Called on every chapter change, so the translated window slides forward with the reader rather
+     * than being filled once and then running dry. Doing the lookahead ahead of time — rather than
+     * lazily on arrival — is what removes the wait at chapter boundaries.
+     */
+    private fun queueTranslationPrefetch(loader: ChapterLoader, current: ReaderChapter) {
+        val startIndex = chapterList.indexOf(current)
+        if (startIndex < 0) return
+
+        val targets = listOf(current) +
+            chapterList.drop(startIndex + 1).take(TRANSLATION_PREFETCH_CHAPTERS)
+
+        translationPrefetchJob?.cancel()
+        translationPrefetchJob = viewModelScope.launchIO {
+            var completed = 0
+            var total = 0
+
+            prefetch@ for (readerChapter in targets) {
+                if (readerChapter !== current) {
+                    runCatching { loader.loadChapter(readerChapter) }
+                        .onFailure {
+                            logcat(LogPriority.WARN, it) {
+                                "Could not load ${readerChapter.chapter.name} for translation"
+                            }
+                        }
+                }
+                val pages = readerChapter.pages.orEmpty()
+                total += pages.size
+
+                for (page in pages) {
+                    // A rate-limited provider fails every page from here on; marching through the
+                    // rest of the window would just spend the recovering quota on more failures.
+                    if (translationManager.isRateLimited()) break@prefetch
+                    translationManager.updateStatus(
+                        TranslationStatus.Working(completed, total, readerChapter.chapter.name),
+                    )
+                    warmPage(readerChapter, page)
+                    completed++
+                }
+            }
+            // The quota message stays visible; "Idle" would overwrite the one line that tells the
+            // user why their pages stopped being translated.
+            if (!translationManager.isRateLimited()) {
+                translationManager.updateStatus(TranslationStatus.Idle)
+            }
+        }
+    }
+
+    /**
+     * Forces one page through the translating pipeline so the result lands in the cache.
+     *
+     * Reading the stream is the trigger: a translating page performs the work inside its stream
+     * provider, so opening and immediately closing it is exactly the prefetch. The page must be
+     * fetched first, hence the wait on its status.
+     */
+    private suspend fun warmPage(chapter: ReaderChapter, page: ReaderPage) {
+        if (page.status != Page.State.Ready) {
+            val loaderJob = viewModelScope.launchIO {
+                runCatching { chapter.pageLoader?.loadPage(page) }
+            }
+            runCatching {
+                withTimeout(PAGE_FETCH_TIMEOUT_MS) {
+                    page.statusFlow.first { it == Page.State.Ready || it is Page.State.Error }
+                }
+            }
+            loaderJob.cancel()
+        }
+        if (page.status != Page.State.Ready) return
+
+        runCatching { page.stream?.invoke()?.close() }
+            .onFailure { logcat(LogPriority.WARN, it) { "Translation prefetch failed for page ${page.index}" } }
+    }
+
     /**
      * Loads the given [chapter] with this [loader] and updates the currently active chapters.
      * Callers must handle errors.
@@ -333,6 +455,18 @@ class ReaderViewModel @JvmOverloads constructor(
                 )
             }
         }
+
+        // Re-arm the lookahead on every chapter change so the translated window slides with the
+        // reader. Without this the window is only ever filled once, at the moment translation is
+        // switched on, and the reader runs out of translated chapters two chapters later — which is
+        // precisely the wait the feature exists to remove. Re-queuing is cheap: chapters already
+        // translated hit the cache and return immediately.
+        manga?.let { manga ->
+            if (translationManager.isEnabled(manga.id)) {
+                queueTranslationPrefetch(loader, chapter)
+            }
+        }
+
         return newChapters
     }
 
@@ -984,5 +1118,10 @@ class ReaderViewModel @JvmOverloads constructor(
         data class SavedImage(val result: SaveImageResult) : Event
         data class ShareImage(val uri: Uri, val page: ReaderPage) : Event
         data class CopyImage(val uri: Uri) : Event
+    }
+
+    private companion object {
+        /** How long to wait for a page to arrive before skipping it during translation prefetch. */
+        const val PAGE_FETCH_TIMEOUT_MS = 45_000L
     }
 }
