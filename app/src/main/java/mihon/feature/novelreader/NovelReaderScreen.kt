@@ -89,6 +89,7 @@ import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.LiterataFamily
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import kotlinx.coroutines.launch
@@ -217,12 +218,24 @@ fun NovelReaderScreen(
         }
     }
 
+    // T5: two columns is a paginated layout, not a scrolling one, so it owns a page index
+    // instead of a scroll offset. One column keeps the scrolling body untouched.
+    val columnCount by preferences.columnCount.changes().collectAsState(initial = preferences.columnCount.get())
+    val twoColumn = isKotoriTablet() && columnCount >= 2
+    var columnPage by rememberSaveable(content) { mutableStateOf(0) }
+    var columnPageCount by remember(content) { mutableStateOf(1) }
+
     val progressPercent by remember {
         derivedStateOf {
             if (scrollState.maxValue <= 0) 0 else (scrollState.value * 100 / scrollState.maxValue).coerceIn(0, 100)
         }
     }
-    LaunchedEffect(progressPercent) { onProgressChanged(progressPercent) }
+    LaunchedEffect(progressPercent, twoColumn) { if (!twoColumn) onProgressChanged(progressPercent) }
+    LaunchedEffect(columnPage, columnPageCount, twoColumn) {
+        if (twoColumn && columnPageCount > 0) {
+            onProgressChanged((columnPage + 1) * 100 / columnPageCount)
+        }
+    }
     val fontSize by preferences.fontSize.changes().collectAsState(initial = preferences.fontSize.get())
     val font by preferences.fontFamily.changes().collectAsState(initial = preferences.fontFamily.get())
     val theme by preferences.theme.changes().collectAsState(initial = preferences.theme.get())
@@ -385,7 +398,37 @@ fun NovelReaderScreen(
             .background(paper.background)
             .nestedScroll(boundaryConnection)
             .then(
-                if (readingMode == NovelReadingMode.PAGED && !settingsVisible) {
+                if (twoColumn && !settingsVisible) {
+                    // Two columns is paginated, so a swipe turns a page rather than scrolling,
+                    // and running off either end changes chapter.
+                    Modifier.pointerInput(content, columnPageCount) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { horizontalDrag = 0f },
+                            onHorizontalDrag = { change, amount ->
+                                change.consume()
+                                horizontalDrag += amount
+                            },
+                            onDragCancel = { horizontalDrag = 0f },
+                            onDragEnd = {
+                                val distance = horizontalDrag
+                                horizontalDrag = 0f
+                                if (abs(distance) < size.width * 0.12f) return@detectHorizontalDragGestures
+                                val forward = distance < 0
+                                when {
+                                    forward && columnPage >= columnPageCount - 1 ->
+                                        if (canOpenNext) latestNextChapter() else setMenuVisible(true)
+                                    !forward && columnPage <= 0 ->
+                                        if (canOpenPrevious) latestPreviousChapter() else setMenuVisible(true)
+                                    else -> {
+                                        columnPage = (columnPage + if (forward) 1 else -1)
+                                            .coerceIn(0, columnPageCount - 1)
+                                        if (currentMenuVisible) setMenuVisible(false)
+                                    }
+                                }
+                            },
+                        )
+                    }
+                } else if (readingMode == NovelReadingMode.PAGED && !settingsVisible) {
                     Modifier.pointerInput(content, viewportHeight, scrollState.maxValue) {
                         detectHorizontalDragGestures(
                             onDragStart = { horizontalDrag = 0f },
@@ -442,7 +485,7 @@ fun NovelReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { translationY = boundaryOffset }
-                .verticalScroll(scrollState, enabled = readingMode == NovelReadingMode.SCROLL)
+                .verticalScroll(scrollState, enabled = !twoColumn && readingMode == NovelReadingMode.SCROLL)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 22.dp),
         ) {
@@ -455,6 +498,38 @@ fun NovelReaderScreen(
                 letterSpacing = 0.14.em,
                 color = paper.accent,
             )
+            if (twoColumn) {
+                NovelColumnReader(
+                    blocks = blocks,
+                    script = script,
+                    highlight = NovelHighlight(
+                        sentence = script[ttsState.sentence],
+                        seekEnabled = ttsState.isActive,
+                    ),
+                    fontFamily = font.family(),
+                    fontSize = fontSize,
+                    lineHeightMultiplier = spacing.multiplier,
+                    ink = paper.ink,
+                    accent = paper.accent,
+                    muted = paper.muted,
+                    columnCount = 2,
+                    pageIndex = columnPage,
+                    onPageCountChange = { count ->
+                        columnPageCount = count.coerceAtLeast(1)
+                        if (columnPage > count - 1) columnPage = (count - 1).coerceAtLeast(0)
+                    },
+                    onSeek = { index ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        ttsControlsVisible = true
+                        ttsController.seekTo(index)
+                        if (!ttsState.isActive) ttsController.play(index)
+                    },
+                    onTapOutsideSeek = {
+                        if (settingsVisible) settingsVisible = false else onSetMenuVisible(!menuVisible)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
             NovelBody(
                 blocks = blocks,
                 script = script,
@@ -489,6 +564,7 @@ fun NovelReaderScreen(
                     ttsController.toggle()
                 },
             )
+            }
         }
 
         // Reader chrome: the exact same app bars as the manga reader, wired to prose.

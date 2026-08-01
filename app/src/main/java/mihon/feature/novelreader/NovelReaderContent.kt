@@ -119,7 +119,7 @@ fun NovelReaderContent(
     val fontSize by preferences.fontSize.changes().collectAsState(initial = preferences.fontSize.get())
     val font by preferences.fontFamily.changes().collectAsState(initial = preferences.fontFamily.get())
     val theme by preferences.theme.changes().collectAsState(initial = preferences.theme.get())
-    val readingMode by preferences.readingMode.changes().collectAsState(initial = preferences.readingMode.get())
+    val columnCount by preferences.columnCount.changes().collectAsState(initial = preferences.columnCount.get())
 
     KotoriNovelPaneFrame(
         enabled = tabletPanes,
@@ -166,7 +166,7 @@ fun NovelReaderContent(
                 fontSize = fontSize,
                 font = font,
                 theme = theme,
-                readingMode = readingMode,
+                columnCount = columnCount,
             )
         },
     ) {

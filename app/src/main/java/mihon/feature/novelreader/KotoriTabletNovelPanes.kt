@@ -59,7 +59,6 @@ import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
 import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
 import mihon.feature.novelreader.NovelReaderPreferences.NovelFont
-import mihon.feature.novelreader.NovelReaderPreferences.NovelReadingMode
 import mihon.feature.novelreader.NovelReaderPreferences.NovelTheme
 import tachiyomi.domain.chapter.model.Chapter
 
@@ -411,7 +410,7 @@ fun KotoriNovelSettingsSidebar(
     fontSize: Int,
     font: NovelFont,
     theme: NovelTheme,
-    readingMode: NovelReadingMode,
+    columnCount: Int,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -550,8 +549,8 @@ fun KotoriNovelSettingsSidebar(
                 color = KotoriColors.textMuted,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                NovelReadingMode.entries.forEach { mode ->
-                    val selected = mode == readingMode
+                listOf(2 to "2 cột", 1 to "1 cột").forEach { (count, label) ->
+                    val selected = count == columnCount
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -568,12 +567,12 @@ fun KotoriNovelSettingsSidebar(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                            ) { preferences.readingMode.set(mode) }
+                            ) { preferences.columnCount.set(count) }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = mode.label,
+                            text = label,
                             fontFamily = BeVietnamProFamily,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                             fontSize = 11.5.sp,
