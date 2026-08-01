@@ -74,6 +74,15 @@ class PageTranslator(
                 logcat { "Dropping non-target-script translation for bubble ${index + 1}" }
                 return@mapIndexedNotNull null
             }
+            val ocrText = recognized.getOrNull(index)?.text.orEmpty()
+            if (isUntranslated(ocrText, translated)) {
+                // Providers echo the input when they cannot translate it, which is what happens to
+                // misread sound effects ("MHM~~" recognised as "WAWHW"). Erasing hand-drawn lettering
+                // only to stamp the same garbled string back is strictly worse than leaving the
+                // artwork alone.
+                logcat { "Dropping unchanged translation for bubble ${index + 1}" }
+                return@mapIndexedNotNull null
+            }
             TranslatedBubble(
                 box = box,
                 original = recognized.getOrNull(index)?.text.orEmpty(),
@@ -237,6 +246,21 @@ class PageTranslator(
     }
 
     /**
+     * True when the "translation" is just the source text handed back.
+     *
+     * Only applied to short strings. A long line that survives translation unchanged does not happen
+     * in practice, whereas a legitimately identical rendering of a short one does — a name, a number,
+     * an interjection that reads the same in both languages — and dropping those would leave real
+     * dialogue untranslated.
+     */
+    private fun isUntranslated(source: String, translated: String): Boolean {
+        if (source.isBlank()) return false
+        val a = normalizeForMatch(source)
+        val b = normalizeForMatch(translated)
+        return a == b && b.length <= MAX_ECHO_LENGTH
+    }
+
+    /**
      * True when [text] is written in the script the reader asked for — or close enough. Latin-target
      * translations that come back mostly CJK are the model refusing (or failing) to translate, and
      * must never reach the renderer.
@@ -316,6 +340,8 @@ class PageTranslator(
         const val RELOCATE_MIN = 0.50f
         /** Targets whose native scripts are CJK; the script sanity check does not apply to them. */
         val CJK_TARGETS = setOf("zh", "ja", "ko")
+        /** Longest echoed string still treated as "the provider gave up" rather than a real match. */
+        const val MAX_ECHO_LENGTH = 24
 
         /** Boxes narrower than this fraction of the page that hug its edge are cropped remnants. */
         const val SLIVER_WIDTH_RATIO = 0.10f

@@ -67,8 +67,13 @@ class BubbleRenderer(private val context: Context) {
             // and both get lettered — the bubble ends up with its translation printed twice, the second
             // copy shrunk into whatever space the first left over. Same words in the same place is one
             // bubble, however many times it was detected.
+            // Equality is too strict a test. Two detections over one bubble are read separately, so
+            // the provider paraphrases them differently ("...even if it's for 1 second" vs "...even
+            // if it is for1 second") and both get lettered — the bubble ends up with two near-
+            // identical paragraphs stacked on top of each other. Near-identical text in the same
+            // place is one bubble, however many times it was detected and however the wording drifted.
             val duplicate = written.any { (rect, text) ->
-                text == plan.text && Rect.intersects(rect, plan.slot)
+                Rect.intersects(rect, plan.slot) && looksLikeSameLine(text, plan.text)
             }
             if (duplicate) {
                 logcat { "Skipping ${plan.slot}: same text already lettered in an overlapping bubble" }
@@ -107,6 +112,22 @@ class BubbleRenderer(private val context: Context) {
             written += plan.slot to plan.text
         }
         return output
+    }
+
+    /**
+     * True when two strings are the same line of dialogue reworded, rather than two different lines.
+     *
+     * Word-set overlap: robust to the provider translating one detection of a bubble slightly
+     * differently from another, and to trailing clauses one crop caught and the other clipped.
+     */
+    private fun looksLikeSameLine(a: String, b: String): Boolean {
+        if (a == b) return true
+        val left = a.lowercase().split(WORD_SPLIT).filter { it.length > 1 }.toSet()
+        val right = b.lowercase().split(WORD_SPLIT).filter { it.length > 1 }.toSet()
+        if (left.isEmpty() || right.isEmpty()) return false
+        val shared = left.count { it in right }
+        // Against the smaller set, so a clipped detection still matches the complete one.
+        return shared.toFloat() / minOf(left.size, right.size) >= SAME_LINE_OVERLAP
     }
 
     /** One bubble that has been cleared, and the text still to be written into it. */
@@ -212,6 +233,19 @@ class BubbleRenderer(private val context: Context) {
         // Sample from the undilated core: the dilated mask has already grown into the paper, and
         // averaging that turns black lettering grey.
         val inkColor = coreInkColor(pixels, mask.core, mask.lightOnDark) ?: fallbackInk(mask.lightOnDark)
+
+        // No enclosing bubble *and* saturated ink means this is display lettering painted onto the
+        // artwork — a series logo, a chapter title, a stylised sound effect. It is part of the
+        // picture, not dialogue: the detector finds it, the provider dutifully translates it, and
+        // the result is a Vietnamese caption stamped over the title art. Real speech is drawn in
+        // black or white essentially without exception, so saturation is the tell.
+        if (saturationOf(inkColor) > MAX_DIALOGUE_SATURATION) {
+            logcat {
+                "Skipping ${bubble.box}: saturated ink ${Integer.toHexString(inkColor)} with no bubble " +
+                    "— decorative lettering, not dialogue"
+            }
+            return null
+        }
 
         Inpainter.fill(pixels, width, height, mask.mask)
         bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
@@ -356,6 +390,16 @@ class BubbleRenderer(private val context: Context) {
     }
 
     private fun fallbackInk(lightOnDark: Boolean): Int = if (lightOnDark) Color.WHITE else Color.BLACK
+
+    /** HSV saturation in 0..1. Zero for any grey, including pure black and pure white. */
+    private fun saturationOf(color: Int): Float {
+        val r = Color.red(color)
+        val g = Color.green(color)
+        val b = Color.blue(color)
+        val max = maxOf(r, g, b)
+        val min = minOf(r, g, b)
+        return if (max == 0) 0f else (max - min).toFloat() / max
+    }
 
     /**
      * Fits [text] into the rectangle, shrinking until it fits, then centres it.
@@ -527,6 +571,9 @@ class BubbleRenderer(private val context: Context) {
 
     private companion object {
         val WHITESPACE_RUN = Regex("\\s+")
+        val WORD_SPLIT = Regex("[^\\p{L}\\p{N}]+")
+        /** Word overlap above which two overlapping bubbles are treated as one line reworded. */
+        const val SAME_LINE_OVERLAP = 0.6f
 
         const val REGION_PAD_RATIO = 0.12f
         const val MIN_REGION_SIDE = 10
@@ -539,6 +586,8 @@ class BubbleRenderer(private val context: Context) {
         const val MIN_DRAW_WIDTH = 32
         /** Leftover-glyph sweeps smaller than this are noise, not a surviving line of text. */
         const val MIN_LEFTOVER_GLYPHS = 40
+        /** Above this ink saturation, unenclosed lettering is title/logo art rather than speech. */
+        const val MAX_DIALOGUE_SATURATION = 0.35f
         const val TEXT_PADDING_RATIO = 0.08f
         const val CHAR_ASPECT = 0.62f
         const val MIN_FONT_SIZE = 9
