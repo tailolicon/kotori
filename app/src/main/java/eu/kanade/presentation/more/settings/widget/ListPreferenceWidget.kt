@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
 import tachiyomi.presentation.core.i18n.stringResource
@@ -37,6 +38,23 @@ fun <T> ListPreferenceWidget(
     onValueChange: (T) -> Unit,
 ) {
     var isDialogShown by remember { mutableStateOf(false) }
+
+    // T8: a handful of short options becomes the mock's segmented chip row rather than a
+    // row that opens a dialog. Longer option sets keep the dialog — chips would not fit.
+    if (isKotoriTablet() && icon == null && canSegment(entries.values)) {
+        val options = remember(entries) { entries.entries.toList() }
+        KotoriSegmentedPreference(
+            title = title,
+            entries = options.mapIndexed { index, entry -> index.toString() to entry.value },
+            selectedKey = options.indexOfFirst { it.key == value }.toString(),
+            onSelect = { index ->
+                index.toIntOrNull()
+                    ?.let { options.getOrNull(it)?.key }
+                    ?.let { @Suppress("UNCHECKED_CAST") onValueChange(it as T) }
+            },
+        )
+        return
+    }
 
     TextPreferenceWidget(
         title = title,

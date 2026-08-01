@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.more.settings.widget.EditTextPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.InfoWidget
+import eu.kanade.presentation.more.settings.widget.KotoriSliderPreference
 import eu.kanade.presentation.more.settings.widget.ListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.MultiSelectListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
@@ -26,6 +27,7 @@ import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TitleFontSize
 import eu.kanade.presentation.more.settings.widget.TrackingPreferenceWidget
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import kotlinx.coroutines.launch
 import tachiyomi.presentation.core.components.BaseSliderItem
 import tachiyomi.presentation.core.util.collectAsState
@@ -81,7 +83,17 @@ internal fun PreferenceItem(
                     },
                 )
             }
-            is Preference.PreferenceItem.SliderPreference -> {
+            is Preference.PreferenceItem.SliderPreference -> if (isKotoriTablet()) {
+                KotoriSliderPreference(
+                    title = item.title,
+                    subtitle = item.subtitle,
+                    valueString = item.valueString.takeUnless { it.isNullOrEmpty() } ?: item.value.toString(),
+                    value = item.value,
+                    valueRange = item.valueRange,
+                    steps = item.steps,
+                    onChange = { scope.launch { item.onValueChanged(it) } },
+                )
+            } else {
                 BaseSliderItem(
                     value = item.value,
                     valueRange = item.valueRange,

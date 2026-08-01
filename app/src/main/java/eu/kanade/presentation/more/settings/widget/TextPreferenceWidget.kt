@@ -20,7 +20,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
+import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 
 @Composable
@@ -38,13 +42,22 @@ fun TextPreferenceWidget(
         title = title,
         subcomponent = if (!subtitle.isNullOrBlank()) {
             {
+                val compact = isKotoriTablet()
                 Text(
                     text = subtitle,
                     modifier = Modifier
-                        .padding(horizontal = PrefsHorizontalPadding)
-                        .secondaryItemAlpha(),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 10,
+                        .padding(horizontal = PrefsHorizontalPadding, vertical = if (compact) 2.dp else 0.dp)
+                        .then(if (compact) Modifier else Modifier.secondaryItemAlpha()),
+                    style = if (compact) {
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = BeVietnamProFamily,
+                            fontSize = 10.5.sp,
+                            color = KotoriColors.textMuted,
+                        )
+                    } else {
+                        MaterialTheme.typography.bodySmall
+                    },
+                    maxLines = if (compact) 3 else 10,
                 )
             }
         } else {

@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 
 @Composable
 fun SwitchPreferenceWidget(
@@ -30,15 +31,23 @@ fun SwitchPreferenceWidget(
         subtitle = subtitle,
         icon = icon,
         widget = {
-            Switch(
-                checked = checked,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = KotoriColors.success.copy(alpha = 0.9f),
-                    checkedThumbColor = Color.White,
-                ),
-                modifier = Modifier.padding(start = TrailingWidgetBuffer),
-            )
+            if (isKotoriTablet()) {
+                KotoriPillSwitch(
+                    checked = checked,
+                    onCheckedChange = null,
+                    modifier = Modifier.padding(start = TrailingWidgetBuffer),
+                )
+            } else {
+                Switch(
+                    checked = checked,
+                    onCheckedChange = null,
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = KotoriColors.success.copy(alpha = 0.9f),
+                        checkedThumbColor = Color.White,
+                    ),
+                    modifier = Modifier.padding(start = TrailingWidgetBuffer),
+                )
+            }
         },
         onPreferenceClick = { onCheckedChanged(!checked) },
     )

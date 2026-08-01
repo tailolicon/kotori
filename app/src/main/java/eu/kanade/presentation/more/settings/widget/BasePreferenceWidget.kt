@@ -26,10 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.more.settings.LocalPreferenceHighlighted
+import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.more.settings.LocalPreferenceMinHeight
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
@@ -45,10 +49,13 @@ internal fun BasePreferenceWidget(
 ) {
     val highlighted = LocalPreferenceHighlighted.current
     val minHeight = LocalPreferenceMinHeight.current
+    // T8: inside the tablet settings cards the rows are the mock's compact type — a
+    // 12.5sp semibold title over a 10.5sp muted sub — not Material's 16sp list rows.
+    val compact = isKotoriTablet()
     Row(
         modifier = modifier
             .highlightBackground(highlighted)
-            .sizeIn(minHeight = minHeight)
+            .then(if (compact) Modifier else Modifier.sizeIn(minHeight = minHeight))
             .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
             .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -62,7 +69,7 @@ internal fun BasePreferenceWidget(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = PrefsVerticalPadding),
+                .padding(vertical = if (compact) 8.dp else PrefsVerticalPadding),
         ) {
             if (!title.isNullOrBlank()) {
                 Text(
@@ -70,8 +77,16 @@ internal fun BasePreferenceWidget(
                     text = title,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = TitleFontSize,
+                    style = if (compact) {
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = BeVietnamProFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            color = KotoriColors.textPrimary,
+                        )
+                    } else {
+                        MaterialTheme.typography.titleLarge
+                    },
+                    fontSize = if (compact) 12.5.sp else TitleFontSize,
                 )
             }
             subcomponent?.invoke(this)
