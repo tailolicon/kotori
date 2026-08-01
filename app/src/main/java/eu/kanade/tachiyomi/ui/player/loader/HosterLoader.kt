@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.player.loader
 
+import android.content.Context
+
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.Video
@@ -18,17 +20,48 @@ class HosterLoader {
         /**
          * Check for the best video from the current hosterState.
          *
-         * The first video with the `preferred` attribute is selected, however
-         * if no such video is selected the first video with a non-empty url is selected.
-         * If there are no viable videos at all, an error is thrown.
+         * Highest quality wins: whichever viable video has the tallest resolution the current
+         * connection can carry, since a source's own ordering says nothing about quality. A
+         * source that explicitly marks a video `preferred` still breaks ties. Falling back, the
+         * first video with a non-empty url is selected; with no viable videos at all, an error
+         * is thrown.
          *
          * @return the indices of the hoster & video
          */
-        fun selectBestVideo(hosterState: List<HosterState>): Pair<Int, Int> {
+        fun selectBestVideo(hosterState: List<HosterState>, context: Context? = null): Pair<Int, Int> {
             val availableHosters = hosterState.withIndex()
                 .filter { (_, state) -> state is HosterState.Ready }
 
-            // Check for first preferred
+            val isViable: (Pair<Video, Video.State>) -> Boolean = { (v, s) ->
+                v.videoUrl.isNotEmpty() && (s == Video.State.READY || s == Video.State.QUEUE)
+            }
+
+            // Best resolution the link can carry, preferring an explicitly `preferred` video
+            // between two of equal height.
+            val maxHeight = VideoQualityPolicy.maxHeight(context)
+            var bestHoster = -1
+            var bestVideo = -1
+            var bestHeight = Int.MIN_VALUE
+            var bestPreferred = false
+            availableHosters.forEach { (hosterIdx, state) ->
+                val hoster = state as HosterState.Ready
+                (hoster.videoList zip hoster.videoState).forEachIndexed { videoIdx, pair ->
+                    if (!isViable(pair)) return@forEachIndexed
+                    val (video, _) = pair
+                    val height = VideoQualityPolicy.heightOf(video) ?: return@forEachIndexed
+                    if (height > maxHeight) return@forEachIndexed
+                    val better = height > bestHeight || (height == bestHeight && video.preferred && !bestPreferred)
+                    if (better) {
+                        bestHeight = height
+                        bestPreferred = video.preferred
+                        bestHoster = hosterIdx
+                        bestVideo = videoIdx
+                    }
+                }
+            }
+            if (bestHoster != -1) return bestHoster to bestVideo
+
+            // No video announced its resolution — fall back to the source's own preference.
             val isPreferred: (Pair<Video, Video.State>) -> Boolean = { (v, s) ->
                 v.preferred && (s == Video.State.READY || s == Video.State.QUEUE)
             }
@@ -86,7 +119,18 @@ class HosterLoader {
                             hosterStates[hosterIdx] = hosterState
 
                             if (hosterState is HosterState.Ready) {
-                                val prefIndex = hosterState.videoList.indexOfFirst { it.preferred && !it.initialized }
+                                // Resolving a source-preferred video straight away is a latency
+                                // win, but only when nothing better is on offer — otherwise it
+                                // would hand back 480p on a link that can carry 1080p.
+                                val maxHeight = VideoQualityPolicy.maxHeight()
+                                val bestHeight = hosterState.videoList
+                                    .mapNotNull { VideoQualityPolicy.heightOf(it) }
+                                    .filter { it <= maxHeight }
+                                    .maxOrNull()
+                                val prefIndex = hosterState.videoList.indexOfFirst {
+                                    it.preferred && !it.initialized &&
+                                        (bestHeight == null || VideoQualityPolicy.heightOf(it) == bestHeight)
+                                }
                                 if (prefIndex != -1) {
                                     val video = hosterState.videoList[prefIndex]
                                     hosterStates[hosterIdx] =

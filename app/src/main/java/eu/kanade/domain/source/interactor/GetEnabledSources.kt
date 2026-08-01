@@ -38,7 +38,10 @@ class GetEnabledSources(
             modeSources(),
         ) { pinnedSourceIds, enabledLanguages, disabledSources, lastUsedSource, sources ->
             sources
-                .filter { it.lang in enabledLanguages || it.isLocal() }
+                // Novel sources are compiled into the app rather than installed, so the
+                // extension language filter — which the user never set for them — must not
+                // hide them. Same reasoning as the local source.
+                .filter { it.lang in enabledLanguages || it.isLocal() || it.isNovel }
                 .filterNot { it.id.toString() in disabledSources }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                 .flatMap {
