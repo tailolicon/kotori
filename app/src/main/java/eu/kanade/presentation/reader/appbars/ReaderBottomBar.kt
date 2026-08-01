@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,6 +50,9 @@ fun ReaderBottomBar(
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    // T4: the spread tile only exists where a spread does — a wide landscape window.
+    spreadEnabled: Boolean? = null,
+    onClickSpread: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
@@ -58,6 +62,15 @@ fun ReaderBottomBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (spreadEnabled != null) {
+            ReaderToolTile(
+                painter = rememberVectorPainter(Icons.Outlined.AutoStories),
+                label = "Trải đôi",
+                onClick = onClickSpread,
+                selected = spreadEnabled,
+                modifier = Modifier.weight(1f),
+            )
+        }
         ReaderToolTile(
             painter = painterResource(readingMode.iconRes),
             label = stringResource(MR.strings.viewer),
@@ -93,11 +106,18 @@ fun ReaderToolTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     surface: ReaderBarSurface? = null,
+    /** An on/off tool wears the mode gradient while it is on, per the mock's active chip. */
+    selected: Boolean = false,
 ) {
+    val accent = KotoriTheme.accent
     // Glass and its pale teal are built for the app's dark chrome. Over a cream or khaki page they
     // read as a faint smudge, so a page that supplies its own colours gets a plain tinted tile with
     // the page's own ink instead.
-    val tileModifier = if (surface == null) {
+    val tileModifier = if (selected) {
+        modifier
+            .clip(RoundedCornerShape(15.dp))
+            .background(accent.gradient)
+    } else if (surface == null) {
         modifier.glass(shape = RoundedCornerShape(15.dp), elevated = true)
     } else {
         modifier
@@ -115,14 +135,18 @@ fun ReaderToolTile(
         Icon(
             painter = painter,
             contentDescription = label,
-            tint = surface?.accent ?: KotoriTheme.accent.light,
+            tint = if (selected) accent.onAccent else surface?.accent ?: accent.light,
         )
         Text(
             text = label,
             fontFamily = BeVietnamProFamily,
             fontWeight = FontWeight.SemiBold,
             fontSize = 8.5.sp,
-            color = surface?.content?.copy(alpha = 0.85f) ?: KotoriColors.textSecondary,
+            color = if (selected) {
+                accent.onAccent
+            } else {
+                surface?.content?.copy(alpha = 0.85f) ?: KotoriColors.textSecondary
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

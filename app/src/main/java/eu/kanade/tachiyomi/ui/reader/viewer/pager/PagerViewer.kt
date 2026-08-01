@@ -15,6 +15,7 @@ import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
+import eu.kanade.tachiyomi.ui.reader.model.PageSpread
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
@@ -120,8 +121,8 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         }
         pager.longTapListener = f@{
             if (activity.viewModel.state.value.menuVisible || config.longTapEnabled) {
-                val item = adapter.items.getOrNull(pager.currentItem)
-                if (item is ReaderPage) {
+                val item = anchorPage(adapter.items.getOrNull(pager.currentItem))
+                if (item != null) {
                     activity.onPageLongTap(item)
                     return@f true
                 }
@@ -169,12 +170,24 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         pager.children
             .filterIsInstance(PagerPageHolder::class.java)
             .firstOrNull { it.item == page }
+            ?: pager.children
+                .filterIsInstance(PagerSpreadHolder::class.java)
+                .firstNotNullOfOrNull { it.holderFor(page) }
+
+    /** The page an item stands for — the first of a spread, in reading order. */
+    private fun anchorPage(item: Any?): ReaderPage? = when (item) {
+        is PageSpread -> item.anchor
+        is ReaderPage -> item
+        else -> null
+    }
 
     /**
      * Called when a new page (either a [ReaderPage] or [ChapterTransition]) is marked as active
      */
     private fun onPageChange(position: Int) {
-        val page = adapter.items.getOrNull(position)
+        // A spread stands in for its first page everywhere downstream: progress, preload and
+        // the activity callback all still speak in single pages.
+        val page = anchorPage(adapter.items.getOrNull(position)) ?: adapter.items.getOrNull(position)
         if (page != null && currentPage != page) {
             val allowPreload = checkAllowPreload(page as? ReaderPage)
             val forward = when {
@@ -299,7 +312,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
      * Tells this viewer to move to the given [page].
      */
     override fun moveToPage(page: ReaderPage) {
-        val position = adapter.items.indexOf(page)
+        val position = adapter.positionOf(page)
         if (position != -1) {
             val currentPosition = pager.currentItem
             pager.setCurrentItem(position, true)
@@ -373,10 +386,18 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
      * changed.
      */
     private fun refreshAdapter() {
-        val currentItem = pager.currentItem
+        // Turning the spread on or off changes how many items the list has, so the position
+        // that was current is meaningless afterwards — hold on to the page instead and look
+        // its new item up, or a refresh would fling the reader to the end of the chapter.
+        val anchor = currentPage as? ReaderPage
+        val fallback = pager.currentItem
         adapter.refresh()
         pager.adapter = adapter
-        pager.setCurrentItem(currentItem, false)
+        val position = anchor
+            ?.let(adapter::positionOf)
+            ?.takeIf { it >= 0 }
+            ?: fallback.coerceIn(0, (adapter.count - 1).coerceAtLeast(0))
+        pager.setCurrentItem(position, false)
     }
 
     /**

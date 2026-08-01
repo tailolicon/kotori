@@ -33,6 +33,20 @@ class PagerConfig(
 
     var dualPageSplitChangedListener: ((Boolean) -> Unit)? = null
 
+    /** T4: two pages side by side. Only ever on when the window is wide enough. */
+    var doublePageSpread = false
+        private set
+
+    /**
+     * A spread halves the width each page gets, so it is only worth it on a landscape window
+     * that is genuinely wide — on a phone it would leave two unreadable slivers.
+     */
+    private val wideWindow: Boolean
+        get() = with(viewer.activity.resources.configuration) {
+            orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
+                screenWidthDp >= MIN_SPREAD_WIDTH_DP
+        }
+
     var imageScaleType = 1
         private set
 
@@ -82,6 +96,12 @@ class PagerConfig(
             .drop(1)
             .onEach { navigationModeChangedListener?.invoke() }
             .launchIn(scope)
+
+        readerPreferences.doublePageSpread
+            .register(
+                { doublePageSpread = it && wideWindow },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
         readerPreferences.dualPageSplitPaged
             .register(
@@ -148,5 +168,9 @@ class PagerConfig(
             else -> defaultNavigation()
         }
         navigationModeChangedListener?.invoke()
+    }
+
+    private companion object {
+        const val MIN_SPREAD_WIDTH_DP = 840
     }
 }

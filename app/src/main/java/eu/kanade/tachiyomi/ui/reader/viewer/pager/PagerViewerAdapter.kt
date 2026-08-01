@@ -4,6 +4,7 @@ import android.view.View
 import android.view.ViewGroup
 import eu.kanade.tachiyomi.ui.reader.model.ChapterTransition
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
+import eu.kanade.tachiyomi.ui.reader.model.PageSpread
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
@@ -22,6 +23,15 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
      */
     var items: MutableList<Any> = mutableListOf()
         private set
+
+    /** The list before pages were paired, so the spread can be re-derived on a config change. */
+    private var rawItems: List<Any> = emptyList()
+
+    private fun buildItems(): MutableList<Any> = if (viewer.config.doublePageSpread) {
+        pairIntoSpreads(rawItems)
+    } else {
+        rawItems.toMutableList()
+    }
 
     /**
      * Holds preprocessed items so they don't get removed when changing chapter
@@ -104,7 +114,8 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
         }
 
         preprocessed = mutableMapOf()
-        items = newItems
+        rawItems = newItems
+        items = buildItems()
         notifyDataSetChanged()
 
         // Will skip insert page otherwise
@@ -125,6 +136,7 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
      */
     override fun createView(container: ViewGroup, position: Int): View {
         return when (val item = items[position]) {
+            is PageSpread -> PagerSpreadHolder(readerThemedContext, viewer, item)
             is ReaderPage -> PagerPageHolder(readerThemedContext, viewer, item)
             is ChapterTransition -> PagerTransitionHolder(readerThemedContext, viewer, item)
             else -> throw NotImplementedError("Holder for ${item.javaClass} not implemented")
@@ -185,7 +197,54 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
         notifyDataSetChanged()
     }
 
+    /**
+     * Walks the item list and turns each run of consecutive pages from one chapter into
+     * spreads. Transitions break a run, so a spread never straddles a chapter boundary, and
+     * an odd page at the end of a run stays a single item rather than being paired with the
+     * next chapter's first page.
+     *
+     * Split pages are left alone: a wide page that was already cut in two is a spread of its
+     * own halves and pairing it again would put four half-pages on screen.
+     */
+    private fun pairIntoSpreads(source: List<Any>): MutableList<Any> {
+        val paired = mutableListOf<Any>()
+        var index = 0
+        while (index < source.size) {
+            val current = source[index]
+            val next = source.getOrNull(index + 1)
+            val pairable = current is ReaderPage && current !is InsertPage &&
+                next is ReaderPage && next !is InsertPage &&
+                current.chapter.chapter.id == next.chapter.chapter.id
+            if (pairable) {
+                paired += PageSpread(current as ReaderPage, next as ReaderPage)
+                index += 2
+            } else {
+                paired += current
+                index++
+            }
+        }
+        return paired
+    }
+
+    /** The item showing [page], whether it stands alone or sits in a spread. */
+    fun positionOf(page: ReaderPage): Int = items.indexOfFirst { item ->
+        item == page || (item is PageSpread && page in item)
+    }
+
+    /** The pages an item covers, in reading order. */
+    fun pagesOf(item: Any?): List<ReaderPage> = when (item) {
+        is PageSpread -> listOf(item.first, item.second)
+        is ReaderPage -> listOf(item)
+        else -> emptyList()
+    }
+
     fun refresh() {
         readerThemedContext = viewer.activity.createReaderThemeContext()
+        // Turning the spread on or off changes what an item *is*, not just how it is drawn,
+        // so the list has to be rebuilt rather than just re-themed.
+        val rebuilt = buildItems()
+        if (rebuilt != items) {
+            items = rebuilt
+        }
     }
 }

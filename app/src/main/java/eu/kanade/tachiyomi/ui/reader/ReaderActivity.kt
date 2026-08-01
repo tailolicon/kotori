@@ -53,9 +53,12 @@ import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
 import eu.kanade.presentation.reader.ReaderContentOverlay
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
+import eu.kanade.presentation.reader.KotoriReaderThumbRail
 import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
 import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
+import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
 import eu.kanade.presentation.reader.appbars.ReaderBottomBar
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
 import eu.kanade.presentation.reader.settings.ReaderSettingsDialog
@@ -291,10 +294,25 @@ class ReaderActivity : BaseActivity() {
                 readerState = viewModel.state,
                 onChangeReadingMode = viewModel::setMangaReadingMode,
                 onChangeOrientation = viewModel::setMangaOrientationType,
+                onToggleTranslation = viewModel::setTranslationEnabled,
             )
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
+            // T4: the page rail rides with the reader chrome, so it appears and leaves with it.
+            val railPages = state.viewerChapters?.currChapter?.pages.orEmpty()
+            if (isKotoriTablet() && state.menuVisible && railPages.isNotEmpty()) {
+                KotoriReaderThumbRail(
+                    pages = railPages,
+                    currentIndices = remember(state.currentPage, state.viewer) {
+                        val first = state.currentPage - 1
+                        val spread = (state.viewer as? PagerViewer)?.config?.doublePageSpread == true
+                        if (spread) setOf(first, first + 1) else setOf(first)
+                    },
+                    onSelect = { moveToPageIndex(it.index) },
+                    modifier = Modifier.align(Alignment.CenterStart),
+                )
+            }
             if (!state.menuVisible && showPageNumber) {
                 ReaderPageIndicator(
                     currentPage = state.currentPage,
@@ -502,6 +520,13 @@ class ReaderActivity : BaseActivity() {
         val verticalNavigatorOnLeft by readerPreferences.verticalNavigatorOnLeft.collectAsState()
         val verticalNavigatorHeight by readerPreferences.verticalNavigatorHeight.collectAsState()
 
+        // T4: the spread only exists on a pager in a wide landscape window, so the tile and the
+        // `12–13 / 28` label are both driven by what the viewer actually decided to do.
+        val pagerViewer = state.viewer as? PagerViewer
+        val spreadAvailable = pagerViewer != null && isKotoriTablet()
+        val spreadOn by readerPreferences.doublePageSpread.collectAsState()
+        val spreadActive = spreadAvailable && spreadOn && pagerViewer?.config?.doublePageSpread == true
+
         ReaderAppBars(
             visible = state.menuVisible,
 
@@ -542,6 +567,11 @@ class ReaderActivity : BaseActivity() {
             onPageIndexChangeFinished = {
                 isScrollingThroughPages = false
             },
+            // The navigator renders this for both the current page and the total; only the
+            // current one is a spread, so the total is left as a plain number.
+            pageLabel = { page ->
+                if (spreadActive && page < state.totalPages) "$page–${page + 1}" else "$page"
+            },
 
             bottomBar = {
                 ReaderBottomBar(
@@ -560,6 +590,13 @@ class ReaderActivity : BaseActivity() {
                         menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
                     },
                     onClickSettings = viewModel::openSettingsDialog,
+                    spreadEnabled = spreadActive.takeIf { spreadAvailable },
+                    onClickSpread = {
+                        val enabled = !readerPreferences.doublePageSpread.get()
+                        readerPreferences.doublePageSpread.set(enabled)
+                        menuToggleToast?.cancel()
+                        menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
+                    },
                 )
             },
         )

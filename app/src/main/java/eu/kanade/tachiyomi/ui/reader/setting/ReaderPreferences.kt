@@ -107,6 +107,13 @@ class ReaderPreferences(
 
     // region Split two-page spread
 
+    /**
+     * Show two consecutive pages side by side as one spread (T4). Distinct from
+     * `dualPageSplit*`, which is the opposite feature: cutting one wide page into two.
+     */
+    val doublePageSpread: Preference<Boolean> = preferenceStore.getBoolean("pref_double_page_spread", true)
+
+
     val dualPageSplitPaged: Preference<Boolean> = preferenceStore.getBoolean("pref_dual_page_split", false)
 
     val dualPageInvertPaged: Preference<Boolean> = preferenceStore.getBoolean("pref_dual_page_invert", false)
