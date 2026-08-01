@@ -36,7 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import dev.vivvvek.seeker.Seeker
 import dev.vivvvek.seeker.SeekerDefaults
 import dev.vivvvek.seeker.Segment
@@ -84,6 +89,7 @@ fun SeekbarWithTimers(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
     ) {
+        val tablet = isKotoriTablet()
         VideoTimer(
             value = position,
             timersInverted.first,
@@ -91,7 +97,8 @@ fun SeekbarWithTimers(
                 clickEvent()
                 positionTimerOnClick()
             },
-            modifier = Modifier.width(92.dp),
+            modifier = Modifier.width(if (tablet) 60.dp else 92.dp),
+            kotoriColor = KotoriColors.highlightPink.takeIf { tablet },
         )
         Seeker(
             value = position.coerceIn(0f, duration),
@@ -128,7 +135,8 @@ fun SeekbarWithTimers(
                 clickEvent()
                 durationTimerOnCLick()
             },
-            modifier = Modifier.width(92.dp),
+            modifier = Modifier.width(if (tablet) 60.dp else 92.dp),
+            kotoriColor = Color(0xFFC9C1E2).takeIf { tablet },
         )
     }
 }
@@ -139,6 +147,8 @@ fun VideoTimer(
     isInverted: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
+    /** Non-null switches the timer to the tablet's Unbounded numerals in that colour. */
+    kotoriColor: Color? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Text(
@@ -151,7 +161,9 @@ fun VideoTimer(
             )
             .wrapContentHeight(Alignment.CenterVertically),
         text = Utils.prettyTime(value.toInt(), isInverted),
-        color = Color.White,
+        color = kotoriColor ?: Color.White,
+        fontFamily = if (kotoriColor != null) UnboundedFamily else null,
+        fontSize = if (kotoriColor != null) 12.sp else TextUnit.Unspecified,
         textAlign = TextAlign.Center,
     )
 }

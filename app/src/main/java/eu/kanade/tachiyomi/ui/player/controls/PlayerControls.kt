@@ -381,6 +381,11 @@ fun PlayerControls(
                         onPlayPauseClick = viewModel::pauseUnpause,
                         enter = fadeIn(playerControlsEnterAnimationSpec()),
                         exit = fadeOut(playerControlsExitAnimationSpec()),
+                        tabletSeek = if (tabletDrawer) {
+                            { offset -> viewModel.seekBy(offset, precise = true) }
+                        } else {
+                            null
+                        },
                     )
                 }
 
