@@ -32,6 +32,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.MissingSourceScreen
+import eu.kanade.presentation.browse.KotoriFeedPill
+import eu.kanade.presentation.browse.KotoriFilterFab
 import eu.kanade.presentation.browse.components.BrowseSourceToolbar
 import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
@@ -150,37 +152,40 @@ data class BrowseSourceScreen(
                             modifier = Modifier
                                 .horizontalScroll(rememberScrollState())
                                 .padding(horizontal = 18.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            KotoriChip(
-                                text = "🔥 " + stringResource(MR.strings.popular),
+                            KotoriFeedPill(
+                                label = "Phổ biến",
                                 selected = state.listing == Listing.Popular,
+                                latest = false,
                                 onClick = {
                                     screenModel.resetFilters()
                                     screenModel.setListing(Listing.Popular)
                                 },
                             )
                             if (screenModel.source.supportsLatest) {
-                                KotoriChip(
-                                    text = stringResource(MR.strings.latest),
+                                KotoriFeedPill(
+                                    label = "Mới nhất",
                                     selected = state.listing == Listing.Latest,
+                                    latest = true,
                                     onClick = {
                                         screenModel.resetFilters()
                                         screenModel.setListing(Listing.Latest)
                                     },
                                 )
                             }
-                            if (state.filters.isNotEmpty()) {
-                                KotoriChip(
-                                    text = stringResource(MR.strings.action_filter),
-                                    selected = state.listing is Listing.Search,
-                                    onClick = screenModel::openFilterSheet,
-                                )
-                            }
                         }
                     }
                 },
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                floatingActionButton = {
+                    if (state.filters.isNotEmpty()) {
+                        KotoriFilterFab(
+                            label = "Bộ lọc",
+                            onClick = screenModel::openFilterSheet,
+                        )
+                    }
+                },
             ) { paddingValues ->
                 BrowseSourceContent(
                     source = screenModel.source,

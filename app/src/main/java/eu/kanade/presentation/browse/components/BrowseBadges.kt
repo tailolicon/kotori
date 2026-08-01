@@ -43,7 +43,7 @@ internal fun InLibraryBadge(enabled: Boolean) {
                     .size(10.dp),
             )
             Text(
-                text = stringResource(MR.strings.label_library).uppercase(),
+                text = "THƯ VIỆN",
                 fontFamily = UnboundedFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 8.sp,

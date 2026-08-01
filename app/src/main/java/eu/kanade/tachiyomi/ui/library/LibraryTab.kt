@@ -389,7 +389,12 @@ data object LibraryTab : Tab {
                             )
                             displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
                         },
-                        categories = state.displayedCategories.map { it.visualName },
+                        // A single unnamed system category is not a choice, so the chip row
+                        // would only be showing the word "Default" with nothing to switch to.
+                        categories = state.displayedCategories
+                            .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
+                            .orEmpty()
+                            .map { it.visualName },
                         categoryCounts = state.displayedCategories.map { state.getItemCountForCategory(it) },
                         activeCategoryIndex = state.coercedActiveCategoryIndex,
                         onSelectCategory = screenModel::updateActiveCategoryIndex,

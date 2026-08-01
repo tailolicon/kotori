@@ -135,10 +135,23 @@ fun rememberKotoriAiringToday(onOpenAnime: (Long) -> Unit): List<KotoriTabletAir
     }
 }
 
-private fun formatRemaining(seconds: Long): String {
-    val minutes = seconds / 60
-    val rest = seconds % 60
-    return "%02d:%02d".format(minutes, rest)
+/**
+ * `mm:ss` left in an episode, or `h:mm:ss` once it runs past an hour.
+ *
+ * Takes milliseconds because that is what the columns hold: `total_seconds` and
+ * `last_second_seen` are written as `duration * 1000`, so reading them as seconds turned a
+ * twenty-minute episode into "còn 492766:40".
+ */
+private fun formatRemaining(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }
 
 /**

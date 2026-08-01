@@ -6,6 +6,11 @@ import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import uy.kohesive.injekt.api.get
+import uy.kohesive.injekt.Injekt
+import androidx.compose.runtime.collectAsState
+import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
+import eu.kanade.presentation.browse.kotoriSourceSubtitle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +52,17 @@ fun BrowseAnimeSourceToolbar(
 
     SearchToolbar(
         navigateUp = navigateUp,
-        titleContent = { AppBarTitle(title) },
+        titleContent = {
+            AppBarTitle(
+                title = title,
+                subtitle = kotoriSourceSubtitle(
+                    sourceId = source?.id ?: 0L,
+                    lang = source?.lang,
+                    typeLabel = "Anime",
+                    version = installedExtensionVersion(source?.id),
+                ),
+            )
+        },
         searchQuery = searchQuery,
         onChangeSearchQuery = onSearchQueryChange,
         onSearch = onSearch,
@@ -123,4 +138,20 @@ fun BrowseAnimeSourceToolbar(
         },
         scrollBehavior = scrollBehavior,
     )
+}
+
+/**
+ * The version of the extension that ships a source, or `null` for the built-in ones.
+ *
+ * Read from the installed list rather than stored on the source, because a source object has no
+ * idea which APK it came out of.
+ */
+@Composable
+private fun installedExtensionVersion(sourceId: Long?): String? {
+    if (sourceId == null) return null
+    val extensionManager = remember { Injekt.get<AnimeExtensionManager>() }
+    val installed by extensionManager.installedExtensionsFlow.collectAsState()
+    return remember(sourceId, installed) {
+        installed.firstOrNull { extension -> extension.sources.any { it.id == sourceId } }?.versionName
+    }
 }

@@ -357,7 +357,12 @@ data object AnimeLibraryTab : Tab {
                             )
                             displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
                         },
-                        categories = state.categories.map { it.visualName },
+                        // A single unnamed system category is not a choice, so the chip row
+                        // would only be showing the word "Default" with nothing to switch to.
+                        categories = state.categories
+                            .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
+                            .orEmpty()
+                            .map { it.visualName },
                         categoryCounts = state.categories.map { state.getAnimeCountForCategory(it) },
                         activeCategoryIndex = screenModel.activeCategoryIndex,
                         onSelectCategory = { screenModel.activeCategoryIndex = it },
