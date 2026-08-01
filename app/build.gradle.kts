@@ -145,6 +145,12 @@ android {
         getByName("benchmark").res.directories.add("src/debug/res")
     }
 
+    androidResources {
+        // The bundled bubble-detector weights are already compressed; letting aapt deflate them
+        // again would break ONNX Runtime's memory-mapped load path.
+        noCompress += listOf("onnx")
+    }
+
     splits {
         abi {
             isEnable = true
@@ -156,6 +162,17 @@ android {
 
     packaging {
         jniLibs {
+            // Two copies of libonnxruntime.so reach the merge: one inside the moonshine-voice AAR
+            // (used by the novel reader's text-to-speech) and one from onnxruntime-android, which the
+            // translation detector needs for the Java API that moonshine does not expose.
+            //
+            // Only one can ship, and which one wins is not worth relying on — so the onnxruntime
+            // version in the catalogue is pinned to the version moonshine bundles (1.23.2). Keep them
+            // in step: a JNI library built against a different runtime version fails with
+            // UnsatisfiedLinkError the first time a session is created, which surfaces as translation
+            // silently falling back to the untranslated page.
+            pickFirsts += "**/libonnxruntime.so"
+
             keepDebugSymbols += listOf(
                 "libandroidx.graphics.path",
                 "libarchive-jni",
@@ -274,6 +291,19 @@ dependencies {
     // native ONNX runtimes; the voice models themselves are downloaded at runtime rather than
     // bundled, so this adds no model weight to the APK.
     implementation(libs.moonshine.voice)
+
+    // On-device manga translation: YOLOv8-seg speech-bubble detector (ONNX Runtime) plus ML Kit
+    // text recognition for CJK glyph geometry. Both run fully offline; the 12 MB ONNX model is
+    // bundled in assets/translation/ and the ML Kit models are bundled by the AAR.
+    //
+    // moonshine-voice bundles libonnxruntime.so inside its own AAR but does not expose the
+    // `ai.onnxruntime` Java API, so the artifact is required even though the native library is
+    // already present. See the pickFirsts rule in `packaging` for how the duplicate is resolved.
+    implementation(libs.onnxruntime.android)
+    implementation(libs.mlkit.text.base)
+    implementation(libs.mlkit.text.japanese)
+    implementation(libs.mlkit.text.chinese)
+    implementation(libs.mlkit.text.korean)
 
     implementation(libs.androidx.sqlite.bundled)
 

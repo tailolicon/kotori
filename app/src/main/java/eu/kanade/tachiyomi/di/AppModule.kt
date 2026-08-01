@@ -207,6 +207,11 @@ class AppModule(val app: Application) : InjektModule {
         // Shared extension-repo service used by the ported Aniyomi anime extension-repo interactors
         addSingletonFactory { mihon.domain.extensionrepo.service.ExtensionRepoService(get(), get()) }
 
+        // On-device manga/novel translation. Held as a singleton because it owns the ONNX detector
+        // session and the translated-page cache, both of which are expensive to recreate.
+        addSingletonFactory { mihon.feature.translation.TranslationManager(app, get()) }
+        addSingletonFactory { mihon.feature.translation.novel.NovelTranslator(app, get()) }
+
         // Asynchronously init expensive components off the main thread for a faster cold start.
         // (These are IO-bound singletons — sources, SQLite drivers, download caches — that
         // previously ran on the main executor and janked startup, doubly so after the anime port.)

@@ -6,6 +6,7 @@ import android.app.SearchManager
 import android.app.assist.AssistContent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -154,7 +155,17 @@ class MainActivity : BaseActivity() {
         registerSecureActivity(this)
     }
 
+    private fun applyKotoriOrientationPolicy() {
+        val deviceConfiguration = applicationContext.resources.configuration
+        requestedOrientation = if (deviceConfiguration.smallestScreenWidthDp >= 600) {
+            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyKotoriOrientationPolicy()
         val isLaunch = savedInstanceState == null
 
         // Prevent splash screen showing up on configuration changes

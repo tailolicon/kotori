@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.feature.translation.TRANSLATION_PREFETCH_CHAPTERS
+import mihon.feature.translation.novel.NovelTranslator
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -41,6 +43,7 @@ class NovelReaderViewModel(
     private val upsertHistory: UpsertHistory = Injekt.get(),
     private val sourceManager: SourceManager = Injekt.get(),
     private val downloadProvider: DownloadProvider = Injekt.get(),
+    private val novelTranslator: NovelTranslator = Injekt.get(),
 ) {
 
     data class State(
@@ -56,6 +59,8 @@ class NovelReaderViewModel(
         val startPercent: Int = 0,
         /** Set when the source wants its own page to render the chapter; [content] is then unused. */
         val webUrl: String? = null,
+        /** True while the chapter body is being translated. */
+        val isTranslating: Boolean = false,
     )
 
     private val _state = MutableStateFlow(State())
@@ -131,6 +136,21 @@ class NovelReaderViewModel(
             }
         }
 
+        // Translation runs after the text is in hand and is cache-backed, so revisiting a chapter is
+        // instant. It falls back to the original body on any failure.
+        val displayText = if (text.isNotBlank() && novelTranslator.isEnabled(mangaId)) {
+            _state.update { it.copy(isTranslating = true) }
+            novelTranslator.translateChapter(
+                mangaId = mangaId,
+                chapterId = chapter.id,
+                chapterName = chapter.name,
+                seriesTitle = manga.title,
+                text = text,
+            ).also { _state.update { state -> state.copy(isTranslating = false) } }
+        } else {
+            text
+        }
+
         currentPercent = chapter.lastPageRead.toInt().coerceIn(0, 100)
         readStartedAt = System.currentTimeMillis()
         _state.update {
@@ -138,12 +158,52 @@ class NovelReaderViewModel(
                 manga = manga,
                 chapter = chapter,
                 chapters = chapters,
-                content = text,
+                content = displayText,
                 isLoading = false,
                 isChangingChapter = false,
                 startPercent = currentPercent,
                 webUrl = webUrl,
             )
+        }
+
+        prefetchNextChapters(manga, chapters, chapter, source)
+    }
+
+    /**
+     * Warms the cache for the chapters after this one so the next tap does not wait on the model.
+     *
+     * Fetching a chapter's source text is cheap next to translating it, and the translation is what
+     * would otherwise stall the reader at a chapter boundary.
+     */
+    private fun prefetchNextChapters(
+        manga: Manga,
+        chapters: List<Chapter>,
+        current: Chapter,
+        source: NovelSource,
+    ) {
+        if (!novelTranslator.isEnabled(mangaId)) return
+        val currentIndex = chapters.indexOfFirst { it.id == current.id }
+        if (currentIndex < 0) return
+
+        val upcoming = chapters.drop(currentIndex + 1).take(TRANSLATION_PREFETCH_CHAPTERS)
+        if (upcoming.isEmpty()) return
+
+        scope.launchIO {
+            for (next in upcoming) {
+                val body = runCatching {
+                    downloadProvider.getSavedNovelText(next.name, next.scanlator, next.url, manga.title, source)
+                        ?: source.getChapterText(next.toSChapter())
+                }.getOrNull()
+                if (body.isNullOrBlank()) continue
+
+                novelTranslator.translateChapter(
+                    mangaId = mangaId,
+                    chapterId = next.id,
+                    chapterName = next.name,
+                    seriesTitle = manga.title,
+                    text = body,
+                )
+            }
         }
     }
 
@@ -157,6 +217,19 @@ class NovelReaderViewModel(
         if (state.isChangingChapter || state.chapter?.id == chapterId) return
         _state.update { it.copy(isChangingChapter = true, error = null) }
         flushProgress()
+        scope.launchIO { load(chapterId) }
+    }
+
+    fun isTranslationEnabled(): Boolean = novelTranslator.isEnabled(mangaId)
+
+    /**
+     * Turns translation on or off for this series and reloads the chapter so the change is visible
+     * immediately rather than at the next chapter boundary.
+     */
+    fun toggleTranslation() {
+        val enabled = !novelTranslator.isEnabled(mangaId)
+        novelTranslator.setEnabled(mangaId, enabled)
+        val chapterId = _state.value.chapter?.id ?: return
         scope.launchIO { load(chapterId) }
     }
 

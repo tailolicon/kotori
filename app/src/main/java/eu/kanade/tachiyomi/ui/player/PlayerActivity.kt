@@ -115,6 +115,18 @@ import kotlin.math.ceil
 import kotlin.math.floor
 
 class PlayerActivity : BaseActivity() {
+    private val isPhysicalTablet: Boolean
+        get() = applicationContext.resources.configuration.smallestScreenWidthDp >= 600
+
+    /**
+     * On a tablet held landscape the player *is* the full-bleed screen with the docked episode
+     * drawer (T3) — the phone's stacked video-plus-list composition has no place there, so
+     * leaving fullscreen must not drop into it. Only a portrait window brings that layout back.
+     */
+    private val isTabletLandscape: Boolean
+        get() = isPhysicalTablet &&
+            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     private val viewModel by viewModels<PlayerViewModel>(factoryProducer = { PlayerViewModelProviderFactory(this) })
     private val binding by lazy { PlayerLayoutBinding.inflate(layoutInflater) }
     private val playerObserver by lazy { PlayerObserver(this) }
@@ -236,6 +248,10 @@ class PlayerActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
+        val startsInLandscape = isTabletLandscape
+        fullscreenFromRotation = startsInLandscape
+        playerFullscreen.value = startsInLandscape
+
         setupPlayerMPV()
         setupPlayerAudio()
         setupMediaSession()
@@ -271,7 +287,7 @@ class PlayerActivity : BaseActivity() {
                     viewModel = viewModel,
                     onBackPress = {
                         when {
-                            playerFullscreen.value -> togglePlayerFullscreen()
+                            playerFullscreen.value && !isTabletLandscape -> togglePlayerFullscreen()
                             isPipSupportedAndEnabled && player.paused == false && playerPreferences.pipOnExit().get() ->
                                 enterPictureInPictureMode(createPipParams())
                             else -> finish()
@@ -324,6 +340,7 @@ class PlayerActivity : BaseActivity() {
 
     /** Portrait (video + episode list) vs landscape fullscreen; toggled without recreating mpv. */
     private val playerFullscreen = androidx.compose.runtime.mutableStateOf(false)
+    private var fullscreenFromRotation = false
 
     /** Resume request keyed to the exact file load so a late callback cannot seek another episode. */
     private data class PendingResume(
@@ -341,11 +358,18 @@ class PlayerActivity : BaseActivity() {
     private var resumeLoadToken = 0
 
     private fun togglePlayerFullscreen() {
+        // Nothing to toggle to on a tablet in landscape: the drawer already shows the episode
+        // list, so collapsing would only shrink the video for no gain.
+        if (isTabletLandscape) return
+        fullscreenFromRotation = false
         playerFullscreen.value = !playerFullscreen.value
         applyPlayerLayout()
     }
 
     private fun applyPlayerLayout() {
+        if (isTabletLandscape && !playerFullscreen.value) {
+            playerFullscreen.value = true
+        }
         val fullscreen = playerFullscreen.value
         val lp = binding.videoFrame.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
         if (fullscreen) {
@@ -725,6 +749,29 @@ class PlayerActivity : BaseActivity() {
             viewModel.hideControls()
         }
         super.onConfigurationChanged(newConfig)
+        if (isInPictureInPictureMode) return
+        syncPlayerLayoutToOrientation(newConfig)
+    }
+
+    private fun syncPlayerLayoutToOrientation(configuration: Configuration) {
+        when (configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                if (!playerFullscreen.value) {
+                    fullscreenFromRotation = true
+                    playerFullscreen.value = true
+                    applyPlayerLayout()
+                }
+            }
+            Configuration.ORIENTATION_PORTRAIT -> {
+                if (fullscreenFromRotation && playerFullscreen.value) {
+                    fullscreenFromRotation = false
+                    playerFullscreen.value = false
+                    applyPlayerLayout()
+                } else if (!playerFullscreen.value) {
+                    setupPlayerOrientation()
+                }
+            }
+        }
     }
 
     fun showToast(message: String) {
@@ -973,11 +1020,14 @@ class PlayerActivity : BaseActivity() {
             ),
         )
         builder.setSourceRectHint(pipRect)
-        player.videoH?.let {
-            val height = it
-            val width = it * player.getVideoOutAspect()!!
-            val rational = Rational(height, width.toInt()).toFloat()
-            if (rational in 0.42..2.38) builder.setAspectRatio(Rational(width.toInt(), height))
+        player.videoH?.let { height ->
+            val aspect = player.getVideoOutAspect()
+            if (height > 0 && aspect != null && aspect.isFinite() && aspect > 0.0) {
+                val width = (height * aspect).toInt()
+                if (width > 0 && width.toFloat() / height in 0.42..2.38) {
+                    builder.setAspectRatio(Rational(width, height))
+                }
+            }
         }
         return builder.build()
     }
@@ -1017,13 +1067,29 @@ class PlayerActivity : BaseActivity() {
         }
 
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (!isInPictureInPictureMode) {
+            syncPlayerLayoutToOrientation(newConfig)
+        }
     }
 
     private fun setupPlayerOrientation() {
         if (player.isExiting) return
-        // Portrait shows the video + episode list; the orientation preference only applies in fullscreen.
+        if (!isPhysicalTablet) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            return
+        }
+        // Keep the portrait player sensor-aware so a physical landscape rotation can enter fullscreen.
         if (!playerFullscreen.value) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            requestedOrientation = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            }
+            return
+        }
+        // Rotation-driven fullscreen must remain sensor-aware so rotating back restores portrait.
+        if (fullscreenFromRotation) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
             return
         }
         requestedOrientation = when (playerPreferences.defaultPlayerOrientationType().get()) {
@@ -1275,11 +1341,20 @@ class PlayerActivity : BaseActivity() {
         }
 
         val loadToken = synchronized(pendingResumeLock) { ++resumeLoadToken }
+        val usesX86Abi = Build.SUPPORTED_ABIS.any { it.startsWith("x86") }
         val preferH264 = resumeSeconds != null &&
             resumeSeconds > 0.5 &&
-            Build.SUPPORTED_ABIS.any { it.startsWith("x86") } &&
+            usesX86Abi &&
             video.mpvArgs.none { (option) -> option == "vid" }
-        val videoOptions = video.mpvArgs.joinToString(",") { (option, value) ->
+        // MuMu exposes MediaCodec decoders that accept VP9/H.264 but fail once mpv binds the
+        // rendering surface (audio continues while the video stays blank). Keep this per-file so
+        // ARM phones retain hardware decoding and an explicit source-provided option still wins.
+        val effectiveMpvArgs = if (usesX86Abi && video.mpvArgs.none { (option) -> option == "hwdec" }) {
+            video.mpvArgs + ("hwdec" to "no")
+        } else {
+            video.mpvArgs
+        }
+        val videoOptions = effectiveMpvArgs.joinToString(",") { (option, value) ->
             "$option=\"$value\""
         }
 

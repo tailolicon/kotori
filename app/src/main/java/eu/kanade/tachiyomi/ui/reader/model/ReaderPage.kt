@@ -7,8 +7,14 @@ open class ReaderPage(
     index: Int,
     url: String = "",
     imageUrl: String? = null,
-    var stream: (() -> InputStream)? = null,
+    stream: (() -> InputStream)? = null,
 ) : Page(index, url, imageUrl, null) {
+
+    /**
+     * Open. Subclasses interpose on page bytes between the loader that fetched them and the viewer
+     * that decodes them — see `TranslatedReaderPage`, which substitutes translated artwork.
+     */
+    open var stream: (() -> InputStream)? = stream
 
     open lateinit var chapter: ReaderChapter
 }

@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import mihon.core.archive.archiveReader
 import mihon.core.archive.epubReader
+import mihon.feature.translation.TranslationManager
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
@@ -16,6 +17,8 @@ import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.source.local.LocalSource
 import tachiyomi.source.local.io.Format
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /**
  * Loader used to retrieve the [PageLoader] for a given chapter.
@@ -26,6 +29,7 @@ class ChapterLoader(
     private val downloadProvider: DownloadProvider,
     private val manga: Manga,
     private val source: Source,
+    private val translationManager: TranslationManager = Injekt.get(),
 ) {
 
     /**
@@ -73,9 +77,22 @@ class ChapterLoader(
     }
 
     /**
-     * Returns the page loader to use for this [chapter].
+     * Returns the page loader to use for this [chapter], wrapped for translation when the user has
+     * enabled it for this manga.
      */
     private fun getPageLoader(chapter: ReaderChapter): PageLoader {
+        val base = getBasePageLoader(chapter)
+        if (!translationManager.isEnabled(manga.id)) return base
+
+        return TranslatingPageLoader(
+            delegate = base,
+            mangaId = manga.id,
+            chapterId = chapter.chapter.id ?: return base,
+            manager = translationManager,
+        )
+    }
+
+    private fun getBasePageLoader(chapter: ReaderChapter): PageLoader {
         val dbChapter = chapter.chapter
         val isDownloaded = downloadManager.isChapterDownloaded(
             dbChapter.name,

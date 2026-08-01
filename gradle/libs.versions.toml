@@ -54,6 +54,10 @@ kotlinx-serialization = "1.11.0"
 ktlint = "1.8.0"
 leakCanary = "2.14"
 logcat = "0.4"
+mlkit-text = "16.0.1"
+# Must match the libonnxruntime.so that moonshine-voice bundles: only one native runtime can ship,
+# and a JNI library built against a different version fails to link at load time.
+onnxruntime = "1.23.2"
 markdown = "0.43.0"
 material = "1.12.0"
 media = "1.7.0"
@@ -167,6 +171,10 @@ leakCanary-plumber = { module = "com.squareup.leakcanary:plumber-android", versi
 logcat = { module = "com.squareup.logcat:logcat", version.ref = "logcat" }
 markdown-coil = { module = "com.mikepenz:multiplatform-markdown-renderer-coil3", version.ref = "markdown" }
 markdown-core = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "markdown" }
+mlkit-text-base = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text" }
+mlkit-text-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlkit-text" }
+mlkit-text-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "mlkit-text" }
+mlkit-text-korean = { module = "com.google.mlkit:text-recognition-korean", version.ref = "mlkit-text" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 mediasession = { module = "androidx.media:media", version.ref = "media" }
 materialKolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
@@ -181,6 +189,7 @@ okhttp-dnsOverHttps = { module = "com.squareup.okhttp3:okhttp-dnsoverhttps", ver
 okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
 okhttp-zstd = { module = "com.squareup.okhttp3:okhttp-zstd", version.ref = "okhttp" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 photoView = { module = "com.github.chrisbanes:PhotoView", version.ref = "photoView" }
 quickJs = { module = "com.github.zhanghai.quickjs-java:quickjs-android", version.ref = "quickJs" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }

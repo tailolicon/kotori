@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.source.anime.builtin.youtube
 
+import android.os.Build
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -175,23 +176,39 @@ abstract class YoutubeChannelSource(
         // audio track makes mpv buffer forever (the endless spinner / 4-second start). Muxed
         // streams play smoothly from 0, so they go first; DASH is only offered for higher quality.
 
-        // 1) HLS master (muxed, adaptive) — best for mpv when present.
-        info.hlsUrl?.takeIf { it.isNotBlank() }?.let {
-            videos += Video(videoUrl = it, videoTitle = "Tự động (HLS)", subtitleTracks = subtitles)
-        }
-
-        // 2) Progressive muxed streams (single URL with audio) — reliable default, up to 720p.
-        info.videoStreams
+        val preferProgressive = Build.SUPPORTED_ABIS.any { it.startsWith("x86") }
+        val progressiveVideos = info.videoStreams
             .filter { it.content?.isNotBlank() == true }
             .sortedByDescending { it.resolution.resHeight() }
-            .forEach { vs ->
-                videos += Video(
+            .mapIndexed { index, vs ->
+                Video(
                     videoUrl = vs.content,
                     videoTitle = vs.resolution.ifBlank { "video" },
+                    preferred = preferProgressive && index == 0,
                     subtitleTracks = subtitles,
                 )
             }
 
+        val hlsVideo = info.hlsUrl
+            ?.takeIf { it.isNotBlank() }
+            ?.let {
+                Video(
+                    videoUrl = it,
+                    videoTitle = "Tự động (HLS)",
+                    preferred = !preferProgressive,
+                    subtitleTracks = subtitles,
+                )
+            }
+
+        // MuMu/x86 can spend 30+ seconds opening YouTube HLS, while progressive starts in ~2 s.
+        // Keep adaptive HLS first on ARM phones so their default quality does not regress.
+        if (preferProgressive) {
+            videos += progressiveVideos
+            hlsVideo?.let(videos::add)
+        } else {
+            hlsVideo?.let(videos::add)
+            videos += progressiveVideos
+        }
         // 3) DASH video-only + best audio (higher resolution, but can buffer) — offered last.
         if (bestAudioUrl != null) {
             info.videoOnlyStreams

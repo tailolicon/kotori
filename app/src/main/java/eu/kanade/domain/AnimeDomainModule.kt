@@ -31,6 +31,9 @@ import mihon.domain.extensionrepo.anime.interactor.ReplaceAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.interactor.UpdateAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
 import mihon.domain.items.episode.interactor.FilterEpisodesForDownload
+import eu.kanade.tachiyomi.network.NetworkHelper
+import mihon.data.airing.AniListAiringApi
+import mihon.domain.airing.interactor.GetAiringSchedule
 import mihon.domain.upcoming.anime.interactor.GetUpcomingAnime
 import tachiyomi.data.category.anime.AnimeCategoryRepositoryImpl
 import tachiyomi.data.custombutton.CustomButtonRepositoryImpl
@@ -130,6 +133,8 @@ class AnimeDomainModule : InjektModule {
         addFactory { GetAnimeSeasonsByParentId(get()) }
         addFactory { GetNextEpisodes(get(), get(), get()) }
         addFactory { GetUpcomingAnime(get()) }
+        addSingletonFactory { AniListAiringApi(get<NetworkHelper>().client) }
+        addFactory { GetAiringSchedule(get(), get(), get()) }
         addFactory { ResetAnimeViewerFlags(get()) }
         addFactory { SetAnimeEpisodeFlags(get()) }
         addFactory { SetAnimeSeasonFlags(get()) }

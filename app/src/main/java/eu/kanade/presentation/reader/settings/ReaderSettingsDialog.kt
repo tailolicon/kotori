@@ -29,6 +29,8 @@ fun ReaderSettingsDialog(
         stringResource(MR.strings.pref_category_reading_mode),
         stringResource(MR.strings.pref_category_general),
         stringResource(MR.strings.custom_filter),
+        // Not a resource yet: the translation feature ships Vietnamese-only copy for now.
+        "Dịch",
     )
     val pagerState = rememberPagerState { tabTitles.size }
 
@@ -63,6 +65,7 @@ fun ReaderSettingsDialog(
                     0 -> ReadingModePage(screenModel)
                     1 -> GeneralPage(screenModel)
                     2 -> ColorFilterPage(screenModel)
+                    3 -> TranslationPage(screenModel)
                 }
             }
         }
