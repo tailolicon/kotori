@@ -174,6 +174,7 @@ data object AnimeLibraryTab : Tab {
 
         val tabletUi = isKotoriTablet()
         val resumeItems = rememberKotoriResumeItems(
+            mode = activeMode,
             onOpenManga = { navigator.push(MangaScreen(it)) },
             onOpenAnime = { navigator.push(AnimeScreen(it)) },
         )

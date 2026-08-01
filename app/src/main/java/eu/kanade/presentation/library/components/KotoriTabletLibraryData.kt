@@ -14,6 +14,10 @@ import tachiyomi.domain.history.anime.interactor.GetAnimeHistory
 import tachiyomi.domain.history.anime.model.AnimeHistoryWithRelations
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.model.HistoryWithRelations
+import eu.kanade.tachiyomi.source.NovelSource
+import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.library.service.LibraryPreferences
 import mihon.domain.upcoming.anime.interactor.GetUpcomingAnime
 import tachiyomi.presentation.core.util.collectAsState
@@ -26,23 +30,29 @@ import java.time.ZoneId
 private const val RESUME_PANEL_SIZE = 4
 
 /**
- * The four most recent in-progress entries across all three content types, for the
- * persistent `TIẾP TỤC` panel of the tablet library (T1).
+ * The four most recent in-progress entries for the persistent `TIẾP TỤC` panel (T1).
+ *
+ * Kept to the mode being browsed. The mock draws a mixed panel, but everywhere else in this
+ * app the modes are separate surfaces — Updates and History already split them — and a panel
+ * that answers "carry on reading" with an anime episode is answering a different question.
  */
 @Composable
 fun rememberKotoriResumeItems(
+    mode: MediaType,
     onOpenManga: (Long) -> Unit,
     onOpenAnime: (Long) -> Unit,
 ): List<KotoriTabletResumeItem> {
     val mangaHistory by produceState<List<HistoryWithRelations>>(initialValue = emptyList()) {
-        Injekt.get<GetHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE) }
+        Injekt.get<GetHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE * 8) }
     }
     val animeHistory by produceState<List<AnimeHistoryWithRelations>>(initialValue = emptyList()) {
-        Injekt.get<GetAnimeHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE) }
+        Injekt.get<GetAnimeHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE * 2) }
     }
 
-    return remember(mangaHistory, animeHistory) {
-        val manga = mangaHistory.map { history ->
+    val isNovelEntry = rememberNovelEntryLookup(remember(mangaHistory) { mangaHistory.map { it.mangaId } })
+
+    return remember(mangaHistory, animeHistory, mode, isNovelEntry) {
+        val manga = mangaHistory.filter { isNovelEntry(it.mangaId) == (mode == MediaType.NOVEL) }.map { history ->
             KotoriTabletResumeItem(
                 key = "manga-${history.id}",
                 title = history.title,
@@ -77,7 +87,8 @@ fun rememberKotoriResumeItems(
                 onClick = { onOpenAnime(history.animeId) },
             ) to (history.seenAt?.time ?: 0L)
         }
-        (manga + anime)
+        val forMode = if (mode == MediaType.ANIME) anime else manga
+        forMode
             .sortedByDescending { it.second }
             .take(RESUME_PANEL_SIZE)
             .map { it.first }
@@ -128,4 +139,26 @@ private fun formatRemaining(seconds: Long): String {
     val minutes = seconds / 60
     val rest = seconds % 60
     return "%02d:%02d".format(minutes, rest)
+}
+
+/**
+ * Whether a history entry is a novel.
+ *
+ * Novels ride the manga stack, so history hands both back together; the source is what tells
+ * them apart. Resolved through the source manager rather than the database because that is
+ * where the novel flag lives.
+ */
+@Composable
+private fun rememberNovelEntryLookup(ids: List<Long>): (Long) -> Boolean {
+    val novelIds by produceState(initialValue = emptySet<Long>(), ids) {
+        val getManga = Injekt.get<GetManga>()
+        val sourceManager = Injekt.get<SourceManager>()
+        value = withIOContext {
+            ids.mapNotNull { id ->
+                val manga = getManga.await(id) ?: return@mapNotNull null
+                id.takeIf { sourceManager.get(manga.source) is NovelSource }
+            }.toSet()
+        }
+    }
+    return { it in novelIds }
 }

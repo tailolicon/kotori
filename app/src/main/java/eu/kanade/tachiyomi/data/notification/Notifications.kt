@@ -32,6 +32,9 @@ object Notifications {
     const val CHANNEL_LIBRARY_ERROR = "library_errors_channel"
     const val ID_LIBRARY_ERROR = -102
 
+    /** "nothing to update" — why a refresh changed nothing. */
+    const val ID_LIBRARY_SKIPPED = -103
+
     /**
      * Notification channel and ids used by the downloader.
      */

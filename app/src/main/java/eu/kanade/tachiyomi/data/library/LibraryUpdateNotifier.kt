@@ -143,6 +143,26 @@ class LibraryUpdateNotifier(
      * @param failed Number of entries that failed to update.
      * @param uri Uri for error log file containing all titles that failed.
      */
+    /**
+     * Says why an update that ran changed nothing.
+     *
+     * Without this, "Cập nhật thông minh" filtering out every entry is indistinguishable from a
+     * refresh button that does not work.
+     */
+    fun showUpdateSkippedNotification(skipped: Int) {
+        if (skipped == 0) return
+
+        context.notify(
+            Notifications.ID_LIBRARY_SKIPPED,
+            Notifications.CHANNEL_LIBRARY_PROGRESS,
+        ) {
+            setContentTitle("Không có gì để cập nhật")
+            setContentText("$skipped bộ bị bỏ qua bởi Cập nhật thông minh. Tắt bớt trong Cài đặt › Thư viện.")
+            setSmallIcon(R.drawable.ic_kotori_notification)
+            setAutoCancel(true)
+        }
+    }
+
     fun showUpdateErrorNotification(failed: Int, uri: Uri) {
         if (failed == 0) {
             return

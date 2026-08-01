@@ -117,7 +117,7 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
         libraryPreferences.lastUpdatedTimestamp.set(Instant.now().toEpochMilli())
 
         val categoryId = inputData.getLong(KEY_CATEGORY, -1L)
-        addAnimeToQueue(categoryId)
+        addAnimeToQueue(categoryId, isAutoUpdate = tags.contains(WORK_NAME_AUTO))
 
         return withIOContext {
             try {
@@ -156,7 +156,8 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
      *
      * @param categoryId the ID of the category to update, or -1 if no category specified.
      */
-    private suspend fun addAnimeToQueue(categoryId: Long) {
+    /** See the manga job: smart-update rules are for the background run, not a manual one. */
+    private suspend fun addAnimeToQueue(categoryId: Long, isAutoUpdate: Boolean) {
         val libraryAnime = getLibraryAnime.await()
 
         val listToUpdate = if (categoryId != -1L) {
@@ -200,7 +201,8 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
             }
         }
 
-        val restrictions = libraryPreferences.autoUpdateItemRestrictions().get()
+        val restrictions =
+            if (isAutoUpdate) libraryPreferences.autoUpdateItemRestrictions().get() else emptySet()
         val skippedUpdates = mutableListOf<Pair<Anime, String?>>()
         val (_, fetchWindowUpperBound) = animeFetchInterval.getWindow(ZonedDateTime.now())
 

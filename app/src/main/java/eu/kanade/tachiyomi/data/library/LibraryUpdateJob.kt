@@ -111,7 +111,7 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
         libraryPreferences.lastUpdatedTimestamp.set(Instant.now().toEpochMilli())
 
         val categoryId = inputData.getLong(KEY_CATEGORY, -1L)
-        addMangaToQueue(categoryId)
+        addMangaToQueue(categoryId, isAutoUpdate = tags.contains(WORK_NAME_AUTO))
 
         return withIOContext {
             try {
@@ -149,7 +149,12 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
      *
      * @param categoryId the ID of the category to update, or -1 if no category specified.
      */
-    private suspend fun addMangaToQueue(categoryId: Long) {
+    /**
+     * @param isAutoUpdate the smart-update rules exist to keep the *background* job cheap. A
+     * manual refresh is someone asking for this to update now, so applying them there means a
+     * library where most entries have an unread chapter refreshes nothing and says nothing.
+     */
+    private suspend fun addMangaToQueue(categoryId: Long, isAutoUpdate: Boolean) {
         val libraryManga = getLibraryManga.await()
 
         val listToUpdate = if (categoryId != -1L) {
@@ -165,14 +170,15 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             }
         }
 
-        val restrictions = libraryPreferences.autoUpdateMangaRestrictions.get()
+        val restrictions = if (isAutoUpdate) libraryPreferences.autoUpdateMangaRestrictions.get() else emptySet()
         val skippedUpdates = mutableListOf<Pair<Manga, String?>>()
         val (_, fetchWindowUpperBound) = fetchInterval.getWindow(ZonedDateTime.now())
 
         mangaToUpdate = listToUpdate
             .filter {
                 when {
-                    it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE && it.totalChapters > 0L -> {
+                    isAutoUpdate && it.manga.updateStrategy == UpdateStrategy.ONLY_FETCH_ONCE &&
+                        it.totalChapters > 0L -> {
                         skippedUpdates.add(
                             it.manga to context.stringResource(MR.strings.skipped_reason_not_always_update),
                         )
@@ -208,8 +214,12 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
 
         notifier.showQueueSizeWarningNotificationIfNeeded(mangaToUpdate)
 
+        if (skippedUpdates.isNotEmpty() && mangaToUpdate.isEmpty()) {
+            // Refreshing and seeing nothing change reads as a broken button. If every entry was
+            // filtered out, the reason belongs on screen, not only in logcat.
+            notifier.showUpdateSkippedNotification(skippedUpdates.size)
+        }
         if (skippedUpdates.isNotEmpty()) {
-            // TODO: surface skipped reasons to user?
             logcat {
                 skippedUpdates
                     .groupBy { it.second }
