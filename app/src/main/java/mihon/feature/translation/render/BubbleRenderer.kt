@@ -239,7 +239,14 @@ class BubbleRenderer(private val context: Context) {
         // picture, not dialogue: the detector finds it, the provider dutifully translates it, and
         // the result is a Vietnamese caption stamped over the title art. Real speech is drawn in
         // black or white essentially without exception, so saturation is the tell.
-        if (saturationOf(inkColor) > MAX_DIALOGUE_SATURATION) {
+        //
+        // Brightness has to gate the test. HSV saturation is (max-min)/max, so at low brightness a
+        // couple of levels of colour noise reads as fully saturated: near-black ink sampled as
+        // #0c1924 scores 0.67 and a perfectly ordinary line of dialogue over dark artwork gets
+        // dropped. Only lettering bright enough for its hue to be real can be judged by hue.
+        if (brightnessOf(inkColor) >= MIN_SATURATION_BRIGHTNESS &&
+            saturationOf(inkColor) > MAX_DIALOGUE_SATURATION
+        ) {
             logcat {
                 "Skipping ${bubble.box}: saturated ink ${Integer.toHexString(inkColor)} with no bubble " +
                     "— decorative lettering, not dialogue"
@@ -390,6 +397,10 @@ class BubbleRenderer(private val context: Context) {
     }
 
     private fun fallbackInk(lightOnDark: Boolean): Int = if (lightOnDark) Color.WHITE else Color.BLACK
+
+    /** HSV value in 0..255: the largest channel. */
+    private fun brightnessOf(color: Int): Int =
+        maxOf(Color.red(color), Color.green(color), Color.blue(color))
 
     /** HSV saturation in 0..1. Zero for any grey, including pure black and pure white. */
     private fun saturationOf(color: Int): Float {
@@ -588,6 +599,8 @@ class BubbleRenderer(private val context: Context) {
         const val MIN_LEFTOVER_GLYPHS = 40
         /** Above this ink saturation, unenclosed lettering is title/logo art rather than speech. */
         const val MAX_DIALOGUE_SATURATION = 0.35f
+        /** Below this brightness, hue is noise and the saturation test must not be applied. */
+        const val MIN_SATURATION_BRIGHTNESS = 110
         const val TEXT_PADDING_RATIO = 0.08f
         const val CHAR_ASPECT = 0.62f
         const val MIN_FONT_SIZE = 9
