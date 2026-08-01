@@ -69,7 +69,9 @@ class BubbleTextRecognizer {
             recognizeBlocking(recognizer, input, clamped.left, clamped.top, upscale)
         } finally {
             if (input !== crop) input.recycle()
-            crop.recycle()
+            // A box covering the whole page makes createBitmap return the page itself; recycling it
+            // would destroy the bitmap the caller is still translating.
+            if (crop !== bitmap) crop.recycle()
         }
         return result
     }

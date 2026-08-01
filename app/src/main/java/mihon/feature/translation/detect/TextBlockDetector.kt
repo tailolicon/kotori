@@ -50,7 +50,11 @@ class TextBlockDetector {
                 try {
                     found += readBlocks(recognizer, band, top)
                 } finally {
-                    band.recycle()
+                    // createBitmap hands back the *source* when the requested region is the whole
+                    // image. Recycling that destroys the page mid-translation, and every later stage
+                    // fails with "cannot use a recycled source" — which is what happened to short
+                    // pages, whose single band covers everything.
+                    if (band !== bitmap) band.recycle()
                 }
                 if (top + height >= bitmap.height) break
                 top += BAND_HEIGHT - BAND_OVERLAP
