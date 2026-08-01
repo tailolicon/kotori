@@ -31,6 +31,8 @@ class UpdatesRepositoryImpl(
     override fun subscribeAll(
         after: Long,
         limit: Long,
+        novelSourceIds: List<Long>,
+        onlyNovelSources: Boolean,
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,
@@ -40,6 +42,10 @@ class UpdatesRepositoryImpl(
             .getRecentUpdatesWithFilters(
                 after = after,
                 limit = limit,
+                // `IN ()` is a syntax error, and an id no source can have keeps the comparison
+                // honest: nothing is a novel until the source list has actually loaded.
+                novelSourceIds = novelSourceIds.ifEmpty { listOf(-1L) },
+                onlyNovelSources = onlyNovelSources,
                 read = unread?.let { !it },
                 started = started?.toLong(),
                 bookmarked = bookmarked,

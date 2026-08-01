@@ -15,6 +15,8 @@ class GetUpdates(
 
     fun subscribe(
         instant: Instant,
+        novelSourceIds: List<Long>,
+        onlyNovelSources: Boolean,
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,
@@ -23,6 +25,8 @@ class GetUpdates(
         return repository.subscribeAll(
             instant.toEpochMilli(),
             limit = 500,
+            novelSourceIds = novelSourceIds,
+            onlyNovelSources = onlyNovelSources,
             unread = unread,
             started = started,
             bookmarked = bookmarked,

@@ -10,6 +10,8 @@ interface UpdatesRepository {
     fun subscribeAll(
         after: Long,
         limit: Long,
+        novelSourceIds: List<Long>,
+        onlyNovelSources: Boolean,
         unread: Boolean?,
         started: Boolean?,
         bookmarked: Boolean?,

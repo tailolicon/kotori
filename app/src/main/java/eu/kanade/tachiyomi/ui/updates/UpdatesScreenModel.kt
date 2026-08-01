@@ -85,29 +85,41 @@ class UpdatesScreenModel(
             // Set date limit for recent chapters
             val limit = ZonedDateTime.now().minusMonths(3).toInstant()
 
-            combine(
+            // The mode belongs in the query, not after it: this list is capped at 500 rows, and a
+            // manga source that just refreshed can fill all 500 on its own, leaving the Novel tab
+            // looking empty when it is not.
+            val novelSourceIds = sourceManager.sources
+                .map { sources -> sources.filterIsInstance<NovelSource>().map { it.id } }
+                .distinctUntilChanged()
+
+            val updates = combine(
                 // needed for SQL filters (unread, started, bookmarked, etc)
-                getUpdatesItemPreferenceFlow()
-                    .distinctUntilChanged()
-                    .flatMapLatest {
-                        getUpdates.subscribe(
-                            limit,
-                            unread = it.filterUnread.toBooleanOrNull(),
-                            started = it.filterStarted.toBooleanOrNull(),
-                            bookmarked = it.filterBookmarked.toBooleanOrNull(),
-                            hideExcludedScanlators = it.filterExcludedScanlators,
-                        ).distinctUntilChanged()
-                    },
+                getUpdatesItemPreferenceFlow().distinctUntilChanged(),
+                novelSourceIds,
+                uiPreferences.activeMediaMode.changes().distinctUntilChanged(),
+                ::Triple,
+            ).flatMapLatest { (preferences, sourceIds, activeMode) ->
+                getUpdates.subscribe(
+                    limit,
+                    novelSourceIds = sourceIds,
+                    onlyNovelSources = activeMode == MediaType.NOVEL,
+                    unread = preferences.filterUnread.toBooleanOrNull(),
+                    started = preferences.filterStarted.toBooleanOrNull(),
+                    bookmarked = preferences.filterBookmarked.toBooleanOrNull(),
+                    hideExcludedScanlators = preferences.filterExcludedScanlators,
+                ).distinctUntilChanged()
+            }
+
+            combine(
+                updates,
                 downloadCache.changes,
                 downloadManager.queueState,
                 // needed for Kotlin filters (downloaded)
                 getUpdatesItemPreferenceFlow().distinctUntilChanged { old, new ->
                     old.filterDownloaded == new.filterDownloaded
                 },
-                uiPreferences.activeMediaMode.changes().distinctUntilChanged(),
-            ) { updates, _, _, itemPreferences, activeMode ->
-                updates
-                    .filter { (sourceManager.get(it.sourceId) is NovelSource) == (activeMode == MediaType.NOVEL) }
+            ) { updateList, _, _, itemPreferences ->
+                updateList
                     .toUpdateItems()
                     .applyFilters(itemPreferences)
             }

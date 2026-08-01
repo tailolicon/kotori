@@ -85,6 +85,7 @@ import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
@@ -95,6 +96,7 @@ import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import mihon.feature.localmedia.LocalMediaColumn
@@ -114,6 +116,7 @@ import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -162,8 +165,20 @@ data object LibraryTab : Tab {
         val state by screenModel.state.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
-        val lastRead by produceState<HistoryWithRelations?>(initialValue = null) {
-            Injekt.get<GetHistory>().subscribe("").collectLatest { value = it.firstOrNull() }
+        // Same mode split as the grid below it — a Novel library topped by "carry on reading" a
+        // manga is answering a question nobody asked here.
+        val lastRead by produceState<HistoryWithRelations?>(initialValue = null, activeMode) {
+            // Paired with the source list because extensions load after the first frame; asking
+            // once would decide nothing is a novel and never revisit it.
+            combine(
+                Injekt.get<GetHistory>().subscribe(""),
+                Injekt.get<SourceManager>().sources,
+            ) { history, sources ->
+                val novelSources = sources.filterIsInstance<NovelSource>().mapTo(mutableSetOf()) { it.id }
+                history.firstOrNull {
+                    (it.coverData.sourceId in novelSources) == (activeMode == MediaType.NOVEL)
+                }
+            }.collectLatest { value = it }
         }
 
         val onContinueReading: (LibraryManga) -> Unit = {

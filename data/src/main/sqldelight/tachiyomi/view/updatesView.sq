@@ -35,6 +35,10 @@ getRecentUpdatesWithFilters:
 SELECT *
 FROM updatesView
 WHERE dateUpload > :after
+-- Novels and manga share this table, so the tab being shown has to be part of the query. Doing
+-- it in Kotlin after the LIMIT lets whichever side has the most recent chapters fill the whole
+-- page and starve the other one, which reads as "there are no updates".
+AND :onlyNovelSources = (source IN :novelSourceIds)
 AND (:read IS NULL OR read = :read)
 -- Started means some progress but not finished, Read means finished chapter, thus:
 AND (
