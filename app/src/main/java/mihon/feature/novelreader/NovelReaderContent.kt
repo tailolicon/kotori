@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
+import eu.kanade.presentation.util.formatChapterNumber
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -121,6 +123,28 @@ fun NovelReaderContent(
 
     KotoriNovelPaneFrame(
         enabled = tabletPanes,
+        bottomBar = {
+            val paper = theme.paper()
+            KotoriNovelChapterBar(
+                previousLabel = previousChapter?.let { "Ch. ${formatChapterNumber(it.chapterNumber)}" },
+                nextLabel = nextChapter?.let { "Ch. ${formatChapterNumber(it.chapterNumber)}" },
+                progress = state.startPercent / 100f,
+                ink = paper.ink,
+                accent = paper.accent,
+                onPrevious = {
+                    previousChapter?.let {
+                        transitionDirection = ChapterTransitionDirection.PREVIOUS
+                        viewModel.loadChapter(it.id)
+                    }
+                },
+                onNext = {
+                    nextChapter?.let {
+                        transitionDirection = ChapterTransitionDirection.NEXT
+                        viewModel.loadChapter(it.id)
+                    }
+                },
+            )
+        },
         start = {
             KotoriNovelChapterPane(
                 title = state.manga?.title.orEmpty(),
@@ -246,6 +270,7 @@ private fun KotoriNovelPaneFrame(
     enabled: Boolean,
     start: @Composable () -> Unit,
     end: @Composable () -> Unit,
+    bottomBar: @Composable () -> Unit,
     content: @Composable () -> Unit,
 ) {
     if (!enabled) {
@@ -254,7 +279,10 @@ private fun KotoriNovelPaneFrame(
     }
     Row(modifier = Modifier.fillMaxSize()) {
         start()
-        Box(modifier = Modifier.weight(1f)) { content() }
+        Column(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f)) { content() }
+            bottomBar()
+        }
         end()
     }
 }

@@ -29,6 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -286,6 +288,114 @@ fun KotoriNovelChapterPane(
                 fontSize = 10.5.sp,
                 color = Color(0xFF6E6558),
                 modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+/**
+ * T5 · the bar under the reading column: `‹ Ch. 11`, the chapter progress, `Ch. 13 ›`,
+ * on the page's own paper rather than the dark reader chrome.
+ */
+@Composable
+fun KotoriNovelChapterBar(
+    previousLabel: String?,
+    nextLabel: String?,
+    progress: Float,
+    ink: Color,
+    accent: Color,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 54.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (previousLabel != null) {
+            KotoriChapterStep(
+                label = previousLabel,
+                ink = ink,
+                accent = accent,
+                leading = true,
+                onClick = onPrevious,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(ink.copy(alpha = 0.13f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(TEAL_GRADIENT),
+            )
+        }
+        if (nextLabel != null) {
+            KotoriChapterStep(
+                label = nextLabel,
+                ink = ink,
+                accent = accent,
+                leading = false,
+                onClick = onNext,
+            )
+        }
+    }
+}
+
+@Composable
+private fun KotoriChapterStep(
+    label: String,
+    ink: Color,
+    accent: Color,
+    leading: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0x8CFFFFFF))
+            .border(1.dp, ink.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 15.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (leading) {
+            Icon(
+                imageVector = Icons.Filled.ChevronLeft,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text(
+            text = label,
+            fontFamily = BeVietnamProFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            color = ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (!leading) {
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
