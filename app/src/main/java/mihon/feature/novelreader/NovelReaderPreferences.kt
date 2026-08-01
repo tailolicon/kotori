@@ -26,6 +26,9 @@ class NovelReaderPreferences(
     /** Text columns on tablet (T5). 1 keeps the scrolling column, 2 paginates into a spread. */
     val columnCount: Preference<Int> = preferenceStore.getInt("novel_column_count", 2)
 
+    /** Whether the tablet chapter pane and settings sidebar are showing (T5). */
+    val tabletPanesVisible: Preference<Boolean> = preferenceStore.getBoolean("novel_tablet_panes", true)
+
     enum class NovelFont(val label: String) {
         LITERATA("Literata"),
         NOTO_SERIF("Noto Serif"),

@@ -29,10 +29,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.UnfoldLess
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -293,114 +294,6 @@ fun KotoriNovelChapterPane(
 }
 
 /**
- * T5 · the bar under the reading column: `‹ Ch. 11`, the chapter progress, `Ch. 13 ›`,
- * on the page's own paper rather than the dark reader chrome.
- */
-@Composable
-fun KotoriNovelChapterBar(
-    previousLabel: String?,
-    nextLabel: String?,
-    progress: Float,
-    ink: Color,
-    accent: Color,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 54.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        if (previousLabel != null) {
-            KotoriChapterStep(
-                label = previousLabel,
-                ink = ink,
-                accent = accent,
-                leading = true,
-                onClick = onPrevious,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(ink.copy(alpha = 0.13f)),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progress.coerceIn(0f, 1f))
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(TEAL_GRADIENT),
-            )
-        }
-        if (nextLabel != null) {
-            KotoriChapterStep(
-                label = nextLabel,
-                ink = ink,
-                accent = accent,
-                leading = false,
-                onClick = onNext,
-            )
-        }
-    }
-}
-
-@Composable
-private fun KotoriChapterStep(
-    label: String,
-    ink: Color,
-    accent: Color,
-    leading: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x8CFFFFFF))
-            .border(1.dp, ink.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
-            .padding(horizontal = 15.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (leading) {
-            Icon(
-                imageVector = Icons.Filled.ChevronLeft,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Text(
-            text = label,
-            fontFamily = BeVietnamProFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
-            color = ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (!leading) {
-            Icon(
-                imageVector = Icons.Filled.ChevronRight,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
-}
-
-/**
  * T5 · Novel reader — the 216 dp dark settings sidebar: size slider, font list, paper
  * swatches, the layout switch and the night toggle.
  */
@@ -567,7 +460,14 @@ fun KotoriNovelSettingsSidebar(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                            ) { preferences.columnCount.set(count) }
+                            ) {
+                                preferences.columnCount.set(count)
+                                // Two columns is a paged layout; picking it in scroll mode would
+                                // otherwise change nothing on screen.
+                                if (count >= 2) {
+                                    preferences.readingMode.set(NovelReaderPreferences.NovelReadingMode.PAGED)
+                                }
+                            }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -644,4 +544,51 @@ fun KotoriNovelSettingsSidebar(
 
 private fun formatChapterNumberShort(number: Double): String {
     return if (number % 1.0 == 0.0) number.toInt().toString() else number.toString()
+}
+
+/**
+ * T5 · the control that folds both flanking panes away.
+ *
+ * The panes are permanent furniture on tablet, which is right while you are moving between
+ * chapters and wrong once you are reading — they cost roughly a third of the width. This sits on
+ * the page itself rather than in the reader chrome so it is reachable without first summoning the
+ * chrome, which is the state the panes are most in the way in.
+ */
+@Composable
+fun KotoriNovelPaneToggle(
+    visible: Boolean,
+    ink: Color,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(13.dp))
+            .background(Color(0x99FFFFFF))
+            .border(1.dp, ink.copy(alpha = 0.14f), RoundedCornerShape(13.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onToggle,
+            )
+            .padding(horizontal = 11.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Icon(
+            imageVector = if (visible) Icons.Filled.UnfoldLess else Icons.Filled.UnfoldMore,
+            contentDescription = null,
+            tint = TEAL,
+            modifier = Modifier
+                .size(16.dp)
+                .rotate(90f),
+        )
+        Text(
+            text = if (visible) "Ẩn khung" else "Hiện khung",
+            fontFamily = BeVietnamProFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            color = ink,
+        )
+    }
 }

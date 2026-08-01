@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Text
@@ -31,7 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
-import eu.kanade.presentation.util.formatChapterNumber
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -121,34 +124,14 @@ fun NovelReaderContent(
     val theme by preferences.theme.changes().collectAsState(initial = preferences.theme.get())
     val columnCount by preferences.columnCount.changes().collectAsState(initial = preferences.columnCount.get())
 
+    val panesVisible by preferences.tabletPanesVisible.changes()
+        .collectAsState(initial = preferences.tabletPanesVisible.get())
+
     KotoriNovelPaneFrame(
         enabled = tabletPanes,
-        bottomBar = {
-            // The reader chrome already puts a seek bar and tool tiles along the bottom when
-            // it is up; showing the chapter bar as well stacked two bars on the page. The
-            // mock's bar is page furniture, so it belongs to the state where the chrome is away.
-            if (menuVisible) return@KotoriNovelPaneFrame
-            val paper = theme.paper()
-            KotoriNovelChapterBar(
-                previousLabel = previousChapter?.let { "Ch. ${formatChapterNumber(it.chapterNumber)}" },
-                nextLabel = nextChapter?.let { "Ch. ${formatChapterNumber(it.chapterNumber)}" },
-                progress = state.startPercent / 100f,
-                ink = paper.ink,
-                accent = paper.accent,
-                onPrevious = {
-                    previousChapter?.let {
-                        transitionDirection = ChapterTransitionDirection.PREVIOUS
-                        viewModel.loadChapter(it.id)
-                    }
-                },
-                onNext = {
-                    nextChapter?.let {
-                        transitionDirection = ChapterTransitionDirection.NEXT
-                        viewModel.loadChapter(it.id)
-                    }
-                },
-            )
-        },
+        panesVisible = panesVisible,
+        ink = theme.paper().ink,
+        onTogglePanes = { preferences.tabletPanesVisible.set(!panesVisible) },
         start = {
             KotoriNovelChapterPane(
                 title = state.manga?.title.orEmpty(),
@@ -272,9 +255,11 @@ fun NovelReaderContent(
 @Composable
 private fun KotoriNovelPaneFrame(
     enabled: Boolean,
+    panesVisible: Boolean,
+    ink: Color,
+    onTogglePanes: () -> Unit,
     start: @Composable () -> Unit,
     end: @Composable () -> Unit,
-    bottomBar: @Composable () -> Unit,
     content: @Composable () -> Unit,
 ) {
     if (!enabled) {
@@ -282,12 +267,23 @@ private fun KotoriNovelPaneFrame(
         return
     }
     Row(modifier = Modifier.fillMaxSize()) {
-        start()
-        Column(modifier = Modifier.weight(1f)) {
-            Box(modifier = Modifier.weight(1f)) { content() }
-            bottomBar()
+        if (panesVisible) start()
+        Box(modifier = Modifier.weight(1f)) {
+            content()
+            KotoriNovelPaneToggle(
+                visible = panesVisible,
+                ink = ink,
+                onToggle = onTogglePanes,
+                // On the right edge at mid-height: the reader chrome owns the full width at the
+                // top (title) and the bottom (seek bar and tool tiles), so a corner would sit
+                // under one of them whenever the chrome is up.
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .windowInsetsPadding(WindowInsets.systemBars)
+                    .padding(end = 10.dp),
+            )
         }
-        end()
+        if (panesVisible) end()
     }
 }
 

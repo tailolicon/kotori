@@ -221,7 +221,11 @@ fun NovelReaderScreen(
     // T5: two columns is a paginated layout, not a scrolling one, so it owns a page index
     // instead of a scroll offset. One column keeps the scrolling body untouched.
     val columnCount by preferences.columnCount.changes().collectAsState(initial = preferences.columnCount.get())
-    val twoColumn = isKotoriTablet() && columnCount >= 2
+    val pagedMode by preferences.readingMode.changes().collectAsState(initial = preferences.readingMode.get())
+    // Two columns is a paginated layout by construction — it measures the text and cuts it into
+    // pages. Asking for "Cuộn dọc" and getting pages anyway is the setting doing nothing, so the
+    // reading mode decides and the column count only applies within the paged one.
+    val twoColumn = isKotoriTablet() && columnCount >= 2 && pagedMode == NovelReadingMode.PAGED
     var columnPage by rememberSaveable(content) { mutableStateOf(0) }
     var columnPageCount by remember(content) { mutableStateOf(1) }
 
