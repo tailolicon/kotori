@@ -63,6 +63,8 @@ data class KotoriUpcomingRelease(
     val itemLabel: String,
     val coverData: Any?,
     val notify: Boolean,
+    /** Owned series get the accent badge; the rest are just what is on air. */
+    val inLibrary: Boolean = false,
     val onClick: () -> Unit,
     val onToggleNotify: () -> Unit,
 )
@@ -85,11 +87,8 @@ fun KotoriTabletUpcomingBoard(
     title: String,
     subtitle: String,
     days: List<KotoriUpcomingDay>,
-    /**
-     * Null hides the `Chỉ thư viện` chip: the upcoming query is already library-only
-     * (`favorite = 1`), so there is no whole-season set to toggle back to.
-     */
     libraryOnly: Boolean?,
+    loading: Boolean = false,
     onToggleLibraryOnly: () -> Unit,
     onNotifyAll: () -> Unit,
     onPreviousWeek: () -> Unit,
@@ -170,6 +169,22 @@ fun KotoriTabletUpcomingBoard(
             }
         }
 
+        if (loading || days.all { it.releases.isEmpty() }) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (loading) "Đang tải lịch chiếu…" else "Tuần này không có tập nào lên sóng",
+                    fontFamily = BeVietnamProFamily,
+                    fontSize = 12.5.sp,
+                    color = KotoriColors.textMuted,
+                )
+            }
+            return@Column
+        }
         Row(
             modifier = Modifier
                 .weight(1f)
@@ -287,6 +302,24 @@ private fun KotoriUpcomingCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 9.sp,
                         color = Color.White,
+                    )
+                }
+            }
+            if (release.inLibrary) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 7.dp, bottom = 6.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accent.gradient)
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = "✓ THƯ VIỆN",
+                        fontFamily = BeVietnamProFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 8.sp,
+                        color = accent.onAccent,
                     )
                 }
             }

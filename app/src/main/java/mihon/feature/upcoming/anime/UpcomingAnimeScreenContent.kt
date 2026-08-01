@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
@@ -37,6 +39,8 @@ import tachiyomi.core.common.Constants
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.launch
+import mihon.domain.airing.interactor.GetAiringSchedule
+import mihon.domain.airing.model.AiringRelease
 import mihon.feature.upcoming.KotoriTabletUpcomingBoard
 import mihon.feature.upcoming.KotoriUpcomingDay
 import mihon.feature.upcoming.KotoriUpcomingRelease
@@ -59,6 +63,7 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 import java.time.ZoneId
 import java.time.YearMonth
 
@@ -131,66 +136,52 @@ private fun KotoriTabletUpcomingWeek(
     val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
     val notifyIds by libraryPreferences.upcomingNotifyAnimeIds.collectAsState()
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
+    var libraryOnly by rememberSaveable { mutableStateOf(false) }
 
     val weekStart = remember(weekOffset) {
         LocalDate.now()
-            .with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
             .plusWeeks(weekOffset.toLong())
     }
-    val anime = remember(items) { items.filterIsInstance<UpcomingAnimeUIModel.Item>().map { it.anime } }
+    val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
     val dayLabels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
 
-    // The card sub-line names the episode that is actually next, so it needs the highest
-    // episode already in the database. One query per entry, re-run only when the set changes.
-    val nextNumbers by produceState(initialValue = emptyMap<Long, Double>(), anime) {
-        val getEpisodes = Injekt.get<GetEpisodesByAnimeId>()
-        value = withIOContext {
-            anime.associate { entry ->
-                entry.id to (getEpisodes.await(entry.id).maxOfOrNull { it.episodeNumber } ?: 0.0) + 1.0
-            }
-        }
+    // The broadcast schedule itself, not the library's guess at when the next episode lands:
+    // an entry the user has never added still shows, and one they have is marked.
+    val schedule by produceState<List<AiringRelease>?>(initialValue = null, weekStart) {
+        value = Injekt.get<GetAiringSchedule>().await(weekStart)
     }
 
-    val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
-    val weekAnimeIds = remember(anime, weekStart) {
-        anime.mapNotNull { entry ->
-            val date = entry.expectedNextUpdate?.toLocalDate() ?: return@mapNotNull null
-            entry.id.toString().takeIf { !date.isBefore(weekStart) && !date.isAfter(weekEnd) }
-        }
-    }
-
-    val days = remember(anime, weekStart, notifyIds, nextNumbers) {
+    val days = remember(schedule, weekStart, notifyIds, libraryOnly) {
+        val releases = schedule.orEmpty().filter { !libraryOnly || it.inLibrary }
         (0..6).map { index ->
             val date = weekStart.plusDays(index.toLong())
             KotoriUpcomingDay(
                 date = date,
                 label = dayLabels[index],
-                releases = anime
-                    .filter { it.expectedNextUpdate?.toLocalDate() == date }
-                    .sortedBy { it.expectedNextUpdate }
-                    .map { entry ->
-                        val time = entry.expectedNextUpdate
-                            ?.atZone(ZoneId.systemDefault())
-                            ?.toLocalTime()
-                        val id = entry.id.toString()
+                releases = releases
+                    .filter { it.airingAt.atZone(ZoneId.systemDefault()).toLocalDate() == date }
+                    .map { release ->
+                        val time = release.airingAt.atZone(ZoneId.systemDefault()).toLocalTime()
+                        val id = release.remoteId.toString()
                         KotoriUpcomingRelease(
-                            key = "upcoming-$id-$date",
-                            time = time
-                                ?.takeIf { it.hour != 0 || it.minute != 0 }
-                                ?.let { "%02d:%02d".format(it.hour, it.minute) },
-                            title = entry.title,
-                            itemLabel = nextNumbers[entry.id]
-                                ?.let { "Tập ${formatEpisodeNumber(it)}" }
-                                ?: "Tập kế",
-                            coverData = AnimeCover(
-                                animeId = entry.id,
-                                sourceId = entry.source,
-                                isAnimeFavorite = entry.favorite,
-                                url = entry.thumbnailUrl,
-                                lastModified = entry.coverLastModified,
-                            ),
+                            key = "airing-$id-${release.episode}",
+                            time = "%02d:%02d".format(time.hour, time.minute),
+                            title = release.title,
+                            itemLabel = "Tập ${release.episode}",
+                            coverData = release.coverUrl,
                             notify = id in notifyIds,
-                            onClick = { onClickUpcoming(entry) },
+                            inLibrary = release.inLibrary,
+                            onClick = {
+                                val animeId = release.animeId
+                                if (animeId != null) {
+                                    onClickUpcoming(Anime.create().copy(id = animeId))
+                                } else {
+                                    // Not in the library yet — the useful thing a tap can do is
+                                    // go looking for it rather than nothing at all.
+                                    navigator.push(GlobalAnimeSearchScreen(release.title))
+                                }
+                            },
                             onToggleNotify = {
                                 val current = libraryPreferences.upcomingNotifyAnimeIds.get()
                                 libraryPreferences.upcomingNotifyAnimeIds.set(
@@ -208,11 +199,13 @@ private fun KotoriTabletUpcomingWeek(
         title = stringResource(MR.strings.label_upcoming),
         subtitle = "Tuần ${weekStart.dayOfMonth}–${weekEnd.dayOfMonth} tháng ${weekEnd.monthValue}",
         days = days,
-        libraryOnly = null,
-        onToggleLibraryOnly = {},
+        loading = schedule == null,
+        libraryOnly = libraryOnly,
+        onToggleLibraryOnly = { libraryOnly = !libraryOnly },
         onNotifyAll = {
+            val ids = days.flatMap { it.releases }.map { it.key.substringAfter("airing-").substringBefore("-") }
             libraryPreferences.upcomingNotifyAnimeIds.set(
-                libraryPreferences.upcomingNotifyAnimeIds.get() + weekAnimeIds,
+                libraryPreferences.upcomingNotifyAnimeIds.get() + ids,
             )
         },
         onPreviousWeek = { weekOffset-- },
