@@ -6,6 +6,8 @@ data class AnimeSource(
     val name: String,
     val supportsLatest: Boolean,
     val isStub: Boolean,
+    /** Compiled into the app rather than installed as an extension APK. */
+    val isBuiltIn: Boolean = false,
     val pin: Pins = Pins.unpinned,
     val isUsedLast: Boolean = false,
 ) {

@@ -24,7 +24,10 @@ class GetEnabledAnimeSources(
             repository.getAnimeSources(),
         ) { pinnedSourceIds, enabledLanguages, disabledSources, lastUsedSource, sources ->
             sources
-                .filter { it.lang in enabledLanguages || it.id == LocalAnimeSource.ID }
+                // Built-in sources ship with the app, so the extension language filter —
+                // which the user never set for sources they did not install — must not
+                // hide them. Same reasoning as the local source.
+                .filter { it.lang in enabledLanguages || it.id == LocalAnimeSource.ID || it.isBuiltIn }
                 .filterNot { it.id.toString() in disabledSources }
                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                 .flatMap {

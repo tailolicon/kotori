@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.source.anime.builtin
 
+import eu.kanade.tachiyomi.animesource.BuiltInAnimeSource
 import eu.kanade.tachiyomi.animesource.model.Hoster
 import eu.kanade.tachiyomi.animesource.model.Hoster.Companion.toHosterList
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -18,7 +19,7 @@ import okhttp3.Response
  * the legacy `getVideoList(episode)` path, concrete sources implement [resolveVideos] and this
  * base wraps the result in a single hoster via [getHosterList].
  */
-abstract class BuiltInHttpSource : AnimeHttpSource() {
+abstract class BuiltInHttpSource : AnimeHttpSource(), BuiltInAnimeSource {
 
     // Built-in sources here target Vietnamese content by default; override if needed.
     override val lang: String = "vi"

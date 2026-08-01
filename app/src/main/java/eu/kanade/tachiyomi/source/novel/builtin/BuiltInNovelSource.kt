@@ -4,6 +4,7 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
+import eu.kanade.tachiyomi.source.builtin.MirrorResolver
 import eu.kanade.tachiyomi.source.online.NovelHttpSource
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 
@@ -45,10 +46,22 @@ abstract class BuiltInNovelSource : NovelHttpSource(), ConfigurableSource {
      * Read fresh each time rather than captured, so switching mirror takes effect on the next
      * request instead of needing the app restarted.
      */
+    private val mirrorResolver by lazy { MirrorResolver(getSourcePreferences(), mirrors) }
+
+    /**
+     * The hostname requests actually go to.
+     *
+     * A mirror the reader picked by hand is honoured as-is — switching mirror is often about
+     * which one carries a given series, not which one is up, and that is a judgement only they
+     * can make. Otherwise [MirrorResolver] keeps this pointed at a host that answers, following
+     * redirects so a domain move is picked up on its own.
+     */
     protected val domain: String
-        get() = getSourcePreferences().getString(MIRROR_KEY, null)
-            ?.takeIf { it in mirrors }
-            ?: mirrors.firstOrNull().orEmpty()
+        get() {
+            val picked = getSourcePreferences().getString(MIRROR_KEY, null)?.takeIf { it in mirrors }
+            if (picked != null) return picked
+            return mirrorResolver.baseUrl(null).removePrefix("https://").removePrefix("http://")
+        }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         val context = screen.context

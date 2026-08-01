@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
+import eu.kanade.tachiyomi.source.builtin.MirrorResolver
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.network.GET
@@ -33,10 +34,15 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
 
     private val preferences by lazy { getSourcePreferences() }
 
-    // Reads the user's domain override, so a domain change is fixable in-app without a rebuild.
+    /**
+     * Resolved rather than hardcoded: [MirrorResolver] probes the known hosts, follows
+     * redirects and keeps whichever one answers, so a domain change the site itself
+     * redirects is picked up without an app update. A pasted override still wins.
+     */
+    private val mirrors by lazy { MirrorResolver(preferences, MIRRORS) }
+
     override val baseUrl: String
-        get() = preferences.getString(PREF_DOMAIN_KEY, DEFAULT_BASE_URL)
-            ?.trim()?.trimEnd('/')?.ifBlank { DEFAULT_BASE_URL } ?: DEFAULT_BASE_URL
+        get() = mirrors.baseUrl(preferences.getString(PREF_DOMAIN_KEY, null))
 
     // Favicon follows whatever the current base domain is.
     override val iconUrl: String
@@ -47,9 +53,10 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
         EditTextPreference(screen.context).apply {
             key = PREF_DOMAIN_KEY
             title = "Ghi đè tên miền"
-            summary = "Nếu web đổi tên miền, dán địa chỉ mới vào đây (vd: $DEFAULT_BASE_URL). Để trống = mặc định. Khởi động lại app sau khi đổi."
+            summary = "Để trống thì app tự dò tên miền còn sống. Chỉ điền khi bạn biết " +
+                "tên miền mới mà app chưa nhận ra (vd: $DEFAULT_BASE_URL)."
             dialogTitle = "Tên miền mới"
-            setDefaultValue(DEFAULT_BASE_URL)
+            setDefaultValue("")
         }.also(screen::addPreference)
     }
 
@@ -203,7 +210,14 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
     }
 
     companion object {
-        const val DEFAULT_BASE_URL = "https://animehay08.site"
+        const val DEFAULT_BASE_URL = "https://animehay10.site"
+
+        /**
+         * Hosts to probe, best-known first. This is a starting point, not a fixed list:
+         * whichever one answers is followed through its redirects, so the domain the app
+         * settles on can be one that is not written here.
+         */
+        private val MIRRORS = listOf("animehay10.site", "animehay09.site", "animehay08.site")
         private const val PREF_DOMAIN_KEY = "override_base_url"
 
         // var $wp_servers = { 'AHS': 'https://ahay.stream/embed-jw/76075', };

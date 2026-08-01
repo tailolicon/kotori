@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
+import eu.kanade.tachiyomi.animesource.BuiltInAnimeSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -79,4 +80,5 @@ fun mapSourceToDomainSource(source: AnimeSource): DomainSource = DomainSource(
     name = source.name,
     supportsLatest = false,
     isStub = false,
+    isBuiltIn = source is BuiltInAnimeSource,
 )
