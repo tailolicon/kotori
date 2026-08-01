@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.relativeDateText
+import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.GradientButton
 import eu.kanade.presentation.theme.kotori.KotoriHeader
@@ -42,6 +44,8 @@ import kotlinx.coroutines.launch
 import mihon.feature.upcoming.components.UpcomingItem
 import mihon.feature.upcoming.components.calendar.Calendar
 import tachiyomi.core.common.Constants
+import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
@@ -304,6 +308,15 @@ private fun KotoriTabletUpcomingWeek(
     val manga = remember(items) { items.filterIsInstance<UpcomingUIModel.Item>().map { it.manga } }
     val dayLabels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
 
+    val nextNumbers by produceState(initialValue = emptyMap<Long, Double>(), manga) {
+        val getChapters = Injekt.get<GetChaptersByMangaId>()
+        value = withIOContext {
+            manga.associate { entry ->
+                entry.id to (getChapters.await(entry.id).maxOfOrNull { it.chapterNumber } ?: 0.0) + 1.0
+            }
+        }
+    }
+
     val weekMangaIds = remember(manga, weekStart) {
         manga.mapNotNull { entry ->
             val date = entry.expectedNextUpdate?.toLocalDate() ?: return@mapNotNull null
@@ -311,7 +324,7 @@ private fun KotoriTabletUpcomingWeek(
         }
     }
 
-    val days = remember(manga, weekStart, notifyIds) {
+    val days = remember(manga, weekStart, notifyIds, nextNumbers) {
         (0..6).map { index ->
             val date = weekStart.plusDays(index.toLong())
             KotoriUpcomingDay(
@@ -329,7 +342,9 @@ private fun KotoriTabletUpcomingWeek(
                             key = "upcoming-manga-$id-$date",
                             time = time?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "--:--",
                             title = entry.title,
-                            itemLabel = "Chương kế",
+                            itemLabel = nextNumbers[entry.id]
+                                ?.let { "Ch. ${formatChapterNumber(it)}" }
+                                ?: "Chương kế",
                             coverData = MangaCover(
                                 mangaId = entry.id,
                                 sourceId = entry.source,

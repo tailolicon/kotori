@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -29,6 +30,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.relativeDateText
+import eu.kanade.presentation.util.formatEpisodeNumber
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.isTabletUi
 import tachiyomi.core.common.Constants
@@ -43,6 +45,8 @@ import mihon.feature.upcoming.components.calendar.Calendar
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import tachiyomi.domain.entries.anime.model.Anime
 import tachiyomi.domain.entries.anime.model.AnimeCover
+import tachiyomi.core.common.util.lang.withIOContext
+import tachiyomi.domain.items.episode.interactor.GetEpisodesByAnimeId
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
@@ -136,6 +140,17 @@ private fun KotoriTabletUpcomingWeek(
     val anime = remember(items) { items.filterIsInstance<UpcomingAnimeUIModel.Item>().map { it.anime } }
     val dayLabels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
 
+    // The card sub-line names the episode that is actually next, so it needs the highest
+    // episode already in the database. One query per entry, re-run only when the set changes.
+    val nextNumbers by produceState(initialValue = emptyMap<Long, Double>(), anime) {
+        val getEpisodes = Injekt.get<GetEpisodesByAnimeId>()
+        value = withIOContext {
+            anime.associate { entry ->
+                entry.id to (getEpisodes.await(entry.id).maxOfOrNull { it.episodeNumber } ?: 0.0) + 1.0
+            }
+        }
+    }
+
     val weekEnd = remember(weekStart) { weekStart.plusDays(6) }
     val weekAnimeIds = remember(anime, weekStart) {
         anime.mapNotNull { entry ->
@@ -144,7 +159,7 @@ private fun KotoriTabletUpcomingWeek(
         }
     }
 
-    val days = remember(anime, weekStart, notifyIds) {
+    val days = remember(anime, weekStart, notifyIds, nextNumbers) {
         (0..6).map { index ->
             val date = weekStart.plusDays(index.toLong())
             KotoriUpcomingDay(
@@ -162,7 +177,9 @@ private fun KotoriTabletUpcomingWeek(
                             key = "upcoming-$id-$date",
                             time = time?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "--:--",
                             title = entry.title,
-                            itemLabel = "Tập kế",
+                            itemLabel = nextNumbers[entry.id]
+                                ?.let { "Tập ${formatEpisodeNumber(it)}" }
+                                ?: "Tập kế",
                             coverData = AnimeCover(
                                 animeId = entry.id,
                                 sourceId = entry.source,

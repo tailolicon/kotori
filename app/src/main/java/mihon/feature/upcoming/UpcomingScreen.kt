@@ -7,6 +7,8 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.home.KotoriRailDestination
+import eu.kanade.tachiyomi.ui.home.KotoriRailScaffold
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 
 class UpcomingScreen : Screen() {
@@ -18,10 +20,12 @@ class UpcomingScreen : Screen() {
         val screenModel = rememberScreenModel { UpcomingScreenModel() }
         val state by screenModel.state.collectAsState()
 
+        KotoriRailScaffold(destination = KotoriRailDestination.Updates) {
         UpcomingScreenContent(
             state = state,
             setSelectedYearMonth = screenModel::setSelectedYearMonth,
             onClickUpcoming = { navigator.push(MangaScreen(it.id)) },
         )
+        }
     }
 }
