@@ -22,6 +22,12 @@ import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.removeCovers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.CatalogueSource
+import tachiyomi.domain.manga.interactor.NetworkToLocalManga
+import mihon.domain.manga.model.toDomainManga
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -63,6 +69,7 @@ class BrowseSourceScreenModel(
     private val setMangaCategories: SetMangaCategories = Injekt.get(),
     private val setMangaDefaultChapterFlags: SetMangaDefaultChapterFlags = Injekt.get(),
     private val getManga: GetManga = Injekt.get(),
+    private val networkToLocalManga: NetworkToLocalManga = Injekt.get(),
     private val updateManga: UpdateManga = Injekt.get(),
     private val addTracks: AddTracks = Injekt.get(),
     getIncognitoState: GetIncognitoState = Injekt.get(),
@@ -114,6 +121,96 @@ class BrowseSourceScreenModel(
                 .cachedIn(ioCoroutineScope)
         }
         .stateIn(ioCoroutineScope, SharingStarted.Lazily, emptyFlow())
+
+    // ============================== Feed (screen 18) ==============================
+
+    /**
+     * The shelf feed a source opens on: a hero, genre chips, a ranked row and status shelves.
+     *
+     * Built from the two feeds a source actually has — popular and latest — rather than from
+     * per-shelf endpoints, which the extension API does not offer. The raw pages are kept so the
+     * shelves can be rebuilt against the database (for the in-library tick) without going back to
+     * the network.
+     */
+    private val rawPopular = MutableStateFlow<List<SManga>>(emptyList())
+    private val rawLatest = MutableStateFlow<List<SManga>>(emptyList())
+    private val feedRefresh = MutableStateFlow(0)
+
+    val feed = combine(rawPopular, rawLatest, feedRefresh) { popular, latest, _ ->
+        if (popular.isEmpty() && latest.isEmpty()) return@combine SourceFeed()
+        val popularItems = popular.toDomain()
+        val latestItems = latest.toDomain()
+        SourceFeed(
+            hero = popularItems.firstOrNull(),
+            top = popularItems.take(TOP_SHELF_SIZE),
+            shelves = listOfNotNull(
+                latestItems.takeIf { it.isNotEmpty() }?.let { SourceShelf("MỚI CẬP NHẬT", "", it) },
+                popularItems.filter { it.status == SManga.ONGOING.toLong() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf("ĐANG RA", "", it) },
+                popularItems.filter { it.status == SManga.COMPLETED.toLong() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf("HOÀN THÀNH · CÀY TRỌN BỘ", "", it) },
+            ),
+            genres = (source as? CatalogueSource)?.genreNames().orEmpty(),
+            loaded = true,
+        )
+    }.stateIn(ioCoroutineScope, SharingStarted.Lazily, SourceFeed())
+
+    private suspend fun List<SManga>.toDomain(): List<Manga> =
+        networkToLocalManga(map { it.toDomainManga(sourceId) })
+
+    fun loadFeed() {
+        if (rawPopular.value.isNotEmpty()) return
+        screenModelScope.launchIO {
+            // Independent so a source whose latest feed is broken still shows the rest.
+            runCatching { source.getPopularManga(1).mangas }
+                .onSuccess { rawPopular.value = it }
+            if (source.supportsLatest) {
+                runCatching { source.getLatestUpdates(1).mangas }
+                    .onSuccess { rawLatest.value = it }
+            }
+        }
+    }
+
+    /** Re-reads the feed's entries from the database, so the in-library tick stays honest. */
+    fun refreshFeedFavorites() {
+        feedRefresh.value += 1
+    }
+
+    /**
+     * The genres a source declares in its own filter list.
+     *
+     * A browse result carries no genre of its own — that arrives with the details fetch — so the
+     * chips filter through the source instead of over what is already on screen.
+     */
+    private fun CatalogueSource.genreNames(): List<String> = runCatching {
+        getFilterList()
+            .filterIsInstance<SourceModelFilter.Group<*>>()
+            .firstOrNull { group ->
+                group.name.contains("thể loại", true) || group.name.contains("genre", true)
+            }
+            ?.state
+            ?.filterIsInstance<SourceModelFilter<*>>()
+            ?.map { it.name }
+            .orEmpty()
+    }.getOrDefault(emptyList())
+
+    @Immutable
+    data class SourceFeed(
+        val hero: Manga? = null,
+        val top: List<Manga> = emptyList(),
+        val shelves: List<SourceShelf> = emptyList(),
+        val genres: List<String> = emptyList(),
+        val loaded: Boolean = false,
+    )
+
+    @Immutable
+    data class SourceShelf(
+        val label: String,
+        val sub: String,
+        val items: List<Manga>,
+    )
 
     fun getColumnsPreference(orientation: Int): GridCells {
         val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -339,5 +436,9 @@ class BrowseSourceScreenModel(
         val dialog: Dialog? = null,
     ) {
         val isUserQuery get() = listing is Listing.Search && !listing.query.isNullOrEmpty()
+    }
+
+    companion object {
+        private const val TOP_SHELF_SIZE = 10
     }
 }

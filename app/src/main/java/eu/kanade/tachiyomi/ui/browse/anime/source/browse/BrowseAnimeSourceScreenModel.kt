@@ -28,6 +28,9 @@ import eu.kanade.tachiyomi.util.removeBackgrounds
 import eu.kanade.tachiyomi.util.removeCovers
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import eu.kanade.tachiyomi.animesource.model.SAnime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -126,6 +129,98 @@ class BrowseAnimeSourceScreenModel(
                 .cachedIn(ioCoroutineScope)
         }
         .stateIn(ioCoroutineScope, SharingStarted.Lazily, emptyFlow())
+
+    // ============================== Feed (screen 18) ==============================
+
+    /**
+     * The shelf feed a source opens on: a hero, genre chips, a ranked row and status shelves.
+     *
+     * Built from the two feeds a source actually has — popular and latest — rather than from
+     * per-shelf endpoints, which the extension API does not offer. The raw pages are kept so the
+     * shelves can be rebuilt against the database (for the in-library tick) without going back to
+     * the network.
+     */
+    private val rawPopular = MutableStateFlow<List<SAnime>>(emptyList())
+    private val rawLatest = MutableStateFlow<List<SAnime>>(emptyList())
+    private val feedRefresh = MutableStateFlow(0)
+
+    val feed = combine(rawPopular, rawLatest, feedRefresh) { popular, latest, _ ->
+        if (popular.isEmpty() && latest.isEmpty()) return@combine SourceFeed()
+        val popularItems = popular.toDomain()
+        val latestItems = latest.toDomain()
+        SourceFeed(
+            hero = popularItems.firstOrNull(),
+            top = popularItems.take(TOP_SHELF_SIZE),
+            shelves = listOfNotNull(
+                latestItems.takeIf { it.isNotEmpty() }?.let { SourceShelf("MỚI CẬP NHẬT", "", it) },
+                popularItems.filter { it.status == SAnime.ONGOING.toLong() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf("ĐANG CHIẾU MÙA NÀY", currentSeasonLabel(), it) },
+                popularItems.filter { it.status == SAnime.COMPLETED.toLong() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf("HOÀN THÀNH · CÀY TRỌN BỘ", "", it) },
+            ),
+            genres = (source as? AnimeCatalogueSource)?.genreNames().orEmpty(),
+            loaded = true,
+        )
+    }.stateIn(ioCoroutineScope, SharingStarted.Lazily, SourceFeed())
+
+    private suspend fun List<SAnime>.toDomain(): List<Anime> = map {
+        networkToLocalAnime.await(it.toDomainAnime(sourceId))
+    }
+
+    fun loadFeed() {
+        val catalogue = source as? AnimeCatalogueSource ?: return
+        if (rawPopular.value.isNotEmpty()) return
+        screenModelScope.launchIO {
+            // Independent so a source whose latest feed is broken still shows the rest.
+            runCatching { catalogue.getPopularAnime(1).animes }
+                .onSuccess { rawPopular.value = it }
+            if (catalogue.supportsLatest) {
+                runCatching { catalogue.getLatestUpdates(1).animes }
+                    .onSuccess { rawLatest.value = it }
+            }
+        }
+    }
+
+    /** Re-reads the feed's entries from the database, so the in-library tick stays honest. */
+    fun refreshFeedFavorites() {
+        feedRefresh.value += 1
+    }
+
+    /**
+     * The genres a source declares in its own filter list.
+     *
+     * A browse result carries no genre of its own — that arrives with the details fetch — so the
+     * chips filter through the source instead of over what is already on screen.
+     */
+    private fun AnimeCatalogueSource.genreNames(): List<String> = runCatching {
+        getFilterList()
+            .filterIsInstance<AnimeSourceModelFilter.Group<*>>()
+            .firstOrNull { group ->
+                group.name.contains("thể loại", true) || group.name.contains("genre", true)
+            }
+            ?.state
+            ?.filterIsInstance<AnimeSourceModelFilter<*>>()
+            ?.map { it.name }
+            .orEmpty()
+    }.getOrDefault(emptyList())
+
+    @Immutable
+    data class SourceFeed(
+        val hero: Anime? = null,
+        val top: List<Anime> = emptyList(),
+        val shelves: List<SourceShelf> = emptyList(),
+        val genres: List<String> = emptyList(),
+        val loaded: Boolean = false,
+    )
+
+    @Immutable
+    data class SourceShelf(
+        val label: String,
+        val sub: String,
+        val items: List<Anime>,
+    )
 
     fun getColumnsPreference(orientation: Int): GridCells {
         val isLandscape = orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -375,4 +470,25 @@ class BrowseAnimeSourceScreenModel(
     ) {
         val isUserQuery get() = listing is Listing.Search && !listing.query.isNullOrEmpty()
     }
+
+    companion object {
+        private const val TOP_SHELF_SIZE = 10
+    }
+}
+
+/**
+ * `Hè 2026` and friends — the season the device is in right now.
+ *
+ * A source result says nothing about which season it belongs to, so this labels the shelf rather
+ * than filtering it: the shelf itself is "still airing", which the entries do declare.
+ */
+private fun currentSeasonLabel(): String {
+    val now = java.time.LocalDate.now()
+    val season = when (now.monthValue) {
+        1, 2, 3 -> "Đông"
+        4, 5, 6 -> "Xuân"
+        7, 8, 9 -> "Hè"
+        else -> "Thu"
+    }
+    return "$season ${now.year}"
 }

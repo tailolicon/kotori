@@ -46,6 +46,12 @@ import eu.kanade.core.util.ifAnimeSourcesLoaded
 import eu.kanade.presentation.browse.RemoveEntryDialog
 import eu.kanade.presentation.browse.anime.BrowseAnimeSourceContent
 import eu.kanade.presentation.browse.anime.MissingSourceScreen
+import eu.kanade.presentation.browse.KotoriFeedItem
+import eu.kanade.presentation.browse.KotoriFeedShelf
+import eu.kanade.presentation.browse.KotoriSourceFeed
+import eu.kanade.tachiyomi.animesource.model.SAnime
+import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.model.asAnimeCover
 import eu.kanade.presentation.browse.KotoriFeedPill
 import eu.kanade.presentation.browse.KotoriFilterFab
 import eu.kanade.presentation.browse.anime.components.BrowseAnimeSourceToolbar
@@ -135,6 +141,9 @@ data class BrowseAnimeSourceScreen(
             assistUrl = (screenModel.source as? AnimeHttpSource)?.baseUrl
         }
 
+        val feed by screenModel.feed.collectAsState()
+        LaunchedEffect(screenModel.source) { screenModel.loadFeed() }
+
         var topBarHeight by remember { mutableIntStateOf(0) }
         val headerScroll = rememberBrowseHeaderScrollState()
         Scaffold(
@@ -204,6 +213,48 @@ data class BrowseAnimeSourceScreen(
                 }
             },
         ) { paddingValues ->
+            // The feed is the browsing state; a query or a filter turns the screen into the grid
+            // of results instead. The two are exclusive in the design, not stacked.
+            val showFeed = state.listing !is Listing.Search && feed.loaded
+            if (showFeed) {
+                val onOpen: (Anime) -> Unit = { navigator.push(AnimeScreen(it.id, true)) }
+                val onToggleFavorite: (Anime) -> Unit = { anime ->
+                    scope.launchIO {
+                        if (anime.favorite) {
+                            screenModel.setDialog(BrowseAnimeSourceScreenModel.Dialog.RemoveAnime(anime))
+                        } else {
+                            screenModel.addFavorite(anime)
+                        }
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                }
+                val toItem: (Anime) -> KotoriFeedItem = { anime ->
+                    KotoriFeedItem(
+                        key = anime.id.toString(),
+                        title = anime.title,
+                        cover = anime.asAnimeCover(),
+                        statusLabel = animeStatusLabel(anime.status),
+                        inLibrary = anime.favorite,
+                        onClick = { onOpen(anime) },
+                        onLongClick = { onToggleFavorite(anime) },
+                    )
+                }
+                KotoriSourceFeed(
+                    hero = feed.hero?.let(toItem),
+                    top = feed.top.map(toItem),
+                    shelves = feed.shelves.map { shelf ->
+                        KotoriFeedShelf(shelf.label, shelf.sub, shelf.items.map(toItem))
+                    },
+                    genres = feed.genres,
+                    activeGenre = null,
+                    onSelectGenre = { genre ->
+                        if (genre != null) screenModel.searchGenre(genre)
+                    },
+                    onPlayHero = { feed.hero?.let(onOpen) },
+                    contentPadding = paddingValues,
+                )
+                return@Scaffold
+            }
             BrowseAnimeSourceContent(
                 source = screenModel.source,
                 animeList = screenModel.animePagerFlowFlow.collectAsLazyPagingItems(),
@@ -320,4 +371,14 @@ data class BrowseAnimeSourceScreen(
         class Text(txt: String) : SearchType(txt)
         class Genre(txt: String) : SearchType(txt)
     }
+}
+
+/** The Vietnamese label a source's status maps to, or `null` when it says nothing useful. */
+private fun animeStatusLabel(status: Long): String? = when (status.toInt()) {
+    SAnime.ONGOING -> "Đang chiếu"
+    SAnime.COMPLETED -> "Hoàn thành"
+    SAnime.ON_HIATUS -> "Tạm ngưng"
+    SAnime.CANCELLED -> "Đã huỷ"
+    SAnime.PUBLISHING_FINISHED -> "Đã chiếu xong"
+    else -> null
 }

@@ -32,6 +32,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.presentation.browse.BrowseSourceContent
 import eu.kanade.presentation.browse.MissingSourceScreen
+import eu.kanade.presentation.browse.KotoriFeedItem
+import eu.kanade.presentation.browse.KotoriFeedShelf
+import eu.kanade.presentation.browse.KotoriSourceFeed
+import eu.kanade.tachiyomi.source.model.SManga
+import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.asMangaCover
 import eu.kanade.presentation.browse.KotoriFeedPill
 import eu.kanade.presentation.browse.KotoriFilterFab
 import eu.kanade.presentation.browse.components.BrowseSourceToolbar
@@ -82,6 +88,8 @@ data class BrowseSourceScreen(
 
         val screenModel = rememberScreenModel { BrowseSourceScreenModel(sourceId, listingQuery) }
         val state by screenModel.state.collectAsState()
+        val feed by screenModel.feed.collectAsState()
+        LaunchedEffect(screenModel.source) { screenModel.loadFeed() }
 
         val navigator = LocalNavigator.currentOrThrow
         val navigateUp: () -> Unit = {
@@ -187,6 +195,49 @@ data class BrowseSourceScreen(
                     }
                 },
             ) { paddingValues ->
+                // The feed is the browsing state; a query or a filter turns the screen into the
+                // grid of results instead. The two are exclusive in the design.
+                val showFeed = state.listing !is Listing.Search && feed.loaded
+                if (showFeed) {
+                    val onOpen: (Manga) -> Unit = { navigator.push(MangaScreen(it.id, true)) }
+                    val toItem: (Manga) -> KotoriFeedItem = { manga ->
+                        KotoriFeedItem(
+                            key = manga.id.toString(),
+                            title = manga.title,
+                            cover = manga.asMangaCover(),
+                            statusLabel = mangaStatusLabel(manga.status),
+                            inLibrary = manga.favorite,
+                            onClick = { onOpen(manga) },
+                            onLongClick = {
+                                scope.launchIO {
+                                    if (manga.favorite) {
+                                        screenModel.setDialog(
+                                            BrowseSourceScreenModel.Dialog.RemoveManga(manga),
+                                        )
+                                    } else {
+                                        screenModel.addFavorite(manga)
+                                    }
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                        )
+                    }
+                    KotoriSourceFeed(
+                        hero = feed.hero?.let(toItem),
+                        top = feed.top.map(toItem),
+                        shelves = feed.shelves.map { shelf ->
+                            KotoriFeedShelf(shelf.label, shelf.sub, shelf.items.map(toItem))
+                        },
+                        genres = feed.genres,
+                        activeGenre = null,
+                        onSelectGenre = { genre ->
+                            if (genre != null) screenModel.searchGenre(genre)
+                        },
+                        onPlayHero = { feed.hero?.let(onOpen) },
+                        contentPadding = paddingValues,
+                    )
+                    return@Scaffold
+                }
                 BrowseSourceContent(
                     source = screenModel.source,
                     mangaList = screenModel.mangaPagerFlowFlow.collectAsLazyPagingItems(),
@@ -294,4 +345,14 @@ data class BrowseSourceScreen(
         class Text(txt: String) : SearchType(txt)
         class Genre(txt: String) : SearchType(txt)
     }
+}
+
+/** The Vietnamese label a source's status maps to, or `null` when it says nothing useful. */
+private fun mangaStatusLabel(status: Long): String? = when (status.toInt()) {
+    SManga.ONGOING -> "Đang ra"
+    SManga.COMPLETED -> "Hoàn thành"
+    SManga.ON_HIATUS -> "Tạm ngưng"
+    SManga.CANCELLED -> "Đã huỷ"
+    SManga.PUBLISHING_FINISHED -> "Đã ra xong"
+    else -> null
 }
