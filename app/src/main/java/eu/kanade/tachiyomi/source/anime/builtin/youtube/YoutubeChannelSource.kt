@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.source.anime.builtin.youtube
 
-import android.os.Build
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -9,15 +8,19 @@ import eu.kanade.tachiyomi.animesource.model.Track
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.source.anime.builtin.BuiltInHttpSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
+import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler
 import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
@@ -46,40 +49,83 @@ abstract class YoutubeChannelSource(
 
     private val service get() = ServiceList.YouTube
 
+    private val pagingMutex = Mutex()
+    private val cachedPlaylists = mutableListOf<PlaylistInfoItem>()
+    private var cachedTab: ListLinkHandler? = null
+    private var nextPage: Page? = null
+    private var exhausted = false
+    private var loadedAt = 0L
+
     // ============================== Browse: playlists = series ==============================
 
-    override suspend fun getPopularAnime(page: Int): AnimesPage = fetchPlaylists(null)
+    override suspend fun getPopularAnime(page: Int): AnimesPage = fetchPlaylists(page, null)
 
-    override suspend fun getLatestUpdates(page: Int): AnimesPage = fetchPlaylists(null)
+    override suspend fun getLatestUpdates(page: Int): AnimesPage = fetchPlaylists(page, null)
 
     override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage =
-        fetchPlaylists(query)
+        fetchPlaylists(page, query)
 
-    private suspend fun fetchPlaylists(query: String?): AnimesPage = withContext(Dispatchers.IO) {
+    private suspend fun fetchPlaylists(page: Int, query: String?): AnimesPage = withContext(Dispatchers.IO) {
         ensureInit(client)
-        val channel = ChannelInfo.getInfo(service, channelUrl)
-        val tab = channel.tabs.firstOrNull { it.contentFilters.contains(ChannelTabs.PLAYLISTS) }
-            ?: return@withContext AnimesPage(emptyList(), false)
 
-        val tabInfo = ChannelTabInfo.getInfo(service, tab)
-        val items = tabInfo.relatedItems.filterIsInstance<PlaylistInfoItem>().toMutableList()
-
-        var next = tabInfo.nextPage
-        var guard = 0
-        while (next != null && guard < 5) {
-            val more = ChannelTabInfo.getMoreItems(service, tab, next)
-            items += more.items.filterIsInstance<PlaylistInfoItem>()
-            next = more.nextPage
-            guard++
+        // Filtering can only start once everything is known, so search still walks the channel —
+        // but off the same cache, so it is a one-time cost rather than a per-keystroke one.
+        if (!query.isNullOrBlank()) {
+            val matches = loadPlaylists(untilAtLeast = 0).items
+                .filter { it.name.contains(query, ignoreCase = true) }
+            return@withContext AnimesPage(matches.map { it.toSAnime() }, false)
         }
 
-        val filtered = if (query.isNullOrBlank()) {
-            items
-        } else {
-            items.filter { it.name.contains(query, ignoreCase = true) }
-        }
-        AnimesPage(filtered.map { it.toSAnime() }, false)
+        val batch = loadPlaylists(untilAtLeast = page * PAGE_SIZE)
+        val from = (page - 1) * PAGE_SIZE
+        if (from >= batch.items.size) return@withContext AnimesPage(emptyList(), false)
+        val slice = batch.items.subList(from, minOf(from + PAGE_SIZE, batch.items.size))
+        AnimesPage(slice.map { it.toSAnime() }, !batch.exhausted || from + slice.size < batch.items.size)
     }
+
+    /**
+     * Channel playlists, fetched only as far as the caller needs them.
+     *
+     * YouTube hands a channel tab back one page at a time. Draining every page before returning
+     * meant six sequential round-trips before the first cover could be drawn, every single time
+     * the browse screen opened. Stopping at the requested page turns a scroll into one request,
+     * and keeping what was already fetched turns a revisit into none.
+     *
+     * @param untilAtLeast how many items are needed; `0` means the whole channel.
+     */
+    private suspend fun loadPlaylists(untilAtLeast: Int): PlaylistBatch = pagingMutex.withLock {
+        if (System.currentTimeMillis() - loadedAt > CACHE_TTL_MILLIS) {
+            cachedPlaylists.clear()
+            cachedTab = null
+            nextPage = null
+            exhausted = false
+        }
+
+        if (cachedTab == null) {
+            val channel = ChannelInfo.getInfo(service, channelUrl)
+            val tab = channel.tabs.firstOrNull { it.contentFilters.contains(ChannelTabs.PLAYLISTS) }
+                ?: return@withLock PlaylistBatch(emptyList(), exhausted = true)
+            val tabInfo = ChannelTabInfo.getInfo(service, tab)
+            cachedTab = tab
+            cachedPlaylists += tabInfo.relatedItems.filterIsInstance<PlaylistInfoItem>()
+            nextPage = tabInfo.nextPage
+            exhausted = tabInfo.nextPage == null
+            loadedAt = System.currentTimeMillis()
+        }
+
+        val tab = cachedTab ?: return@withLock PlaylistBatch(emptyList(), exhausted = true)
+        while (!exhausted && (untilAtLeast <= 0 || cachedPlaylists.size < untilAtLeast)) {
+            val next = nextPage ?: break
+            val more = ChannelTabInfo.getMoreItems(service, tab, next)
+            cachedPlaylists += more.items.filterIsInstance<PlaylistInfoItem>()
+            nextPage = more.nextPage
+            exhausted = more.nextPage == null
+        }
+
+        PlaylistBatch(cachedPlaylists.toList(), exhausted)
+    }
+
+    private class PlaylistBatch(val items: List<PlaylistInfoItem>, val exhausted: Boolean)
 
     private fun PlaylistInfoItem.toSAnime(): SAnime {
         val item = this
@@ -171,48 +217,44 @@ abstract class YoutubeChannelSource(
 
         val videos = mutableListOf<Video>()
 
-        // Prefer *muxed* streams (audio+video in one file). YouTube's DASH video-only streams are
-        // throttled and start at a non-zero fragment timestamp, and pairing them with a separate
-        // audio track makes mpv buffer forever (the endless spinner / 4-second start). Muxed
-        // streams play smoothly from 0, so they go first; DASH is only offered for higher quality.
+        val progressiveStreams = info.videoStreams.filter { it.content?.isNotBlank() == true }
+        val dashStreams = info.videoOnlyStreams.filter { it.content?.isNotBlank() == true }
+        val bestHeight = (progressiveStreams + dashStreams)
+            .maxOfOrNull { it.resolution.resHeight() }
+            ?.takeIf { it > 0 }
 
-        val preferProgressive = Build.SUPPORTED_ABIS.any { it.startsWith("x86") }
-        val progressiveVideos = info.videoStreams
-            .filter { it.content?.isNotBlank() == true }
-            .sortedByDescending { it.resolution.resHeight() }
-            .mapIndexed { index, vs ->
-                Video(
-                    videoUrl = vs.content,
-                    videoTitle = vs.resolution.ifBlank { "video" },
-                    preferred = preferProgressive && index == 0,
-                    subtitleTracks = subtitles,
-                )
-            }
-
-        val hlsVideo = info.hlsUrl
+        // Adaptive HLS goes first and carries the height of the best rung it can reach, because
+        // that is what "play at the highest quality the connection allows" actually means here:
+        // it climbs on a good link and drops on a bad one without a fixed choice being made up
+        // front. YouTube's muxed streams top out at 360p, so preferring one of those — which is
+        // what this used to do — meant the player silently opened every episode in 360p.
+        info.hlsUrl
             ?.takeIf { it.isNotBlank() }
             ?.let {
-                Video(
+                videos += Video(
                     videoUrl = it,
                     videoTitle = "Tự động (HLS)",
-                    preferred = !preferProgressive,
+                    resolution = bestHeight,
+                    preferred = true,
                     subtitleTracks = subtitles,
                 )
             }
 
-        // MuMu/x86 can spend 30+ seconds opening YouTube HLS, while progressive starts in ~2 s.
-        // Keep adaptive HLS first on ARM phones so their default quality does not regress.
-        if (preferProgressive) {
-            videos += progressiveVideos
-            hlsVideo?.let(videos::add)
-        } else {
-            hlsVideo?.let(videos::add)
-            videos += progressiveVideos
-        }
-        // 3) DASH video-only + best audio (higher resolution, but can buffer) — offered last.
+        // Muxed streams (audio+video in one file) start instantly but are capped low; DASH is
+        // video-only, so it needs a paired audio track and buffers more. Both stay available as
+        // manual picks.
+        progressiveStreams
+            .sortedByDescending { it.resolution.resHeight() }
+            .forEach { vs ->
+                videos += Video(
+                    videoUrl = vs.content,
+                    videoTitle = vs.resolution.ifBlank { "video" },
+                    subtitleTracks = subtitles,
+                )
+            }
+
         if (bestAudioUrl != null) {
-            info.videoOnlyStreams
-                .filter { it.content?.isNotBlank() == true }
+            dashStreams
                 .sortedByDescending { it.resolution.resHeight() }
                 .forEach { vs ->
                     videos += Video(
@@ -246,6 +288,12 @@ abstract class YoutubeChannelSource(
     override fun episodeListParse(response: Response) = throw UnsupportedOperationException("Not used")
 
     companion object {
+        /** One screenful of playlists; YouTube's own channel pages are about this size. */
+        private const val PAGE_SIZE = 30
+
+        /** How long a fetched channel listing stays good for. Playlists change rarely. */
+        private const val CACHE_TTL_MILLIS = 10 * 60 * 1000L
+
         // Matches "Tập 3", "Tap 03", "Episode 12", "Ep 5", "#7" (first number wins).
         private val EPISODE_NUMBER_REGEX =
             Regex("""(?:tập|tap|episode|ep|#)\s*[.:\-]?\s*(\d{1,4}(?:[.,]\d+)?)""", RegexOption.IGNORE_CASE)

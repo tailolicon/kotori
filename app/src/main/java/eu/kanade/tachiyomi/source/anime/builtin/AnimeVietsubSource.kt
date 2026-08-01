@@ -21,6 +21,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.FormBody
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -72,6 +73,27 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
         }.also(screen::addPreference)
     }
 
+    /**
+     * The site answers the first request of a session with `403`, a `Set-Cookie`, and a one-line
+     * script that bounces the browser back to the same URL. That is a handshake, not a block —
+     * the next request carrying those cookies gets a normal `200`, which is why the site works in
+     * a browser but every call from here failed. OkHttp has already stored the cookies by the
+     * time an application interceptor sees the response, so replaying once is the whole fix.
+     */
+    override val client: OkHttpClient by lazy {
+        network.client.newBuilder()
+            .addInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (response.code != 403 || response.headers("Set-Cookie").isEmpty()) {
+                    response
+                } else {
+                    response.close()
+                    chain.proceed(chain.request())
+                }
+            }
+            .build()
+    }
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override fun headersBuilder() = Headers.Builder()
@@ -81,28 +103,41 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
 
     // ============================== Browse ==============================
 
-    override fun popularAnimeRequest(page: Int): Request = GET(listUrl("/danh-sach/list-tron-bo/", page), headers)
+    override fun popularAnimeRequest(page: Int): Request = GET(browseUrl("/danh-sach/list-tron-bo/", page), headers)
 
     override fun popularAnimeParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
 
-    override fun latestUpdatesRequest(page: Int): Request = GET(listUrl("/danh-sach/list-dang-chieu/", page), headers)
+    override fun latestUpdatesRequest(page: Int): Request = GET(browseUrl("/danh-sach/list-dang-chieu/", page), headers)
 
     override fun latestUpdatesParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
         val q = URLEncoder.encode(query, "UTF-8")
-        return GET(listUrl("/tim-kiem/$q/", page), headers)
+        val base = "$baseUrl/tim-kiem/$q/"
+        return GET(if (page <= 1) base else base + "trang-$page.html", headers)
     }
 
     override fun searchAnimeParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
 
-    private fun listUrl(path: String, page: Int): String {
+    /**
+     * A browse-list page.
+     *
+     * The empty path segments are not a typo — the site's own pagination links look like
+     * `/danh-sach/list-tron-bo//////all//trang-2.html`, and they are the filter slots (genre,
+     * year, status…) left blank. The tidy `…/trang-2.html` this used to build returns a page
+     * with no entries at all, which is why browsing never got past the first screen.
+     */
+    private fun browseUrl(path: String, page: Int): String {
         val base = baseUrl + path
-        return if (page <= 1) base else base.trimEnd('/') + "/trang-$page.html"
+        return if (page <= 1) base else base.trimEnd('/') + "//////all//trang-$page.html"
     }
 
     private fun parseAnimeList(doc: Document): AnimesPage {
-        val animes = doc.select("li.TPostMv, .TPostMv, .MovieList .TPost").mapNotNull { el ->
+        // The two are nested — `<li class="TPostMv"><article class="TPost …">` — so a selector
+        // matching both returns every entry twice. Take the outer card, and only reach for the
+        // inner one on pages laid out without the list wrapper.
+        val cards = doc.select("li.TPostMv").ifEmpty { doc.select(".MovieList article.TPost") }
+        val animes = cards.mapNotNull { el ->
             val link = el.selectFirst("a") ?: return@mapNotNull null
             SAnime.create().apply {
                 setUrlWithoutDomain(link.attr("abs:href"))
@@ -110,8 +145,8 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
                 thumbnail_url = el.selectFirst("img")?.imageUrl()
             }
         }
-        val hasNext = doc.selectFirst(".wp-pagenavi a.nextpostslink, .wp-pagenavi .current + a") != null ||
-            animes.size >= 20
+        // A page number higher than the current one is the site's own "there is more" marker.
+        val hasNext = doc.selectFirst(".wp-pagenavi a.page.larger, .wp-pagenavi a.nextpostslink") != null
         return AnimesPage(animes, hasNext && animes.isNotEmpty())
     }
 

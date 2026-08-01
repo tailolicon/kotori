@@ -99,6 +99,37 @@ class HosterLoader {
             return Pair(-1, -1)
         }
 
+        /**
+         * The best video inside a single hoster, by the same rule as [selectBestVideo].
+         *
+         * Playback starts from the first hoster that resolves rather than waiting for all of them,
+         * and that shortcut used to take whatever the source flagged `preferred`. On YouTube the
+         * flagged stream is the muxed one, which tops out at 360p, so "start fast" quietly meant
+         * "start low". Picking the tallest stream this hoster offers keeps the head start without
+         * spending the resolution on it.
+         *
+         * @return the video index, or -1 when the hoster has nothing viable
+         */
+        fun bestVideoIndex(hoster: HosterState.Ready, context: Context? = null): Int {
+            val maxHeight = VideoQualityPolicy.maxHeight(context)
+            var bestIdx = -1
+            var bestHeight = Int.MIN_VALUE
+            var bestPreferred = false
+            (hoster.videoList zip hoster.videoState).forEachIndexed { videoIdx, (video, state) ->
+                if (video.videoUrl.isEmpty()) return@forEachIndexed
+                if (state != Video.State.READY && state != Video.State.QUEUE) return@forEachIndexed
+                val height = VideoQualityPolicy.heightOf(video) ?: return@forEachIndexed
+                if (height > maxHeight) return@forEachIndexed
+                if (height > bestHeight || (height == bestHeight && video.preferred && !bestPreferred)) {
+                    bestHeight = height
+                    bestPreferred = video.preferred
+                    bestIdx = videoIdx
+                }
+            }
+            // Nothing announced a resolution, so the source's own preference is all there is.
+            return if (bestIdx != -1) bestIdx else hoster.videoList.indexOfFirst { it.preferred }
+        }
+
         class EarlyReturnException(val video: Video) : Exception()
 
         /**

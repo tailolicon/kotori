@@ -1421,7 +1421,7 @@ class PlayerViewModel @JvmOverloads constructor(
                                     }
                                 }
 
-                                val prefIndex = hosterState.videoList.indexOfFirst { it.preferred }
+                                val prefIndex = HosterLoader.bestVideoIndex(hosterState)
                                 if (prefIndex != -1 && hosterIndex == -1) {
                                     if (hasFoundPreferredVideo.compareAndSet(false, true)) {
                                         if (selectedHosterVideoIndex.value == Pair(-1, -1)) {
