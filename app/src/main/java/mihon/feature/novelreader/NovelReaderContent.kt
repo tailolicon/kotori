@@ -124,6 +124,10 @@ fun NovelReaderContent(
     KotoriNovelPaneFrame(
         enabled = tabletPanes,
         bottomBar = {
+            // The reader chrome already puts a seek bar and tool tiles along the bottom when
+            // it is up; showing the chapter bar as well stacked two bars on the page. The
+            // mock's bar is page furniture, so it belongs to the state where the chrome is away.
+            if (menuVisible) return@KotoriNovelPaneFrame
             val paper = theme.paper()
             KotoriNovelChapterBar(
                 previousLabel = previousChapter?.let { "Ch. ${formatChapterNumber(it.chapterNumber)}" },

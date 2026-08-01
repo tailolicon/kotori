@@ -57,7 +57,8 @@ import java.time.LocalDate
 @Immutable
 data class KotoriUpcomingRelease(
     val key: String,
-    val time: String,
+    /** Null when the source only knows the date, not the hour. */
+    val time: String?,
     val title: String,
     val itemLabel: String,
     val coverData: Any?,
@@ -269,21 +270,25 @@ private fun KotoriUpcomingCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 7.dp, top = 6.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0x990B0812))
-                    .padding(horizontal = 7.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = release.time,
-                    fontFamily = BeVietnamProFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp,
-                    color = Color.White,
-                )
+            // Only anime carries a real air time; a manga's next-update estimate is a date,
+            // so the chip is dropped rather than stamping every card with 00:00.
+            if (release.time != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 7.dp, top = 6.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0x990B0812))
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = release.time,
+                        fontFamily = BeVietnamProFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 9.sp,
+                        color = Color.White,
+                    )
+                }
             }
             Icon(
                 imageVector = if (release.notify) Icons.Filled.Notifications else Icons.Outlined.Notifications,

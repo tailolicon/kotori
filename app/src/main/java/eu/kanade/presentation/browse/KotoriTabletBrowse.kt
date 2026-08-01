@@ -369,7 +369,10 @@ fun KotoriTabletBrowseLayout(
     onSearch: () -> Unit,
     onClearSearch: () -> Unit,
     filterLabels: List<String>,
-    activeFilter: Int,
+    // `Mọi nguồn` / `Đã ghim` pick the source set and `Có trong thư viện` hides empty
+    // sources — they are independent switches in the model, not one radio group, so more
+    // than one can be lit at a time.
+    activeFilters: Set<Int>,
     onSelectFilter: (Int) -> Unit,
     modifier: Modifier = Modifier,
     sourceColumn: @Composable () -> Unit,
@@ -429,9 +432,10 @@ fun KotoriTabletBrowseLayout(
                                 text = label,
                                 fontFamily = BeVietnamProFamily,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                                fontSize = 11.5.sp,
+                                fontSize = 11.sp,
                                 color = if (selected) accent.onAccent else KotoriColors.textMuted,
                                 maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             val badge = tabBadges.getOrNull(index)
                             if (badge != null && badge > 0) {
@@ -490,7 +494,7 @@ fun KotoriTabletBrowseLayout(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     filterLabels.forEachIndexed { index, label ->
-                        val selected = index == activeFilter
+                        val selected = index in activeFilters
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(15.dp))

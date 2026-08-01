@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -543,8 +542,11 @@ private fun KotoriTabletSidePanel(
         verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
         KotoriPanelLabel(text = "TIẾP TỤC", accent = accent)
+        // The resume list is the only part that may not fit, so it takes exactly what is
+        // left after the airing section and scrolls. Two `fill = false` weights used to
+        // share the space and let rows spill past the panel's own border.
         LazyColumn(
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
             items(resumeItems, key = { it.key }) { item ->
@@ -558,7 +560,6 @@ private fun KotoriTabletSidePanel(
                 KotoriTabletAiringRow(item = item, accentLight = accent.light)
             }
         }
-        Spacer(modifier = Modifier.weight(1f, fill = false))
     }
 }
 

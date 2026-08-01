@@ -340,7 +340,9 @@ private fun KotoriTabletUpcomingWeek(
                         val id = entry.id.toString()
                         KotoriUpcomingRelease(
                             key = "upcoming-manga-$id-$date",
-                            time = time?.let { "%02d:%02d".format(it.hour, it.minute) } ?: "--:--",
+                            time = time
+                                ?.takeIf { it.hour != 0 || it.minute != 0 }
+                                ?.let { "%02d:%02d".format(it.hour, it.minute) },
                             title = entry.title,
                             itemLabel = nextNumbers[entry.id]
                                 ?.let { "Ch. ${formatChapterNumber(it)}" }

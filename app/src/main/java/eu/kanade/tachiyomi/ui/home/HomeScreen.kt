@@ -91,9 +91,6 @@ object HomeScreen : Screen() {
         MoreTab,
     )
 
-    /** Same five destinations, for screens pushed over the tabs that still show the rail. */
-    internal val RAIL_TABS: List<eu.kanade.presentation.util.Tab> get() = TABS
-
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow

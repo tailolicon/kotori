@@ -77,22 +77,15 @@ fun Screen.KotoriTabletMangaBrowse(
             onSearch = { searchModel.search() },
             onClearSearch = { searchModel.updateSearchQuery("") },
             filterLabels = FILTER_LABELS,
-            activeFilter = when {
-                searchState.onlyShowHasResults -> 2
-                searchState.sourceFilter == SourceFilter.PinnedOnly -> 1
-                else -> 0
+            activeFilters = buildSet {
+                add(if (searchState.sourceFilter == SourceFilter.PinnedOnly) 1 else 0)
+                if (searchState.onlyShowHasResults) add(2)
             },
             onSelectFilter = { index ->
                 when (index) {
-                    0 -> {
-                        searchModel.setSourceFilter(SourceFilter.All)
-                        if (searchState.onlyShowHasResults) searchModel.toggleFilterResults()
-                    }
-                    1 -> {
-                        searchModel.setSourceFilter(SourceFilter.PinnedOnly)
-                        if (searchState.onlyShowHasResults) searchModel.toggleFilterResults()
-                    }
-                    else -> if (!searchState.onlyShowHasResults) searchModel.toggleFilterResults()
+                    0 -> searchModel.setSourceFilter(SourceFilter.All)
+                    1 -> searchModel.setSourceFilter(SourceFilter.PinnedOnly)
+                    else -> searchModel.toggleFilterResults()
                 }
             },
             sourceColumn = {
@@ -178,22 +171,15 @@ fun Screen.KotoriTabletAnimeBrowse(
             onSearch = { searchModel.search() },
             onClearSearch = { searchModel.updateSearchQuery("") },
             filterLabels = FILTER_LABELS,
-            activeFilter = when {
-                searchState.onlyShowHasResults -> 2
-                searchState.sourceFilter == AnimeSourceFilter.PinnedOnly -> 1
-                else -> 0
+            activeFilters = buildSet {
+                add(if (searchState.sourceFilter == AnimeSourceFilter.PinnedOnly) 1 else 0)
+                if (searchState.onlyShowHasResults) add(2)
             },
             onSelectFilter = { index ->
                 when (index) {
-                    0 -> {
-                        searchModel.setSourceFilter(AnimeSourceFilter.All)
-                        if (searchState.onlyShowHasResults) searchModel.toggleFilterResults()
-                    }
-                    1 -> {
-                        searchModel.setSourceFilter(AnimeSourceFilter.PinnedOnly)
-                        if (searchState.onlyShowHasResults) searchModel.toggleFilterResults()
-                    }
-                    else -> if (!searchState.onlyShowHasResults) searchModel.toggleFilterResults()
+                    0 -> searchModel.setSourceFilter(AnimeSourceFilter.All)
+                    1 -> searchModel.setSourceFilter(AnimeSourceFilter.PinnedOnly)
+                    else -> searchModel.toggleFilterResults()
                 }
             },
             sourceColumn = {
