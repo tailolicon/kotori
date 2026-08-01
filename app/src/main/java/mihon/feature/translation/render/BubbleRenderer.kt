@@ -81,6 +81,18 @@ class BubbleRenderer(private val context: Context) {
                 continue
             }
 
+            // One bubble detected twice is read twice, and the provider splits the sentence: the
+            // first box gets "Although I could use the system's channel," the second gets "but at
+            // this level there is no point wasting resources." Both are lettered, at different
+            // sizes, one above the other inside the same bubble. They are not duplicates by text —
+            // they are genuinely different halves — so only the geometry gives it away. A slot that
+            // sits almost entirely inside one already lettered is the same bubble again.
+            val nested = painted.any { containment(plan.slot, it) >= NESTED_SLOT_FRACTION }
+            if (nested) {
+                logcat { "Skipping ${plan.slot}: nested inside a bubble already lettered" }
+                continue
+            }
+
             val free = clearOf(plan.slot, painted)
             if (free == null) {
                 logcat { "Skipping ${plan.slot}: its text slot is already occupied" }
@@ -130,6 +142,15 @@ class BubbleRenderer(private val context: Context) {
         val shared = left.count { it in right }
         // Against the smaller set, so a clipped detection still matches the complete one.
         return shared.toFloat() / minOf(left.size, right.size) >= SAME_LINE_OVERLAP
+    }
+
+    /** Fraction of [inner]'s area that lies inside [outer], in 0..1. */
+    private fun containment(inner: Rect, outer: Rect): Float {
+        val area = inner.width().toLong() * inner.height()
+        if (area <= 0) return 0f
+        val overlap = Rect(inner)
+        if (!overlap.intersect(outer)) return 0f
+        return (overlap.width().toLong() * overlap.height()).toFloat() / area
     }
 
     /** One bubble that has been cleared, and the text still to be written into it. */
@@ -246,15 +267,32 @@ class BubbleRenderer(private val context: Context) {
         // Measured from the original lettering, before any of it is erased.
         val leftAligned = looksLeftAligned(bubble.lines)
 
+        // Status panels take a different route entirely — see [BubbleBox.isTextBlock].
+        if (bubble.box.isTextBlock && textLines.isNotEmpty()) {
+            return eraseTextBlock(
+                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
+            )
+        }
+
         val flat = BubbleFill.detect(pixels, width, height, searchArea, textLines)
         if (flat != null) {
             for (i in pixels.indices) if (flat.region[i]) pixels[i] = flat.fillColor
 
-            // The flood fill stops at panel borders, so a bubble that straddles one is only half
-            // cleared — the lettering on the far side survives and the page ships with a ghost line
-            // under the translation ("LET'S BUY SOME" above, its replacement below). Sweep the rest
-            // of the search area for leftover glyphs and inpaint them away.
-            val leftover = GlyphMask.detect(pixels, width, height, searchArea)
+            // Sweep the whole filled bubble for leftover lettering, not just the detector's box.
+            //
+            // The box routinely covers only part of the bubble it found — the flood fill then finds
+            // the real extent, but the glyph search was bounded by the box, so any line of the
+            // original outside it survives. On the page that exposed this the reader saw a finished
+            // Vietnamese sentence with "THING ELSE, SIR?" still sitting underneath it. The fill
+            // region is the bubble's true shape, so that is what has to be swept.
+            val sweepArea = Rect(flat.bounds).apply {
+                union(searchArea)
+                left = left.coerceAtLeast(0)
+                top = top.coerceAtLeast(0)
+                right = right.coerceAtMost(width)
+                bottom = bottom.coerceAtMost(height)
+            }
+            val leftover = GlyphMask.detect(pixels, width, height, sweepArea)
             if (leftover.covered > 0) {
                 var outside = 0
                 for (i in leftover.mask.indices) {
@@ -345,6 +383,107 @@ class BubbleRenderer(private val context: Context) {
 
         val page = Rect(textArea).apply { offset(regionLeft, regionTop) }
         return Plan(page, bubble.translated, inkColor, paperColor, leftAligned)
+    }
+
+    /**
+     * Clears a block of lettering that has no bubble around it — a status window, a caption.
+     *
+     * Masking by glyph fails here and cannot be made to work: the panels are translucent gradients
+     * and their lettering is a pale tint of the same hue as the panel, so no threshold separates
+     * them. Left to the glyph mask, the original shows through the translation as a ghost, which is
+     * exactly what the reader sees on a skill panel.
+     *
+     * The OCR line boxes are the reliable geometry, so the whole line strip is inpainted rather than
+     * the strokes inside it. That is safe precisely because these panels are smooth gradients: the
+     * inpainter has consistent colour on every side of the strip to reconstruct from. It would not
+     * be safe over drawn artwork, which is why it is reserved for boxes the text pass produced.
+     */
+    private fun eraseTextBlock(
+        bitmap: Bitmap,
+        bubble: TranslatedBubble,
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        textLines: List<Rect>,
+        regionLeft: Int,
+        regionTop: Int,
+        leftAligned: Boolean,
+    ): Plan? {
+        val strips = textLines
+            .map { line ->
+                val growX = max(2, (line.height() * LINE_STRIP_PAD).roundToInt())
+                val growY = max(2, (line.height() * LINE_STRIP_PAD).roundToInt())
+                Rect(line).apply {
+                    inset(-growX, -growY)
+                    left = left.coerceIn(0, width)
+                    top = top.coerceIn(0, height)
+                    right = right.coerceIn(0, width)
+                    bottom = bottom.coerceIn(0, height)
+                }
+            }
+            .filter { it.width() > 0 && it.height() > 0 }
+        if (strips.isEmpty()) return null
+
+        // Sample the ink before erasing: the replacement should match the panel's own lettering,
+        // which is usually a bright tint rather than the black a bubble would use.
+        val inkColor = strokeColorIn(pixels, width, strips) ?: Color.WHITE
+
+        val mask = BooleanArray(pixels.size)
+        for (strip in strips) {
+            for (y in strip.top until strip.bottom) {
+                val base = y * width
+                for (x in strip.left until strip.right) mask[base + x] = true
+            }
+        }
+        Inpainter.fill(pixels, width, height, mask)
+        bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
+
+        val bounds = Rect(strips[0])
+        for (strip in strips) bounds.union(strip)
+        val paperColor = averageColorIn(pixels, width, bounds)
+
+        val page = Rect(bounds).apply { offset(regionLeft, regionTop) }
+        logcat {
+            "text-block=${bubble.box} strips=${strips.size} bounds=$bounds page=$page " +
+                "left=$leftAligned ink=${Integer.toHexString(inkColor)}"
+        }
+        return Plan(page, bubble.translated, inkColor, paperColor, leftAligned)
+    }
+
+    /**
+     * Colour of the lettering inside [strips], taken as the pixels furthest from the strip's own
+     * median luminance — whichever side of it they fall on, since panel text can be lighter or
+     * darker than the panel.
+     */
+    private fun strokeColorIn(pixels: IntArray, width: Int, strips: List<Rect>): Int? {
+        val samples = ArrayList<Int>()
+        for (strip in strips) {
+            for (y in strip.top until strip.bottom) {
+                val base = y * width
+                for (x in strip.left until strip.right) samples.add(pixels[base + x])
+            }
+        }
+        if (samples.size < MIN_INK_SAMPLES) return null
+
+        val sorted = samples.sortedBy { luminanceOf(it) }
+        val median = luminanceOf(sorted[sorted.size / 2])
+        val take = max(1, (sorted.size * TEXT_BLOCK_INK_PERCENTILE).roundToInt())
+        // Lettering is the minority of a text strip, so it lives in whichever tail sits further from
+        // the median — that is the panel background.
+        val lowGap = median - luminanceOf(sorted.first())
+        val highGap = luminanceOf(sorted.last()) - median
+        val selected = if (highGap >= lowGap) sorted.takeLast(take) else sorted.take(take)
+
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        for (p in selected) {
+            r += (p shr 16) and 0xFF
+            g += (p shr 8) and 0xFF
+            b += p and 0xFF
+        }
+        val count = selected.size
+        return Color.rgb((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
     }
 
     /**
@@ -686,12 +825,18 @@ class BubbleRenderer(private val context: Context) {
         const val ALIGNMENT_MARGIN = 2f
         /** Word overlap above which two overlapping bubbles are treated as one line reworded. */
         const val SAME_LINE_OVERLAP = 0.6f
+        /** Slot area inside an already-lettered slot above which it is the same bubble again. */
+        const val NESTED_SLOT_FRACTION = 0.7f
 
         const val REGION_PAD_RATIO = 0.12f
         const val MIN_REGION_SIDE = 10
         const val BOX_INSET_RATIO = 0.06f
         const val MIN_INK_SAMPLES = 12
         const val INK_PERCENTILE = 0.40f
+        /** Lettering is a minority of a text strip, so a narrower tail than a glyph mask needs. */
+        const val TEXT_BLOCK_INK_PERCENTILE = 0.15f
+        /** Padding around an OCR line box before it is inpainted, as a fraction of line height. */
+        const val LINE_STRIP_PAD = 0.18f
 
         const val MIN_SLOT_SIDE = 12
         /** Narrower than this and no line of dialogue can render unclipped. */

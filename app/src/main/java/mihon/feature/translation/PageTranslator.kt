@@ -3,6 +3,7 @@ package mihon.feature.translation
 import android.content.Context
 import android.graphics.Bitmap
 import mihon.feature.translation.detect.BubbleDetector
+import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
 import mihon.feature.translation.model.TranslatedBubble
@@ -27,6 +28,7 @@ class PageTranslator(
 ) {
 
     private val detector by lazy { BubbleDetector(context) }
+    private val textBlocks by lazy { TextBlockDetector() }
     private val recognizer by lazy { BubbleTextRecognizer() }
     private val renderer by lazy { BubbleRenderer(context) }
 
@@ -38,20 +40,31 @@ class PageTranslator(
      * @throws NothingToTranslate when no bubble yielded usable text
      */
     suspend fun translate(source: Bitmap): Bitmap = withIOContext {
-        val detected = detector.detect(source)
-        val boxes = detected.filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
-        if (boxes.size < detected.size) {
-            logcat { "Dropped ${detected.size - boxes.size} edge-sliver box(es)" }
-        }
-        if (boxes.isEmpty()) throw NothingToTranslate()
-        logcat { "Detected ${boxes.size} bubbles on ${source.width}x${source.height} page" }
-
-        val provider = currentProvider()
         val translationContext = TranslationContext(
             sourceLanguage = preferences.sourceLanguage.get(),
             targetLanguage = preferences.targetLanguage.get(),
             styleHint = preferences.styleHint.get(),
         )
+
+        val detected = detector.detect(source)
+        // The bubble model only knows speech bubbles. Status windows, captions and narration boxes
+        // are lettering too, and readers care about them just as much — a chapter whose skill panels
+        // stay in English is not a translated chapter.
+        val extras = runCatching { textBlocks.detect(source, detected, translationContext.sourceLanguage) }
+            .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
+            .getOrDefault(emptyList())
+
+        val boxes = (detected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
+        if (boxes.size < detected.size + extras.size) {
+            logcat { "Dropped ${detected.size + extras.size - boxes.size} edge-sliver box(es)" }
+        }
+        if (boxes.isEmpty()) throw NothingToTranslate()
+        logcat {
+            "Detected ${boxes.size} regions (${detected.size} bubbles + ${extras.size} text blocks) " +
+                "on ${source.width}x${source.height} page"
+        }
+
+        val provider = currentProvider()
 
         // Glyph geometry is collected regardless of who does the reading, because the renderer needs it
         // to mask strokes rather than whole bubbles. It is cheap and fully local.
