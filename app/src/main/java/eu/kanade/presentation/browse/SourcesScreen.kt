@@ -1,8 +1,10 @@
 package eu.kanade.presentation.browse
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -15,12 +17,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.browse.components.BaseSourceItem
+import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.theme.kotori.KotoriChip
 import eu.kanade.presentation.theme.kotori.KotoriSectionLabel
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.tachiyomi.ui.browse.source.SourcesScreenModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
@@ -37,6 +44,8 @@ import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 import tachiyomi.source.local.isLocal
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 @Composable
 fun SourcesScreen(
@@ -53,8 +62,12 @@ fun SourcesScreen(
             modifier = Modifier.padding(contentPadding),
         )
         else -> {
+            // T6: inside the 300dp source column the rows are the compact variant —
+            // no full-width padding, no `Mới`/`Hot` chips, tighter geometry.
+            val compact = isKotoriTablet()
             ScrollbarLazyColumn(
-                contentPadding = contentPadding + topSmallPaddingValues,
+                contentPadding = if (compact) contentPadding else contentPadding + topSmallPaddingValues,
+                verticalArrangement = if (compact) Arrangement.spacedBy(6.dp) else Arrangement.Top,
             ) {
                 items(
                     items = state.items,
@@ -76,15 +89,31 @@ fun SourcesScreen(
                             SourceHeader(
                                 modifier = Modifier.animateItem(),
                                 language = model.language,
+                                compact = compact,
                             )
                         }
-                        is SourceUiModel.Item -> SourceItem(
-                            modifier = Modifier.animateItem(),
-                            source = model.source,
-                            onClickItem = onClickItem,
-                            onLongClickItem = onLongClickItem,
-                            onClickPin = onClickPin,
-                        )
+                        is SourceUiModel.Item -> if (compact) {
+                            val source = model.source
+                            KotoriCompactSourceRow(
+                                modifier = Modifier.animateItem(),
+                                name = source.name,
+                                subtitle = sourceSubtitle(source),
+                                pinned = Pin.Pinned in source.pin,
+                                selected = false,
+                                onClick = { onClickItem(source, Listing.Popular) },
+                                onLongClick = { onLongClickItem(source) },
+                                onTogglePin = { onClickPin(source) },
+                                icon = { SourceIcon(source = source, modifier = Modifier.fillMaxSize()) },
+                            )
+                        } else {
+                            SourceItem(
+                                modifier = Modifier.animateItem(),
+                                source = model.source,
+                                onClickItem = onClickItem,
+                                onLongClickItem = onLongClickItem,
+                                onClickPin = onClickPin,
+                            )
+                        }
                     }
                 }
             }
@@ -96,13 +125,26 @@ fun SourcesScreen(
 private fun SourceHeader(
     language: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val context = LocalContext.current
     KotoriSectionLabel(
         text = LocaleHelper.getSourceDisplayName(language, context),
-        modifier = modifier
-            .padding(start = 18.dp, top = 12.dp, bottom = 4.dp),
+        modifier = modifier.padding(
+            start = if (compact) 2.dp else 18.dp,
+            top = if (compact) 8.dp else 12.dp,
+            bottom = 4.dp,
+        ),
     )
+}
+
+/** `VI · Manga` sub-line of a compact source row. */
+@Composable
+private fun sourceSubtitle(source: Source): String {
+    val language = LocaleHelper.getSourceDisplayName(source.lang, LocalContext.current)
+    val mode = remember { Injekt.get<UiPreferences>().activeMediaMode.get() }
+    val type = if (mode == MediaType.NOVEL) "Novel" else "Manga"
+    return "$language · $type"
 }
 
 @Composable

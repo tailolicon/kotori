@@ -1,5 +1,6 @@
 package eu.kanade.presentation.theme.kotori
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,18 +39,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import eu.kanade.tachiyomi.util.system.isTabletUi
+
+private const val KOTORI_TABLET_MIN_SMALLEST_WIDTH_DP = 600
 
 /**
- * Kotori window classes, per the tablet handoff: the tablet composition is applied at
- * >= 840 dp width (Compose `WindowWidthSizeClass.Expanded`); 600–839 dp keeps the phone
- * composition but swaps the bottom nav for the rail; below 600 dp is the phone layout.
+ * Window-width tokens used inside Kotori layouts. The tablet composition itself is enabled only
+ * for a physical >= 600 dp device in landscape; portrait always uses the phone composition.
  */
 enum class KotoriWindowWidth {
     Compact,
@@ -71,12 +73,17 @@ fun kotoriWindowWidth(): KotoriWindowWidth {
 /** True when the re-composed tablet layouts (T1–T8) should be used. */
 @Composable
 @ReadOnlyComposable
-fun isKotoriTablet(): Boolean = LocalConfiguration.current.isTabletUi()
+fun isKotoriTablet(): Boolean {
+    val configuration = LocalConfiguration.current
+    val deviceConfiguration = LocalContext.current.applicationContext.resources.configuration
+    return configuration.orientation == Configuration.ORIENTATION_LANDSCAPE &&
+        deviceConfiguration.smallestScreenWidthDp >= KOTORI_TABLET_MIN_SMALLEST_WIDTH_DP
+}
 
 /** True when the vertical navigation rail replaces the floating bottom nav. */
 @Composable
 @ReadOnlyComposable
-fun isKotoriRail(): Boolean = kotoriWindowWidth() != KotoriWindowWidth.Compact
+fun isKotoriRail(): Boolean = isKotoriTablet()
 
 /**
  * Tablet-only tokens. Values mirror `Kotori Tablet.dc.html` 1:1 (1 px ≈ 1 dp).
@@ -166,6 +173,14 @@ object KotoriTabletShapes {
         topEnd = 16.dp,
         bottomEnd = 16.dp,
         bottomStart = 5.dp,
+    )
+
+    /** Compact source tiles in the T6 column: 13 13 13 4 */
+    val sourceTile = RoundedCornerShape(
+        topStart = 13.dp,
+        topEnd = 13.dp,
+        bottomEnd = 13.dp,
+        bottomStart = 4.dp,
     )
 
     /** Settings row icon tiles: 12 12 12 4 */

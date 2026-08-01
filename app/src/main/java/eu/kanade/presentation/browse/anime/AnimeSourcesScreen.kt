@@ -1,8 +1,10 @@
 package eu.kanade.presentation.browse.anime
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
@@ -20,9 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.browse.KotoriCompactSourceRow
+import eu.kanade.presentation.browse.anime.components.AnimeSourceIcon
 import eu.kanade.presentation.browse.anime.components.BaseAnimeSourceItem
 import eu.kanade.presentation.theme.kotori.KotoriChip
 import eu.kanade.presentation.theme.kotori.KotoriSectionLabel
+import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.tachiyomi.ui.browse.anime.source.AnimeSourcesScreenModel
 import eu.kanade.tachiyomi.ui.browse.anime.source.browse.BrowseAnimeSourceScreenModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
@@ -55,8 +60,11 @@ fun AnimeSourcesScreen(
             modifier = Modifier.padding(contentPadding),
         )
         else -> {
+            // T6: compact rows inside the 300dp source column.
+            val compact = isKotoriTablet()
             ScrollbarLazyColumn(
-                contentPadding = contentPadding + topSmallPaddingValues,
+                contentPadding = if (compact) contentPadding else contentPadding + topSmallPaddingValues,
+                verticalArrangement = if (compact) Arrangement.spacedBy(6.dp) else Arrangement.Top,
             ) {
                 items(
                     items = state.items,
@@ -78,15 +86,32 @@ fun AnimeSourcesScreen(
                             AnimeSourceHeader(
                                 modifier = Modifier.animateItem(),
                                 language = model.language,
+                                compact = compact,
                             )
                         }
-                        is AnimeSourceUiModel.Item -> AnimeSourceItem(
-                            modifier = Modifier.animateItem(),
-                            source = model.source,
-                            onClickItem = onClickItem,
-                            onLongClickItem = onLongClickItem,
-                            onClickPin = onClickPin,
-                        )
+                        is AnimeSourceUiModel.Item -> if (compact) {
+                            val source = model.source
+                            val language = LocaleHelper.getSourceDisplayName(source.lang, LocalContext.current)
+                            KotoriCompactSourceRow(
+                                modifier = Modifier.animateItem(),
+                                name = source.name,
+                                subtitle = "$language · Anime",
+                                pinned = Pin.Pinned in source.pin,
+                                selected = false,
+                                onClick = { onClickItem(source, Listing.Popular) },
+                                onLongClick = { onLongClickItem(source) },
+                                onTogglePin = { onClickPin(source) },
+                                icon = { AnimeSourceIcon(source = source, modifier = Modifier.fillMaxSize()) },
+                            )
+                        } else {
+                            AnimeSourceItem(
+                                modifier = Modifier.animateItem(),
+                                source = model.source,
+                                onClickItem = onClickItem,
+                                onLongClickItem = onLongClickItem,
+                                onClickPin = onClickPin,
+                            )
+                        }
                     }
                 }
             }
@@ -98,12 +123,16 @@ fun AnimeSourcesScreen(
 private fun AnimeSourceHeader(
     language: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val context = LocalContext.current
     KotoriSectionLabel(
         text = LocaleHelper.getSourceDisplayName(language, context),
-        modifier = modifier
-            .padding(start = 18.dp, top = 12.dp, bottom = 4.dp),
+        modifier = modifier.padding(
+            start = if (compact) 2.dp else 18.dp,
+            top = if (compact) 8.dp else 12.dp,
+            bottom = 4.dp,
+        ),
     )
 }
 
