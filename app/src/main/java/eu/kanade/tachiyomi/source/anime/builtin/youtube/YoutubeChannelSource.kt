@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import org.schabi.newpipe.extractor.Image
+import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.ServiceList
@@ -26,6 +27,7 @@ import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.stream.StreamInfo
+import org.schabi.newpipe.extractor.stream.VideoStream
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 /**
@@ -210,61 +212,73 @@ abstract class YoutubeChannelSource(
                 Track(it, sub.displayLanguageName ?: sub.languageTag ?: "sub")
             }
         }
+        // Pair with an m4a/AAC track when there is one: it is what the MP4 video streams below are
+        // muxed against everywhere else, and mpv opens the pair without a container mismatch.
         val bestAudioUrl = info.audioStreams
             .filter { it.content?.isNotBlank() == true }
-            .maxByOrNull { it.averageBitrate }
+            .maxWithOrNull(compareBy({ it.format == MediaFormat.M4A }, { it.averageBitrate }))
             ?.content
 
         val videos = mutableListOf<Video>()
 
         val progressiveStreams = info.videoStreams.filter { it.content?.isNotBlank() == true }
-        val dashStreams = info.videoOnlyStreams.filter { it.content?.isNotBlank() == true }
-        val bestHeight = (progressiveStreams + dashStreams)
-            .maxOfOrNull { it.resolution.resHeight() }
-            ?.takeIf { it > 0 }
 
-        // Adaptive HLS goes first and carries the height of the best rung it can reach, because
-        // that is what "play at the highest quality the connection allows" actually means here:
-        // it climbs on a good link and drops on a bad one without a fixed choice being made up
-        // front. YouTube's muxed streams top out at 360p, so preferring one of those — which is
-        // what this used to do — meant the player silently opened every episode in 360p.
-        info.hlsUrl
-            ?.takeIf { it.isNotBlank() }
-            ?.let {
+        // Highest first, and MP4/H.264 ahead of WebM/VP9 at the same height. This is the one the
+        // player opens by default, so it has to be the one that decodes in hardware — VP9 falls
+        // back to software on most Android devices and on x86 emulators, where 1080p then plays
+        // at a few frames a second.
+        val dashStreams = info.videoOnlyStreams
+            .filter { it.content?.isNotBlank() == true }
+            .sortedWith(
+                compareByDescending<VideoStream> { it.resolution.resHeight() }
+                    .thenByDescending { it.format == MediaFormat.MPEG_4 },
+            )
+
+        // Video-only + a separate audio track is what the site's own player does, and it is the
+        // only way to get past 360p: YouTube's muxed streams stop there. Two direct file URLs
+        // open in about as long as one, so this costs nothing at start.
+        if (bestAudioUrl != null) {
+            dashStreams.forEachIndexed { index, vs ->
                 videos += Video(
-                    videoUrl = it,
-                    videoTitle = "Tự động (HLS)",
-                    resolution = bestHeight,
-                    preferred = true,
+                    videoUrl = vs.content,
+                    videoTitle = "${vs.resolution.ifBlank { "video" }} (tách tiếng)",
+                    resolution = vs.resolution.resHeight().takeIf { it > 0 },
+                    preferred = index == 0,
+                    audioTracks = listOf(Track(bestAudioUrl, "audio")),
                     subtitleTracks = subtitles,
                 )
             }
+        }
 
-        // Muxed streams (audio+video in one file) start instantly but are capped low; DASH is
-        // video-only, so it needs a paired audio track and buffers more. Both stay available as
-        // manual picks.
+        // Muxed streams (audio+video in one file) are capped at 360p but need no pairing, so they
+        // stay as the fallback when a video-only stream will not open.
         progressiveStreams
             .sortedByDescending { it.resolution.resHeight() }
             .forEach { vs ->
                 videos += Video(
                     videoUrl = vs.content,
                     videoTitle = vs.resolution.ifBlank { "video" },
+                    resolution = vs.resolution.resHeight().takeIf { it > 0 },
+                    preferred = bestAudioUrl == null && vs === progressiveStreams.firstOrNull(),
                     subtitleTracks = subtitles,
                 )
             }
 
-        if (bestAudioUrl != null) {
-            dashStreams
-                .sortedByDescending { it.resolution.resHeight() }
-                .forEach { vs ->
-                    videos += Video(
-                        videoUrl = vs.content,
-                        videoTitle = "${vs.resolution.ifBlank { "video" }} (tách tiếng)",
-                        audioTracks = listOf(Track(bestAudioUrl, "audio")),
-                        subtitleTracks = subtitles,
-                    )
-                }
-        }
+        // Offered last and never auto-selected. YouTube's HLS manifest lists every rendition as a
+        // separate track in one file: ffmpeg reloads all of them continuously ("m3u8 list sequence
+        // may have been wrapped" on repeat), mpv opens whichever it considers default — 144p here
+        // — and the result desynchronises and throws decode errors. It is only useful as a manual
+        // escape hatch if the direct URLs ever stop working. Deliberately carries no resolution so
+        // it cannot win the automatic pick.
+        info.hlsUrl
+            ?.takeIf { it.isNotBlank() }
+            ?.let {
+                videos += Video(
+                    videoUrl = it,
+                    videoTitle = "HLS (dự phòng)",
+                    subtitleTracks = subtitles,
+                )
+            }
 
         videos
     }
