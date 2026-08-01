@@ -88,7 +88,9 @@ abstract class SearchScreenModel(
         val isNovelMode = uiPreferences.activeMediaMode.get() == MediaType.NOVEL
         return sourceManager.getAll()
             .filter { (it is NovelSource) == isNovelMode || it.isLocal() }
-            .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
+            // The built-in novel sources ship with the app, so the extension language filter —
+            // which the user never set for sources they did not install — must not hide them.
+            .filter { (it.lang in enabledLanguages || it is NovelSource || it.isLocal()) && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(
                     { "${it.id}" !in pinnedSources },

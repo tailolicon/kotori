@@ -9,6 +9,7 @@ import eu.kanade.domain.entries.anime.model.toDomainAnime
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
+import eu.kanade.tachiyomi.animesource.BuiltInAnimeSource
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.mutate
@@ -84,7 +85,11 @@ abstract class AnimeSearchScreenModel(
 
     open fun getEnabledSources(): List<AnimeCatalogueSource> {
         return sourceManager.getCatalogueSources()
-            .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
+            // Built-in sources ship with the app, so the extension language filter — which the
+            // user never set for sources they did not install — must not hide them. The browse
+            // list already exempts them; global search kept its own copy of the filter and did
+            // not, which is why AnimeHay and the YouTube channels never appeared in results.
+            .filter { (it.lang in enabledLanguages || it is BuiltInAnimeSource) && "${it.id}" !in disabledSources }
             .sortedWith(
                 compareBy(
                     { "${it.id}" !in pinnedSources },
