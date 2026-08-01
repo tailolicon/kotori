@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.source.anime.builtin
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -81,6 +82,17 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
     // ============================== Search ==============================
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
+        // A picked genre is its own listing page here, not a search parameter, so it replaces the
+        // query instead of narrowing it.
+        val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.slug()
+        if (genre != null && query.isBlank()) {
+            val genreUrl = if (page <= 1) {
+                "$baseUrl/the-loai/$genre.html"
+            } else {
+                "$baseUrl/the-loai/${genre.substringBeforeLast('-')}/trang-$page.html"
+            }
+            return GET(genreUrl, headers)
+        }
         val keyword = URLEncoder.encode(query, "UTF-8")
         val url = if (page <= 1) {
             "$baseUrl/tim-kiem/?keyword=$keyword"
@@ -91,6 +103,22 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
     }
 
     override fun searchAnimeParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
+
+    override fun getFilterList() = AnimeFilterList(GenreFilter())
+
+    /**
+     * The site genres, as a picker.
+     *
+     * Exposed as a filter rather than hardcoded in the UI so the browse screen chips and the
+     * filter sheet read the same list, and so picking one resolves to the site own listing page
+     * rather than a text search for the genre name.
+     */
+    private class GenreFilter : AnimeFilter.Select<String>(
+        "Thể loại",
+        arrayOf("Tất cả") + GENRES.keys.toTypedArray(),
+    ) {
+        fun slug(): String? = values.getOrNull(state)?.takeIf { state > 0 }?.let { GENRES[it] }
+    }
 
     private fun parseAnimeList(doc: Document): AnimesPage {
         val animes = doc.select("div.mc").mapNotNull { el ->
@@ -210,6 +238,58 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
     }
 
     companion object {
+        /** The site own genre list, display name to url slug. */
+        private val GENRES = linkedMapOf(
+            "Hành động" to "hanh-dong-2",
+            "Hài hước" to "hai-huoc-3",
+            "Tình cảm" to "tinh-cam-4",
+            "Harem" to "harem-5",
+            "Bí ẩn" to "bi-an-6",
+            "Bi kịch" to "bi-kich-7",
+            "Giả tưởng" to "gia-tuong-8",
+            "Học đường" to "hoc-duong-9",
+            "Đời thường" to "doi-thuong-10",
+            "Võ thuật" to "vo-thuat-11",
+            "Trò chơi" to "tro-choi-12",
+            "Thám tử" to "tham-tu-13",
+            "Lịch sử" to "lich-su-14",
+            "Siêu năng lực" to "sieu-nang-luc-15",
+            "Shounen" to "shounen-16",
+            "Shounen AI" to "shounen-ai-17",
+            "Shoujo" to "shoujo-18",
+            "Shoujo AI" to "shoujo-ai-19",
+            "Thể thao" to "the-thao-20",
+            "Âm nhạc" to "am-nhac-21",
+            "Psychological" to "psychological-22",
+            "Mecha" to "mecha-23",
+            "Quân đội" to "quan-doi-24",
+            "Drama" to "drama-25",
+            "Seinen" to "seinen-26",
+            "Siêu nhiên" to "sieu-nhien-27",
+            "Phiêu lưu" to "phieu-luu-28",
+            "Kinh dị" to "kinh-di-29",
+            "Ma cà rồng" to "ma-ca-rong-30",
+            "Tokusatsu" to "tokusatsu-31",
+            "Samurai" to "samurai-32",
+            "Viễn tưởng" to "vien-tuong-33",
+            "CN Animation" to "cn-animation-34",
+            "Tiên hiệp" to "tien-hiep-35",
+            "Kiếm hiệp" to "kiem-hiep-36",
+            "Xuyên không" to "xuyen-khong-37",
+            "Trùng sinh" to "trung-sinh-38",
+            "Huyền ảo" to "huyen-ao-39",
+            "Ngôn tình (CNA)" to "cna-ngon-tinh-40",
+            "Dị giới" to "di-gioi-41",
+            "Hài hước (CNA)" to "cna-hai-huoc-42",
+            "Đam mỹ" to "dam-my-43",
+            "Võ hiệp" to "vo-hiep-44",
+            "Ecchi" to "ecchi-45",
+            "Demon" to "demon-46",
+            "Live Action" to "live-action-47",
+            "Thriller" to "thriller-48",
+            "Khoa huyễn" to "khoa-huyen-49",
+        )
+
         const val DEFAULT_BASE_URL = "https://animehay10.site"
 
         /**

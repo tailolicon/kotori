@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -174,16 +177,33 @@ private fun KotoriFeedHero(item: KotoriFeedItem, onPlay: () -> Unit) {
                 onLongClick = item.onLongClick,
             ),
     ) {
-        KotoriCoverImage(data = item.cover, modifier = Modifier.fillMaxSize())
+        // Cover art is a ~215x320 poster; stretched across a 196 dp banner it is simply soft.
+        // Blurring it hard turns that into a deliberate backdrop, and the sharp poster sits in
+        // front at its own aspect ratio so the artwork still reads.
+        KotoriCoverImage(
+            data = item.cover,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(28.dp),
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0.26f to Color.Transparent,
-                        1f to Color(0xE60B0812),
+                        0.26f to Color(0x400B0812),
+                        1f to Color(0xF20B0812),
                     ),
                 ),
+        )
+        KotoriCoverImage(
+            data = item.cover,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 76.dp)
+                .fillMaxHeight()
+                .aspectRatio(2f / 2.9f)
+                .clip(CardShape),
         )
         Text(
             text = "NỔI BẬT HÔM NAY",

@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.source.anime.builtin
 import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
+import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
@@ -112,12 +113,34 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
     override fun latestUpdatesParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
+        // A picked genre is its own listing page here, not a search parameter, so it replaces the
+        // query instead of narrowing it.
+        val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.slug()
+        if (genre != null && query.isBlank()) {
+            return GET(browseUrl("/the-loai/$genre/", page), headers)
+        }
         val q = URLEncoder.encode(query, "UTF-8")
         val base = "$baseUrl/tim-kiem/$q/"
         return GET(if (page <= 1) base else base + "trang-$page.html", headers)
     }
 
     override fun searchAnimeParse(response: Response): AnimesPage = parseAnimeList(response.asJsoup())
+
+    override fun getFilterList() = AnimeFilterList(GenreFilter())
+
+    /**
+     * The site genres, as a picker.
+     *
+     * Exposed as a filter rather than hardcoded in the UI so the browse screen chips and the
+     * filter sheet read the same list, and so picking one resolves to the site own listing page
+     * rather than a text search for the genre name.
+     */
+    private class GenreFilter : AnimeFilter.Select<String>(
+        "Thể loại",
+        arrayOf("Tất cả") + GENRES.keys.toTypedArray(),
+    ) {
+        fun slug(): String? = values.getOrNull(state)?.takeIf { state > 0 }?.let { GENRES[it] }
+    }
 
     /**
      * A browse-list page.
@@ -300,6 +323,57 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
     }
 
     companion object {
+        /** The site own genre list, display name to url slug. */
+        private val GENRES = linkedMapOf(
+            "Hành động" to "hanh-dong",
+            "Phiêu lưu" to "phieu-luu",
+            "Đam mỹ" to "dong-tinh-nam",
+            "Cartoon" to "cartoon",
+            "Cổ trang" to "co-trang",
+            "Hài hước" to "hai-huoc",
+            "Điên loạn" to "dien-loan",
+            "Demons" to "demons",
+            "Drama" to "drama",
+            "Ecchi" to "ecchi",
+            "Phép thuật" to "phep-thuat",
+            "Trò chơi" to "tro-choi",
+            "Harem" to "harem",
+            "Lịch sử" to "lich-su",
+            "Kinh dị" to "kinh-di",
+            "Josei" to "josei",
+            "Trẻ em" to "tre-em",
+            "Live Action" to "live-action",
+            "Ma thuật" to "ma-thuat",
+            "Võ thuật" to "martial-arts",
+            "Mecha" to "mecha",
+            "Quân đội" to "quan-doi",
+            "Âm nhạc" to "am-nhac",
+            "Bí ẩn" to "mystery",
+            "Parody" to "parody",
+            "Cảnh sát" to "police",
+            "Psychological" to "psychological",
+            "Tình cảm" to "tinh-cam",
+            "Samurai" to "samurai",
+            "Học đường" to "truong-hoc",
+            "Sci-Fi" to "sci-fi",
+            "Seinen" to "seinen",
+            "Shoujo" to "shoujo",
+            "Shoujo Ai" to "shoujo-ai",
+            "Shounen" to "shounen",
+            "Shounen Ai" to "shounen-ai",
+            "Đời thường" to "doi-thuong",
+            "Space" to "space",
+            "Thể thao" to "the-thao",
+            "Siêu năng lực" to "super-power",
+            "Siêu nhiên" to "sieu-nhien",
+            "Hồi hộp" to "hoi-hop",
+            "Thriller" to "thriller",
+            "Tokusatsu" to "tokusatsu",
+            "Vampire" to "vampire",
+            "Yaoi" to "yaoi",
+            "Yuri" to "yuri",
+        )
+
         const val DEFAULT_BASE_URL = "https://animevietsub.ing"
 
         /**

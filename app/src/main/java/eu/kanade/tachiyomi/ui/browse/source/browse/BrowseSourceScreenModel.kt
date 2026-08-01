@@ -28,6 +28,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.CatalogueSource
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import mihon.domain.manga.model.toDomainManga
+import eu.kanade.tachiyomi.ui.browse.anime.source.browse.KOTORI_COMMON_GENRES
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -186,15 +187,21 @@ class BrowseSourceScreenModel(
      */
     private fun CatalogueSource.genreNames(): List<String> = runCatching {
         getFilterList()
-            .filterIsInstance<SourceModelFilter.Group<*>>()
-            .firstOrNull { group ->
-                group.name.contains("thể loại", true) || group.name.contains("genre", true)
+            .firstOrNull { filter ->
+                filter.name.contains("thể loại", true) || filter.name.contains("genre", true)
             }
-            ?.state
-            ?.filterIsInstance<SourceModelFilter<*>>()
-            ?.map { it.name }
-            .orEmpty()
-    }.getOrDefault(emptyList())
+            .let { filter ->
+                when (filter) {
+                    // A group of toggles, one per genre.
+                    is SourceModelFilter.Group<*> -> filter.state
+                        .filterIsInstance<SourceModelFilter<*>>()
+                        .map { it.name }
+                    // A single picker; its first entry is the "all" option, which is not a genre.
+                    is SourceModelFilter.Select<*> -> filter.values.filterIsInstance<String>().drop(1)
+                    else -> emptyList()
+                }
+            }
+    }.getOrDefault(emptyList()).ifEmpty { KOTORI_COMMON_GENRES }
 
     @Immutable
     data class SourceFeed(

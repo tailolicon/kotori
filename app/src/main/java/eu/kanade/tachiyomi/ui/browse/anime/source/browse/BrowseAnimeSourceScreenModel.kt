@@ -196,15 +196,21 @@ class BrowseAnimeSourceScreenModel(
      */
     private fun AnimeCatalogueSource.genreNames(): List<String> = runCatching {
         getFilterList()
-            .filterIsInstance<AnimeSourceModelFilter.Group<*>>()
-            .firstOrNull { group ->
-                group.name.contains("thể loại", true) || group.name.contains("genre", true)
+            .firstOrNull { filter ->
+                filter.name.contains("thể loại", true) || filter.name.contains("genre", true)
             }
-            ?.state
-            ?.filterIsInstance<AnimeSourceModelFilter<*>>()
-            ?.map { it.name }
-            .orEmpty()
-    }.getOrDefault(emptyList())
+            .let { filter ->
+                when (filter) {
+                    // A group of toggles, one per genre.
+                    is AnimeSourceModelFilter.Group<*> -> filter.state
+                        .filterIsInstance<AnimeSourceModelFilter<*>>()
+                        .map { it.name }
+                    // A single picker; its first entry is the "all" option, which is not a genre.
+                    is AnimeSourceModelFilter.Select<*> -> filter.values.filterIsInstance<String>().drop(1)
+                    else -> emptyList()
+                }
+            }
+    }.getOrDefault(emptyList()).ifEmpty { KOTORI_COMMON_GENRES }
 
     @Immutable
     data class SourceFeed(
@@ -492,3 +498,24 @@ private fun currentSeasonLabel(): String {
     }
     return "$season ${now.year}"
 }
+
+/**
+ * Genres to offer when a source declares none of its own.
+ *
+ * These run as a plain search for the word, which is weaker than a real genre listing but is the
+ * only thing available for a source that exposes no filters — and an empty chip row is worse.
+ */
+internal val KOTORI_COMMON_GENRES = listOf(
+    "Hành động",
+    "Phiêu lưu",
+    "Hài hước",
+    "Tình cảm",
+    "Học đường",
+    "Kinh dị",
+    "Viễn tưởng",
+    "Huyền ảo",
+    "Trinh thám",
+    "Thể thao",
+    "Đời thường",
+    "Kiếm hiệp",
+)
