@@ -31,6 +31,8 @@ import tachiyomi.domain.sync.service.SyncPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 class SyncJob(private val context: Context, workerParams: WorkerParameters) :
@@ -70,9 +72,30 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
             uploadFile = File(context.cacheDir, UPLOAD_TEMP_NAME)
             BackupCreator(context, isAutoBackup = false)
                 .backup(uploadFile.getUriCompat(context), BACKUP_OPTIONS)
-            client.upload(uploadFile.readBytes())
+            val uploadBytes = uploadFile.readBytes()
+            client.upload(uploadBytes)
 
             prefs.lastSyncTimestamp.set(System.currentTimeMillis())
+
+            // Snapshot is undo insurance only — never fail a sync that already succeeded.
+            runCatching {
+                val todayName = "kotori-sync-${LocalDate.now().format(SNAPSHOT_DATE_FORMAT)}.tachibk"
+                val names = client.listFileNames()
+                if (todayName !in names) {
+                    client.upload(uploadBytes, todayName)
+                }
+                // yyyyMMdd sorts chronologically as a string, so descending = newest first.
+                // Regex excludes the live kotori-sync.tachibk — that file is current state;
+                // deleting it would look like a clean prune until the next device syncs.
+                names
+                    .filter { SNAPSHOT_NAME_REGEX.matches(it) }
+                    .sortedDescending()
+                    .drop(MAX_SNAPSHOTS)
+                    .forEach { client.delete(it) }
+            }.onFailure { e ->
+                logcat(LogPriority.WARN, e)
+            }
+
             Result.success()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
@@ -116,6 +139,10 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
 
         private const val DOWNLOAD_TEMP_NAME = "kotori-sync-download.tachibk"
         private const val UPLOAD_TEMP_NAME = "kotori-sync-upload.tachibk"
+
+        private const val MAX_SNAPSHOTS = 3
+        private val SNAPSHOT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd")
+        private val SNAPSHOT_NAME_REGEX = Regex("""kotori-sync-\d{8}\.tachibk""")
 
         fun setupTask(context: Context, prefInterval: Int? = null) {
             val syncPreferences = Injekt.get<SyncPreferences>()

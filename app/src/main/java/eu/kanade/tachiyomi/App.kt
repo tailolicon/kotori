@@ -314,4 +314,4 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 private const val ACTION_DISABLE_INCOGNITO_MODE = "tachi.action.DISABLE_INCOGNITO_MODE"
 
 /** How long reading has to stay quiet before the session's progress is pushed. */
-private const val PROGRESS_SYNC_DEBOUNCE_MS = 60_000L
+private const val PROGRESS_SYNC_DEBOUNCE_MS = 30_000L
