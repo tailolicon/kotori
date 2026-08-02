@@ -252,11 +252,12 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
                     }
                 }
                 .build()
-            // Preserve a trailing progress request that arrives while another merge/upload runs.
-            // The mutex also serializes this chain with the differently named periodic worker.
+            // Only the newest request matters because every pass uploads a complete snapshot.
+            // Replacing the chain also prevents rapid progress/leave events from building a
+            // backlog whose oldest snapshots would take longer than the 30-second target to drain.
             context.workManager.enqueueUniqueWork(
                 ONE_TIME_WORK_NAME,
-                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                ExistingWorkPolicy.REPLACE,
                 request,
             )
         }

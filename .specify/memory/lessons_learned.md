@@ -32,4 +32,4 @@
 
 ### 7. Download-Then-Upload Sync Must Merge Progress Monotonically
 - **Mistake to Avoid:** Restoring a non-zero but older cloud position over newer local progress immediately before creating the upload backup; this silently re-uploads the stale value.
-- **Enforced Solution:** Merge chapter/page and episode/time positions with the maximum local/remote value, enqueue immediately from reader/player persistence call sites, and skip no-op history restores; broad database observers also see restore writes and create sync feedback loops.
+- **Enforced Solution:** Merge chapter/page and episode/time positions with the maximum local/remote value, enqueue immediately from reader/player persistence call sites, replace superseded full-snapshot work instead of appending a backlog, and skip no-op history restores; broad database observers also see restore writes and create sync feedback loops.
