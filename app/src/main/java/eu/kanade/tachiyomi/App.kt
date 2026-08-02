@@ -37,6 +37,7 @@ import eu.kanade.tachiyomi.data.coil.MangaCoverKeyer
 import eu.kanade.tachiyomi.data.coil.MangaKeyer
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.data.sync.SyncJob
 import eu.kanade.tachiyomi.di.AppModule
 import eu.kanade.tachiyomi.di.PreferenceModule
 import eu.kanade.tachiyomi.network.NetworkHelper
@@ -171,6 +172,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         initializeMigrator()
+
+        // Periodic WebDAV sync; other jobs (backup/library) register via ALWAYS migrations.
+        SyncJob.setupTask(this)
     }
 
     private fun initializeMigrator() {
@@ -228,10 +232,14 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     override fun onStart(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStart()
+        // Pull remote changes so the session you just opened is current.
+        SyncJob.startIfDue(this)
     }
 
     override fun onStop(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStopped()
+        // Push local progress; not rate-limited — leaving the app is when there is new data to send.
+        SyncJob.startOnLeave(this)
     }
 
     override fun getPackageName(): String {
