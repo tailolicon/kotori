@@ -21,5 +21,6 @@ Build, verify, and publish the latest committed Kotori application state to the
 - Run debug unit tests and the release build; fix failures and retest until green.
 - Verify APK package name, version, ABI coverage, size, and signing metadata.
 - Review staged changes for unrelated files, generated artifacts, and secrets.
+- Require HTTPS before attaching Basic Auth credentials to WebDAV requests.
 - Confirm `origin/main`, the tag, and GitHub release resolve to the same commit.
 - Do not claim publication if GitHub authentication or signing is unavailable.

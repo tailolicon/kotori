@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.sync
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
 import okhttp3.Credentials
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -177,7 +178,11 @@ class WebDavSyncClient(
         if (url.isBlank()) {
             throw IllegalStateException("Vui lòng cấu hình URL WebDAV trước khi đồng bộ.")
         }
-        return url
+        val parsedUrl = url.toHttpUrl()
+        require(parsedUrl.isHttps) {
+            "WebDAV phải dùng HTTPS để bảo vệ tên đăng nhập và mật khẩu."
+        }
+        return parsedUrl.toString().trimEnd('/')
     }
 
     private fun authenticatedRequest(url: String): Request.Builder {
