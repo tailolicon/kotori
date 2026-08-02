@@ -26,6 +26,8 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.workManager
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.sync.service.SyncPreferences
@@ -41,8 +43,11 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
 
     private val notifier = BackupNotifier(context)
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = syncMutex.withLock { runSync() }
+
+    private suspend fun runSync(): Result {
         val isManual = inputData.getBoolean(IS_MANUAL_KEY, false)
+        val reason = inputData.getString(SYNC_REASON_KEY).orEmpty()
         val prefs = Injekt.get<SyncPreferences>()
 
         if (!prefs.syncEnabled.get() || prefs.syncUrl.get().isBlank()) {
@@ -57,6 +62,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         var uploadFile: File? = null
 
         return try {
+            logcat { "WebDAV sync started ($reason)" }
             val client = WebDavSyncClient(prefs)
 
             // null = remote file missing (first ever sync) — skip restore and create it on upload
@@ -84,6 +90,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
             client.upload(uploadBytes)
 
             prefs.lastSyncTimestamp.set(System.currentTimeMillis())
+            logcat { "WebDAV sync completed ($reason)" }
 
             // Snapshot is undo insurance only — never fail a sync that already succeeded.
             runCatching {
@@ -135,15 +142,14 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         const val TAG_AUTO = "Sync"
         const val TAG_MANUAL = "Sync:manual"
         const val IS_MANUAL_KEY = "is_manual"
+        const val SYNC_REASON_KEY = "sync_reason"
 
         // privateSettings must stay false: the uploaded backup lives on the same WebDAV server
         // whose credentials are stored under private preference keys.
         private val BACKUP_OPTIONS = BackupOptions(privateSettings = false)
         private val RESTORE_OPTIONS = RestoreOptions()
 
-        // Opening/closing the app repeatedly would otherwise enqueue a chain of full library
-        // uploads; this floor keeps opportunistic syncs to at most once every five minutes.
-        private const val MIN_AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000L
+        private const val ONE_TIME_WORK_NAME = "Sync:once"
 
         private const val DOWNLOAD_TEMP_NAME = "kotori-sync-download.tachibk"
         private const val UPLOAD_TEMP_NAME = "kotori-sync-upload.tachibk"
@@ -151,6 +157,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         private const val MAX_SNAPSHOTS = 3
         private val SNAPSHOT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd")
         private val SNAPSHOT_NAME_REGEX = Regex("""kotori-sync-\d{8}\.tachibk""")
+        private val syncMutex = Mutex()
 
         fun setupTask(context: Context, prefInterval: Int? = null) {
             val syncPreferences = Injekt.get<SyncPreferences>()
@@ -168,7 +175,12 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
                 )
                     .addTag(TAG_AUTO)
                     .setConstraints(constraints)
-                    .setInputData(workDataOf(IS_MANUAL_KEY to false))
+                    .setInputData(
+                        workDataOf(
+                            IS_MANUAL_KEY to false,
+                            SYNC_REASON_KEY to "periodic",
+                        ),
+                    )
                     .build()
 
                 context.workManager.enqueueUniquePeriodicWork(
@@ -182,7 +194,13 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         }
 
         /** The sync button in settings: always runs, and says so when it fails. */
-        fun startNow(context: Context) = enqueueOnce(context, isManual = true)
+        fun startNow(context: Context) = enqueueOnce(context, reason = "manual", isManual = true)
+
+        /** Pull whenever the app enters the foreground so another device's upload is visible. */
+        fun startOnOpen(context: Context) {
+            if (!Injekt.get<SyncPreferences>().syncEnabled.get()) return
+            enqueueOnce(context, reason = "open", isManual = false, expedited = true)
+        }
 
         /**
          * Leaving the app — push what was just read.
@@ -192,7 +210,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
          */
         fun startOnLeave(context: Context) {
             if (!Injekt.get<SyncPreferences>().syncEnabled.get()) return
-            enqueueOnce(context, isManual = false, expedited = true)
+            enqueueOnce(context, reason = "leave", isManual = false, expedited = true)
         }
 
         /**
@@ -200,19 +218,31 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
          *
          * Waiting for `onStop` is a single point of failure: a force stop, or an OEM battery
          * manager that kills the process outright, skips it, and everything read in that session
-         * stays on the one device. Pushing during the session bounds that loss to the debounce
-         * window instead of a whole sitting. Rate limited by [startIfDue] so a long read does not
-         * become a stream of full-library uploads.
+         * stays on the one device. [App] samples progress writes before calling this, so continuous
+         * reading still uploads without creating one job per database write.
          */
-        fun startOnProgress(context: Context) = startIfDue(context)
+        fun startOnProgress(context: Context) {
+            if (!Injekt.get<SyncPreferences>().syncEnabled.get()) return
+            enqueueOnce(context, reason = "progress", isManual = false, expedited = true)
+        }
 
-        private fun enqueueOnce(context: Context, isManual: Boolean, expedited: Boolean = false) {
+        private fun enqueueOnce(
+            context: Context,
+            reason: String,
+            isManual: Boolean,
+            expedited: Boolean = false,
+        ) {
             val request = OneTimeWorkRequestBuilder<SyncJob>()
                 .addTag(if (isManual) TAG_MANUAL else TAG_AUTO)
                 .setConstraints(
                     Constraints(requiredNetworkType = NetworkType.CONNECTED),
                 )
-                .setInputData(workDataOf(IS_MANUAL_KEY to isManual))
+                .setInputData(
+                    workDataOf(
+                        IS_MANUAL_KEY to isManual,
+                        SYNC_REASON_KEY to reason,
+                    ),
+                )
                 .apply {
                     // The push on leaving races the process being killed, so it asks to run now
                     // rather than in the next batching window. RUN_AS_NON_EXPEDITED_WORK_REQUEST
@@ -222,19 +252,13 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
                     }
                 }
                 .build()
-            context.workManager.enqueueUniqueWork(TAG_MANUAL, ExistingWorkPolicy.KEEP, request)
-        }
-
-        fun startIfDue(context: Context) {
-            val prefs = Injekt.get<SyncPreferences>()
-            if (!prefs.syncEnabled.get()) return
-
-            val elapsed = System.currentTimeMillis() - prefs.lastSyncTimestamp.get()
-            if (elapsed < MIN_AUTO_SYNC_INTERVAL_MS) return
-
-            // Shares the one unique name with every other one-off sync, so an opening pull and a
-            // leaving push can never queue up behind each other.
-            enqueueOnce(context, isManual = false)
+            // Preserve a trailing progress request that arrives while another merge/upload runs.
+            // The mutex also serializes this chain with the differently named periodic worker.
+            context.workManager.enqueueUniqueWork(
+                ONE_TIME_WORK_NAME,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                request,
+            )
         }
 
         fun isRunning(context: Context): Boolean {

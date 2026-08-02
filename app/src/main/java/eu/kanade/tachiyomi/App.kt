@@ -50,11 +50,11 @@ import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notify
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
@@ -189,7 +189,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             Injekt.get<GetHistory>().subscribe("").drop(1),
             Injekt.get<GetAnimeHistory>().subscribe("").drop(1),
         )
-            .debounce(PROGRESS_SYNC_DEBOUNCE_MS)
+            // Sample instead of debounce: continuous reading must still upload periodically.
+            // Twenty seconds leaves scheduling/network headroom inside the 30-second target.
+            .sample(PROGRESS_SYNC_CADENCE_MS)
             .onEach { SyncJob.startOnProgress(this) }
             .launchIn(scope)
     }
@@ -250,7 +252,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     override fun onStart(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStart()
         // Pull remote changes so the session you just opened is current.
-        SyncJob.startIfDue(this)
+        SyncJob.startOnOpen(this)
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -313,5 +315,5 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
 private const val ACTION_DISABLE_INCOGNITO_MODE = "tachi.action.DISABLE_INCOGNITO_MODE"
 
-/** How long reading has to stay quiet before the session's progress is pushed. */
-private const val PROGRESS_SYNC_DEBOUNCE_MS = 30_000L
+/** Maximum time a progress event waits before an upload is requested. */
+private const val PROGRESS_SYNC_CADENCE_MS = 20_000L

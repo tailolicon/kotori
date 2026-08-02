@@ -29,3 +29,7 @@
 ### 6. YouTube HLS Startup and Early PiP Metadata
 - **Mistake to Avoid:** Selecting adaptive HLS first on MuMu/x86, where it can take more than 30 seconds to start, or force-unwrapping MPV aspect metadata before the first frame is ready.
 - **Enforced Solution:** Prefer the best progressive muxed stream only on x86/x86_64 while preserving HLS quality on ARM, and build PiP aspect ratio only from finite positive metadata. Verify cold-start time and keep playback alive for at least 30 seconds.
+
+### 7. Download-Then-Upload Sync Must Merge Progress Monotonically
+- **Mistake to Avoid:** Restoring a non-zero but older cloud position over newer local progress immediately before creating the upload backup; this silently re-uploads the stale value.
+- **Enforced Solution:** Merge chapter/page and episode/time positions with the maximum local/remote value, sample progress events on a bounded cadence, and skip no-op history restores to avoid sync feedback loops.

@@ -166,24 +166,7 @@ class MangaRestorer(
                     return@mapNotNull null
                 }
 
-                // Update to an existing chapter
-                var updatedChapter = chapter
-                    .copyFrom(dbChapter)
-                    .copy(
-                        id = dbChapter.id,
-                        bookmark = chapter.bookmark || dbChapter.bookmark,
-                    )
-                if (dbChapter.read && !updatedChapter.read) {
-                    updatedChapter = updatedChapter.copy(
-                        read = true,
-                        lastPageRead = dbChapter.lastPageRead,
-                    )
-                } else if (updatedChapter.lastPageRead == 0L && dbChapter.lastPageRead != 0L) {
-                    updatedChapter = updatedChapter.copy(
-                        lastPageRead = dbChapter.lastPageRead,
-                    )
-                }
-                updatedChapter
+                mergeChapterProgress(chapter, dbChapter)
             }
             .partition { it.id > 0 }
 
@@ -345,14 +328,20 @@ class MangaRestorer(
                 }
             }
 
-            // Update history entry
+            val mergedReadAt = max(item.readAt?.time ?: 0L, dbHistory.last_read?.time ?: 0L)
+            val additionalReadDuration = max(item.readDuration, dbHistory.time_read) - dbHistory.time_read
+            if (mergedReadAt == (dbHistory.last_read?.time ?: 0L) && additionalReadDuration == 0L) {
+                return@mapNotNull null
+            }
+
+            // `upsert` adds the duration, so only pass the portion missing locally.
             item.copy(
                 id = dbHistory._id,
                 chapterId = dbHistory.chapter_id,
-                readAt = max(item.readAt?.time ?: 0L, dbHistory.last_read?.time ?: 0L)
+                readAt = mergedReadAt
                     .takeIf { it > 0L }
                     ?.let { Date(it) },
-                readDuration = max(item.readDuration, dbHistory.time_read) - dbHistory.time_read,
+                readDuration = additionalReadDuration,
             )
         }
 
@@ -440,3 +429,18 @@ class MangaRestorer(
         toInsert.forEach { database.excluded_scanlatorsQueries.insert(manga.id, it) }
     }
 }
+
+/**
+ * Merges the cloud chapter into the local chapter without allowing reading progress to move
+ * backwards. A sync always downloads before it uploads; choosing the downloaded non-zero value
+ * unconditionally would therefore erase the progress that caused the sync in the first place.
+ */
+internal fun mergeChapterProgress(remote: Chapter, local: Chapter): Chapter = remote
+    .copyFrom(local)
+    .copy(
+        id = local.id,
+        read = remote.read || local.read,
+        bookmark = remote.bookmark || local.bookmark,
+        lastPageRead = max(remote.lastPageRead, local.lastPageRead),
+        version = max(remote.version, local.version),
+    )

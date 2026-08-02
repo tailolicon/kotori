@@ -183,25 +183,7 @@ class AnimeRestorer(
                     return@mapNotNull null
                 }
 
-                // Update to an existing episode
-                var updatedEpisode = episode
-                    .copyFrom(dbEpisode)
-                    .copy(
-                        id = dbEpisode.id,
-                        bookmark = episode.bookmark || dbEpisode.bookmark,
-                        fillermark = episode.fillermark || dbEpisode.fillermark,
-                    )
-                if (dbEpisode.seen && !updatedEpisode.seen) {
-                    updatedEpisode = updatedEpisode.copy(
-                        seen = true,
-                        lastSecondSeen = dbEpisode.lastSecondSeen,
-                    )
-                } else if (updatedEpisode.lastSecondSeen == 0L && dbEpisode.lastSecondSeen != 0L) {
-                    updatedEpisode = updatedEpisode.copy(
-                        lastSecondSeen = dbEpisode.lastSecondSeen,
-                    )
-                }
-                updatedEpisode
+                mergeEpisodeProgress(episode, dbEpisode)
             }
             .partition { it.id > 0 }
 
@@ -370,11 +352,16 @@ class AnimeRestorer(
                 }
             }
 
-            // Update history entry
+            val mergedSeenAt = max(item.seenAt?.time ?: 0L, dbHistory.last_seen?.time ?: 0L)
+            if (mergedSeenAt == (dbHistory.last_seen?.time ?: 0L)) {
+                return@mapNotNull null
+            }
+
+            // Avoid a no-op history write feeding back into the progress-sync observer.
             item.copy(
                 id = dbHistory._id,
                 episodeId = dbHistory.episode_id,
-                seenAt = max(item.seenAt?.time ?: 0L, dbHistory.last_seen?.time ?: 0L)
+                seenAt = mergedSeenAt
                     .takeIf { it > 0L }
                     ?.let { Date(it) },
             )
@@ -448,3 +435,16 @@ class AnimeRestorer(
 
     private fun AnimeTrack.forComparison() = this.copy(id = 0L, animeId = 0L)
 }
+
+/** Anime counterpart of [mergeChapterProgress]; playback position is monotonic during sync. */
+internal fun mergeEpisodeProgress(remote: Episode, local: Episode): Episode = remote
+    .copyFrom(local)
+    .copy(
+        id = local.id,
+        seen = remote.seen || local.seen,
+        bookmark = remote.bookmark || local.bookmark,
+        fillermark = remote.fillermark || local.fillermark,
+        lastSecondSeen = max(remote.lastSecondSeen, local.lastSecondSeen),
+        totalSeconds = max(remote.totalSeconds, local.totalSeconds),
+        version = max(remote.version, local.version),
+    )
