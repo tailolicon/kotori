@@ -142,9 +142,10 @@ class BrowseAnimeSourceScreenModel(
      */
     private val rawPopular = MutableStateFlow<List<SAnime>>(emptyList())
     private val rawLatest = MutableStateFlow<List<SAnime>>(emptyList())
+    private val rawGenres = MutableStateFlow<List<Pair<String, List<SAnime>>>>(emptyList())
     private val feedRefresh = MutableStateFlow(0)
 
-    val feed = combine(rawPopular, rawLatest, feedRefresh) { popular, latest, _ ->
+    val feed = combine(rawPopular, rawLatest, rawGenres, feedRefresh) { popular, latest, genreRows, _ ->
         if (popular.isEmpty() && latest.isEmpty()) return@combine SourceFeed()
         val popularItems = popular.toDomain()
         val latestItems = latest.toDomain()
@@ -152,14 +153,18 @@ class BrowseAnimeSourceScreenModel(
             hero = popularItems.firstOrNull(),
             top = popularItems.take(TOP_SHELF_SIZE),
             shelves = listOfNotNull(
-                latestItems.takeIf { it.isNotEmpty() }?.let { SourceShelf("MỚI CẬP NHẬT", "", it) },
+                latestItems.takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf("MỚI CẬP NHẬT", "", it, listing = Listing.Latest) },
                 popularItems.filter { it.status == SAnime.ONGOING.toLong() }
                     .takeIf { it.isNotEmpty() }
                     ?.let { SourceShelf("ĐANG CHIẾU MÙA NÀY", currentSeasonLabel(), it) },
                 popularItems.filter { it.status == SAnime.COMPLETED.toLong() }
                     .takeIf { it.isNotEmpty() }
                     ?.let { SourceShelf("HOÀN THÀNH · CÀY TRỌN BỘ", "", it) },
-            ),
+            ) + genreRows.mapNotNull { (genre, entries) ->
+                entries.takeIf { it.isNotEmpty() }
+                    ?.let { SourceShelf(genre.uppercase(), "", it.toDomain(), genre = genre) }
+            },
             genres = (source as? AnimeCatalogueSource)?.genreNames().orEmpty(),
             loaded = true,
         )
@@ -180,7 +185,68 @@ class BrowseAnimeSourceScreenModel(
                 runCatching { catalogue.getLatestUpdates(1).animes }
                     .onSuccess { rawLatest.value = it }
             }
+            loadGenreShelves(catalogue)
         }
+    }
+
+    /**
+     * One shelf per popular genre, appended as they arrive.
+     *
+     * Each is its own request — the API has no way to ask for several genres at once — so they
+     * load after the main feed is already on screen rather than holding it up, and a genre that
+     * fails is simply left out.
+     */
+    private suspend fun loadGenreShelves(catalogue: AnimeCatalogueSource) {
+        val declared = catalogue.genreNames()
+        if (declared.isEmpty()) return
+        val chosen = PREFERRED_SHELF_GENRES.filter { it in declared }
+            .ifEmpty { declared }
+            .take(GENRE_SHELF_COUNT)
+        chosen.forEach { genre ->
+            // A source with a real genre filter gets its own listing; one without still gets a
+            // shelf, from searching the genre's name. Weaker, but better than no shelf at all.
+            val filters = filtersForGenre(genre)
+            val query = if (filters == null) genre else ""
+            runCatching {
+                catalogue.getSearchAnime(1, query, filters ?: catalogue.getFilterList()).animes
+            }
+                .onSuccess { entries ->
+                    if (entries.isNotEmpty()) rawGenres.value = rawGenres.value + (genre to entries)
+                }
+        }
+    }
+
+    /** A filter list with [genreName] picked, or null when the source has no such genre. */
+    private fun filtersForGenre(genreName: String): AnimeFilterList? {
+        val catalogue = source as? AnimeCatalogueSource ?: return null
+        val filters = catalogue.getFilterList()
+        for (sourceFilter in filters) {
+            if (sourceFilter is AnimeSourceModelFilter.Group<*>) {
+                for (filter in sourceFilter.state) {
+                    if (filter is AnimeSourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                        when (filter) {
+                            is AnimeSourceModelFilter.TriState -> filter.state = 1
+                            is AnimeSourceModelFilter.CheckBox -> filter.state = true
+                            else -> return null
+                        }
+                        return filters
+                    }
+                }
+            } else if (sourceFilter is AnimeSourceModelFilter.Select<*>) {
+                val index = sourceFilter.values.filterIsInstance<String>()
+                    .indexOfFirst { it.equals(genreName, true) }
+                if (index != -1) {
+                    sourceFilter.state = index
+                    return filters
+                }
+            }
+        }
+        return null
+    }
+
+    /** Opens a feed as a full grid — what `Tất cả ›` on a shelf header does. */
+    fun showAll(listing: Listing) {
+        mutableState.update { it.copy(listing = listing, toolbarQuery = null, activeGenre = null, showGrid = true) }
     }
 
     /** Re-reads the feed's entries from the database, so the in-library tick stays honest. */
@@ -226,6 +292,10 @@ class BrowseAnimeSourceScreenModel(
         val label: String,
         val sub: String,
         val items: List<Anime>,
+        /** Set when `Tất cả ›` should open this genre in full. */
+        val genre: String? = null,
+        /** Set when `Tất cả ›` should open a source feed in full. */
+        val listing: Listing? = null,
     )
 
     fun getColumnsPreference(orientation: Int): GridCells {
@@ -255,7 +325,9 @@ class BrowseAnimeSourceScreenModel(
     }
 
     fun setListing(listing: Listing) {
-        mutableState.update { it.copy(listing = listing, toolbarQuery = null) }
+        mutableState.update {
+            it.copy(listing = listing, toolbarQuery = null, activeGenre = null, showGrid = false)
+        }
     }
 
     fun setFilters(filters: AnimeFilterList) {
@@ -325,6 +397,7 @@ class BrowseAnimeSourceScreenModel(
                 filters = defaultFilters,
                 listing = listing,
                 toolbarQuery = listing.query,
+                activeGenre = genreName,
             )
         }
     }
@@ -472,6 +545,10 @@ class BrowseAnimeSourceScreenModel(
         val listing: Listing,
         val filters: AnimeFilterList = AnimeFilterList(),
         val toolbarQuery: String? = null,
+        /** The genre chip currently applied, so the row can mark it and offer a way back. */
+        val activeGenre: String? = null,
+        /** `Tất cả ›` was used: show the current feed as a grid rather than as shelves. */
+        val showGrid: Boolean = false,
         val dialog: Dialog? = null,
     ) {
         val isUserQuery get() = listing is Listing.Search && !listing.query.isNullOrEmpty()
@@ -519,3 +596,23 @@ internal val KOTORI_COMMON_GENRES = listOf(
     "Đời thường",
     "Kiếm hiệp",
 )
+
+/**
+ * Genres worth a shelf of their own, best first.
+ *
+ * Intersected with what a source actually declares — a source with none of these falls back to
+ * its own first few, so the feed is never short of shelves.
+ */
+internal val PREFERRED_SHELF_GENRES = listOf(
+    "Hành động",
+    "Tình cảm",
+    "Hài hước",
+    "Phiêu lưu",
+    "Học đường",
+    "Huyền ảo",
+    "Kinh dị",
+    "Viễn tưởng",
+)
+
+/** How many genre shelves the feed carries. Each one costs a request when the source opens. */
+internal const val GENRE_SHELF_COUNT = 4

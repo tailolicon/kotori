@@ -60,11 +60,12 @@ data class KotoriFeedItem(
     val onLongClick: () -> Unit,
 )
 
-/** A titled horizontal shelf. */
+/** A titled horizontal shelf. `onSeeAll` is null when the shelf has nowhere fuller to go. */
 data class KotoriFeedShelf(
     val label: String,
     val sub: String,
     val items: List<KotoriFeedItem>,
+    val onSeeAll: (() -> Unit)? = null,
 )
 
 private val HeroShape = RoundedCornerShape(
@@ -102,6 +103,7 @@ fun KotoriSourceFeed(
     activeGenre: String?,
     onSelectGenre: (String?) -> Unit,
     onPlayHero: () -> Unit,
+    onSeeAllTop: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -115,23 +117,13 @@ fun KotoriSourceFeed(
         }
         if (genres.isNotEmpty()) {
             item("genres") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    item("all") {
-                        KotoriGenreChip("Tất cả", activeGenre == null) { onSelectGenre(null) }
-                    }
-                    items(genres, key = { it }) { genre ->
-                        KotoriGenreChip(genre, genre == activeGenre) { onSelectGenre(genre) }
-                    }
-                }
+                KotoriGenreRow(genres, activeGenre, onSelectGenre)
             }
         }
         if (top.isNotEmpty()) {
             item("top") {
                 Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                    KotoriShelfHeader(label = "TOP 10 TRONG NGÀY", sub = "")
+                    KotoriShelfHeader(label = "TOP 10 TRONG NGÀY", sub = "", onSeeAll = onSeeAllTop)
                     LazyRow(
                         contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -145,7 +137,7 @@ fun KotoriSourceFeed(
         }
         items(shelves, key = { it.label }) { shelf ->
             Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                KotoriShelfHeader(label = shelf.label, sub = shelf.sub)
+                KotoriShelfHeader(label = shelf.label, sub = shelf.sub, onSeeAll = shelf.onSeeAll)
                 LazyRow(
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(11.dp),
@@ -278,7 +270,7 @@ private fun KotoriFeedHero(item: KotoriFeedItem, onPlay: () -> Unit) {
 }
 
 @Composable
-private fun KotoriShelfHeader(label: String, sub: String) {
+private fun KotoriShelfHeader(label: String, sub: String, onSeeAll: (() -> Unit)?) {
     val accent = LocalKotoriAccent.current
     Row(
         modifier = Modifier
@@ -300,6 +292,24 @@ private fun KotoriShelfHeader(label: String, sub: String) {
                 fontFamily = BeVietnamProFamily,
                 fontSize = 10.5.sp,
                 color = KotoriColors.textFaint,
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        if (onSeeAll != null) {
+            Text(
+                text = "Tất cả ›",
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp,
+                color = KotoriColors.textMuted,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onSeeAll,
+                    )
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
             )
         }
     }
@@ -456,5 +466,57 @@ private fun KotoriCoverImage(data: Any?, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+}
+
+/**
+ * The genre chips.
+ *
+ * Drawn above the results as well as above the feed: picking a genre swaps the whole screen for a
+ * grid, and taking the chips away with it left no way back to where you started.
+ */
+@Composable
+fun KotoriGenreRow(
+    genres: List<String>,
+    activeGenre: String?,
+    onSelectGenre: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyRow(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item("all") {
+            KotoriGenreChip("Tất cả", activeGenre == null) { onSelectGenre(null) }
+        }
+        items(genres, key = { it }) { genre ->
+            KotoriGenreChip(genre, genre == activeGenre) { onSelectGenre(genre) }
+        }
+    }
+}
+
+/** `KẾT QUẢ · 42 bộ · Hành động` — what the grid below is showing and why. */
+@Composable
+fun KotoriResultHeader(count: Int, activeGenre: String?, modifier: Modifier = Modifier) {
+    val accent = LocalKotoriAccent.current
+    Row(
+        modifier = modifier.padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "KẾT QUẢ",
+            fontFamily = UnboundedFamily,
+            fontSize = 11.sp,
+            letterSpacing = 0.16.em,
+            color = accent.light,
+        )
+        Text(
+            text = listOfNotNull("$count bộ", activeGenre).joinToString(" · "),
+            fontFamily = BeVietnamProFamily,
+            fontSize = 11.sp,
+            color = KotoriColors.textMuted,
+        )
     }
 }

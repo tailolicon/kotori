@@ -38,6 +38,7 @@ import eu.kanade.presentation.browse.KotoriSourceFeed
 import eu.kanade.tachiyomi.source.model.SManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.asMangaCover
+import eu.kanade.presentation.browse.KotoriGenreRow
 import eu.kanade.presentation.browse.KotoriFeedPill
 import eu.kanade.presentation.browse.KotoriFilterFab
 import eu.kanade.presentation.browse.components.BrowseSourceToolbar
@@ -89,6 +90,16 @@ data class BrowseSourceScreen(
         val screenModel = rememberScreenModel { BrowseSourceScreenModel(sourceId, listingQuery) }
         val state by screenModel.state.collectAsState()
         val feed by screenModel.feed.collectAsState()
+
+        // Shared by the header row and the feed, so both agree on what is selected.
+        val onSelectGenre: (String?) -> Unit = { genre ->
+            if (genre == null) {
+                screenModel.resetFilters()
+                screenModel.setListing(Listing.Popular)
+            } else {
+                screenModel.searchGenre(genre)
+            }
+        }
         LaunchedEffect(screenModel.source) { screenModel.loadFeed() }
 
         val navigator = LocalNavigator.currentOrThrow
@@ -197,7 +208,7 @@ data class BrowseSourceScreen(
             ) { paddingValues ->
                 // The feed is the browsing state; a query or a filter turns the screen into the
                 // grid of results instead. The two are exclusive in the design.
-                val showFeed = state.listing !is Listing.Search && feed.loaded
+                val showFeed = state.listing !is Listing.Search && !state.showGrid && feed.loaded
                 if (showFeed) {
                     val onOpen: (Manga) -> Unit = { navigator.push(MangaScreen(it.id, true)) }
                     val toItem: (Manga) -> KotoriFeedItem = { manga ->
@@ -226,14 +237,24 @@ data class BrowseSourceScreen(
                         hero = feed.hero?.let(toItem),
                         top = feed.top.map(toItem),
                         shelves = feed.shelves.map { shelf ->
-                            KotoriFeedShelf(shelf.label, shelf.sub, shelf.items.map(toItem))
+                            KotoriFeedShelf(
+                                label = shelf.label,
+                                sub = shelf.sub,
+                                items = shelf.items.map(toItem),
+                                onSeeAll = when {
+                                    shelf.genre != null -> ({ screenModel.searchGenre(shelf.genre) })
+                                    shelf.listing != null -> ({ screenModel.showAll(shelf.listing) })
+                                    // A status shelf is something this screen worked out, not a
+                                    // feed the source can serve, so nothing fuller can be opened.
+                                    else -> null
+                                },
+                            )
                         },
                         genres = feed.genres,
-                        activeGenre = null,
-                        onSelectGenre = { genre ->
-                            if (genre != null) screenModel.searchGenre(genre)
-                        },
+                        activeGenre = state.activeGenre,
+                        onSelectGenre = onSelectGenre,
                         onPlayHero = { feed.hero?.let(onOpen) },
+                        onSeeAllTop = { screenModel.showAll(Listing.Popular) },
                         contentPadding = paddingValues,
                     )
                     return@Scaffold
