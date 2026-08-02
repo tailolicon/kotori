@@ -94,31 +94,61 @@ class WebDavSyncClient(
         }
     }
 
+    /**
+     * Checks the server is reachable with these credentials, creating the sync folder if the URL
+     * points at one that does not exist yet.
+     *
+     * A missing folder answers `404`, and reporting that as a failure made the user go and create
+     * it by hand — for a folder only this app ever uses, whose name they had already typed in.
+     * The upload path has always created it on demand; the test now does the same, so a green
+     * result means the destination is genuinely ready rather than merely already prepared.
+     */
     suspend fun testConnection(): Result<Unit> = withIOContext {
         try {
-            val request = authenticatedRequest(folderUrl())
-                .method("PROPFIND", EMPTY_REQUEST)
-                .header("Depth", "0")
-                .build()
-            client.newCall(request).await().use { response ->
-                when {
-                    response.isSuccessful || response.code == 207 -> Result.success(Unit)
-                    response.code == 401 || response.code == 403 -> {
-                        Result.failure(
-                            IOException("Sai tên đăng nhập hoặc mật khẩu WebDAV."),
-                        )
-                    }
-                    else -> {
-                        Result.failure(
-                            IOException("Kết nối WebDAV thất bại (mã ${response.code})."),
-                        )
-                    }
-                }
+            when (val code = propfindStatus()) {
+                in 200..299, 207 -> Result.success(Unit)
+                401, 403 -> Result.failure(IOException(BAD_CREDENTIALS))
+                404 -> createFolderThenRetest()
+                else -> Result.failure(IOException("Kết nối WebDAV thất bại (mã $code)."))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    private suspend fun createFolderThenRetest(): Result<Unit> {
+        val mkcol = client.newCall(
+            authenticatedRequest(folderUrl()).method("MKCOL", null).build(),
+        ).await().use { it.code }
+
+        return when (mkcol) {
+            in 200..299 -> Result.success(Unit)
+            401, 403 -> Result.failure(IOException(BAD_CREDENTIALS))
+            // WebDAV answers 409 when the *parent* is missing, which here means the part of the
+            // address before the last folder is wrong — on Koofr, everything up to `/dav/Koofr`.
+            409 -> Result.failure(
+                IOException(
+                    "Không tạo được thư mục: phần địa chỉ phía trước không tồn tại. " +
+                        "Với Koofr, địa chỉ phải bắt đầu bằng https://app.koofr.net/dav/Koofr/",
+                ),
+            )
+            // Some servers refuse MKCOL on a collection that already exists. If it is there now,
+            // the connection was fine all along.
+            405 -> if (propfindStatus() in listOf(207) + (200..299).toList()) {
+                Result.success(Unit)
+            } else {
+                Result.failure(IOException("Thư mục đã tồn tại nhưng không đọc được (mã 405)."))
+            }
+            else -> Result.failure(IOException("Không tạo được thư mục đồng bộ (mã $mkcol)."))
+        }
+    }
+
+    private suspend fun propfindStatus(): Int = client.newCall(
+        authenticatedRequest(folderUrl())
+            .method("PROPFIND", EMPTY_REQUEST)
+            .header("Depth", "0")
+            .build(),
+    ).await().use { it.code }
 
     /**
      * Servers use different XML namespace prefixes (`<D:href>`, `<d:href>`, plain `<href>`).
@@ -162,6 +192,7 @@ class WebDavSyncClient(
 
     private companion object {
         const val REMOTE_FILE_NAME = "kotori-sync.tachibk"
+        const val BAD_CREDENTIALS = "Sai tên đăng nhập hoặc mật khẩu WebDAV."
         val OCTET_STREAM = "application/octet-stream".toMediaType()
         val EMPTY_REQUEST = ByteArray(0).toRequestBody(null)
 
