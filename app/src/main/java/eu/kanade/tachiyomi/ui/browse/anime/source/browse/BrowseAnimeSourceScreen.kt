@@ -224,10 +224,17 @@ data class BrowseAnimeSourceScreen(
                 }
             },
         ) { paddingValues ->
-            // The feed is the browsing state; a query or a filter turns the screen into the grid
-            // of results instead. The two are exclusive in the design, not stacked.
-            val showFeed = state.listing !is Listing.Search && !state.showGrid && feed.loaded
-            if (showFeed) {
+            // The feed belongs to "Phổ biến" alone. "Mới nhất" is a plain list of what the
+            // source just updated, which is the whole point of the tab — shelving it under a hero
+            // and a top ten buries the one thing it is for.
+            val feedIsTheView = state.listing == Listing.Popular && !state.showGrid
+            // Falling through to the grid while the feed loads flashed the old layout for a few
+            // seconds and then swapped it out underneath the reader.
+            if (feedIsTheView && !feed.loaded) {
+                LoadingScreen(Modifier.padding(paddingValues))
+                return@Scaffold
+            }
+            if (feedIsTheView) {
                 val onOpen: (Anime) -> Unit = { navigator.push(AnimeScreen(it.id, true)) }
                 val onToggleFavorite: (Anime) -> Unit = { anime ->
                     scope.launchIO {
