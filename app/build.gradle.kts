@@ -34,10 +34,11 @@ android {
 
         versionCode = getLatestCommitCount().toInt()
 
-        // Derived, never written down: a hardcoded name goes stale on the very next commit — the
-        // last one said 72 while the tree it shipped from was already at 74, which is exactly the
-        // kind of drift that makes it impossible to tell which build carries which fix.
-        versionName = "0.20.1-${getLatestCommitCount()}"
+        // The release name is written down; the commit count is not. Release builds carry a plain
+        // "1.0.0", while debug/update/preview append `-${commitCount}` through their
+        // versionNameSuffix — so a milestone reads as a milestone, and every other build still
+        // says exactly which commit it came from.
+        versionName = "1.0.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
