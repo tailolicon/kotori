@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.data.sync
 
 import android.content.Context
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -14,13 +15,13 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestorer
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.notification.Notifications
-import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
@@ -65,13 +66,20 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
                     it.writeBytes(remoteBytes)
                 }
                 BackupRestorer(context, notifier, isSync = true)
-                    .restore(downloadFile.getUriCompat(context), RESTORE_OPTIONS)
+                    .restore(downloadFile.toUniFileUri(), RESTORE_OPTIONS)
             }
 
             // Fresh backup of the now-merged local state, then push it upstream
-            uploadFile = File(context.cacheDir, UPLOAD_TEMP_NAME)
+            // BackupCreator rejects a destination that is not already a file, so the empty
+            // placeholder has to exist on disk before it is handed over — a `File` object alone
+            // is just a path, and the failure it produced said only "Couldn't create a backup
+            // file", which points at the backup rather than at its destination.
+            uploadFile = File(context.cacheDir, UPLOAD_TEMP_NAME).also {
+                it.delete()
+                it.createNewFile()
+            }
             BackupCreator(context, isAutoBackup = false)
-                .backup(uploadFile.getUriCompat(context), BACKUP_OPTIONS)
+                .backup(uploadFile.toUniFileUri(), BACKUP_OPTIONS)
             val uploadBytes = uploadFile.readBytes()
             client.upload(uploadBytes)
 
@@ -234,3 +242,11 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         }
     }
 }
+
+/**
+ * A [Uri] the backup code can open, straight from the file.
+ *
+ * Not `getUriCompat`: that hands back a FileProvider `content://` URI, and routing the app's own
+ * private cache through its own provider buys nothing here while adding a way to fail.
+ */
+private fun File.toUniFileUri(): Uri = UniFile.fromFile(this)!!.uri
