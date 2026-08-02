@@ -25,7 +25,14 @@ class UiPreferences(
 
     val themeDarkAmoled: Preference<Boolean> = preferenceStore.getBoolean("pref_theme_dark_amoled_key", false)
 
-    val activeMediaMode: Preference<MediaType> = preferenceStore.getEnum("active_media_mode", MediaType.MANGA)
+    /**
+     * Which of Manga/Anime/Novel is on screen — private, so it never travels in a backup.
+     *
+     * It is where this device is looking, not data. Syncing it meant every completed sync yanked
+     * the tab over to whatever the other device happened to be showing, mid-session.
+     */
+    val activeMediaMode: Preference<MediaType> =
+        preferenceStore.getEnum(Preference.privateKey("active_media_mode"), MediaType.MANGA)
 
     val relativeTime: Preference<Boolean> = preferenceStore.getBoolean("relative_time_v2", true)
 

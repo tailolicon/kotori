@@ -9,6 +9,8 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -60,6 +62,10 @@ fun Screen.KotoriTabletMangaBrowse(
     val navigator = LocalNavigator.currentOrThrow
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    // `state` belongs to the phone layout's HorizontalPager, which this screen does not compose.
+    // Driving the segmented control through it meant `animateScrollToPage` had nothing to scroll
+    // and `currentPage` never moved — Tiện ích and Di dời simply did nothing when tapped.
+    var activeTab by remember { mutableIntStateOf(state.currentPage) }
     val searchModel = rememberScreenModel { GlobalSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
 
@@ -70,8 +76,8 @@ fun Screen.KotoriTabletMangaBrowse(
             title = stringResource(MR.strings.browse),
             tabLabels = tabs.map { stringResource(it.titleRes) },
             tabBadges = tabs.map { it.badgeNumber },
-            activeTab = state.currentPage,
-            onSelectTab = { scope.launch { state.animateScrollToPage(it) } },
+            activeTab = activeTab,
+            onSelectTab = { activeTab = it },
             searchQuery = searchState.searchQuery.orEmpty(),
             onSearchChange = searchModel::updateSearchQuery,
             onSearch = { searchModel.search() },
@@ -89,7 +95,7 @@ fun Screen.KotoriTabletMangaBrowse(
                 }
             },
             sourceColumn = {
-                tabs[state.currentPage].content(PaddingValues(), snackbarHostState)
+                tabs[activeTab.coerceIn(tabs.indices)].content(PaddingValues(), snackbarHostState)
             },
             results = {
                 val mode = remember { Injekt.get<UiPreferences>().activeMediaMode.get() }
@@ -154,6 +160,10 @@ fun Screen.KotoriTabletAnimeBrowse(
     val navigator = LocalNavigator.currentOrThrow
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    // `state` belongs to the phone layout's HorizontalPager, which this screen does not compose.
+    // Driving the segmented control through it meant `animateScrollToPage` had nothing to scroll
+    // and `currentPage` never moved — Tiện ích and Di dời simply did nothing when tapped.
+    var activeTab by remember { mutableIntStateOf(state.currentPage) }
     val searchModel = rememberScreenModel { GlobalAnimeSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
 
@@ -164,8 +174,8 @@ fun Screen.KotoriTabletAnimeBrowse(
             title = stringResource(MR.strings.browse),
             tabLabels = tabs.map { stringResource(it.titleRes) },
             tabBadges = tabs.map { it.badgeNumber },
-            activeTab = state.currentPage,
-            onSelectTab = { scope.launch { state.animateScrollToPage(it) } },
+            activeTab = activeTab,
+            onSelectTab = { activeTab = it },
             searchQuery = searchState.searchQuery.orEmpty(),
             onSearchChange = searchModel::updateSearchQuery,
             onSearch = { searchModel.search() },
@@ -183,7 +193,7 @@ fun Screen.KotoriTabletAnimeBrowse(
                 }
             },
             sourceColumn = {
-                tabs[state.currentPage].content(PaddingValues(), snackbarHostState)
+                tabs[activeTab.coerceIn(tabs.indices)].content(PaddingValues(), snackbarHostState)
             },
             results = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(18.dp)) {

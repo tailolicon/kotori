@@ -165,13 +165,19 @@ private fun formatRemaining(millis: Long): String {
 private fun rememberNovelEntryLookup(ids: List<Long>): (Long) -> Boolean {
     val novelIds by produceState(initialValue = emptySet<Long>(), ids) {
         val getManga = Injekt.get<GetManga>()
-        // Extensions load asynchronously, so asking the source manager once — right after the app
-        // starts, which is exactly when this panel first draws — answers "nothing is a novel" and
-        // caches it. Following the source list instead means the answer corrects itself.
-        Injekt.get<SourceManager>().sources.collectLatest { sources ->
-            val novelSources = sources.filterIsInstance<NovelSource>().mapTo(mutableSetOf()) { it.id }
+        val sourceManager = Injekt.get<SourceManager>()
+        // Extensions load asynchronously, so asking once — right after the app starts, which is
+        // exactly when this panel first draws — answers "nothing is a novel" and caches it.
+        // Following the source list means the answer corrects itself when they arrive.
+        sourceManager.sources.collectLatest {
             value = withIOContext {
-                ids.filterTo(mutableSetOf()) { id -> getManga.await(id)?.source in novelSources }
+                ids.filterTo(mutableSetOf()) { id ->
+                    val sourceId = getManga.await(id)?.source ?: return@filterTo false
+                    // `sourceManager.get(...)` rather than scanning the emitted list: it is the
+                    // same call the library grid filters by, so the panel and the grid can never
+                    // disagree about what counts as a novel.
+                    sourceManager.get(sourceId) is NovelSource
+                }
             }
         }
     }
