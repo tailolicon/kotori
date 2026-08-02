@@ -1,6 +1,8 @@
 package mihon.feature.novelreader
 
+import android.app.Application
 import eu.kanade.tachiyomi.data.download.DownloadProvider
+import eu.kanade.tachiyomi.data.sync.SyncJob
 import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.model.SChapter
 import kotlinx.coroutines.CoroutineScope
@@ -284,6 +286,7 @@ class NovelReaderViewModel(
                     ),
                 )
                 upsertHistory.await(HistoryUpdate(chapter.id, Date(), sessionDuration))
+                SyncJob.startOnProgress(Injekt.get<Application>())
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Failed to save novel progress" }
             }

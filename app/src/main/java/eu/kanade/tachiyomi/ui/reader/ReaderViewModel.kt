@@ -16,6 +16,7 @@ import eu.kanade.domain.source.interactor.GetIncognitoState
 import eu.kanade.domain.track.interactor.TrackChapter
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.data.database.models.toDomainChapter
+import eu.kanade.tachiyomi.data.sync.SyncJob
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.data.download.model.Download
@@ -731,6 +732,7 @@ class ReaderViewModel @JvmOverloads constructor(
             val sessionReadDuration = chapterReadStartTime?.let { endTime.time - it } ?: 0
 
             upsertHistory.await(HistoryUpdate(chapterId, endTime, sessionReadDuration))
+            SyncJob.startOnProgress(Injekt.get<Application>())
             chapterReadStartTime = null
         }
     }

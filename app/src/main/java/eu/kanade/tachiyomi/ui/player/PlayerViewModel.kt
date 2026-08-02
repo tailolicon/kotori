@@ -68,6 +68,7 @@ import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
+import eu.kanade.tachiyomi.data.sync.SyncJob
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.anilist.Anilist
 import eu.kanade.tachiyomi.data.track.myanimelist.MyAnimeList
@@ -1801,6 +1802,7 @@ class PlayerViewModel @JvmOverloads constructor(
             upsertHistory.await(
                 AnimeHistoryUpdate(episodeId, seenAt),
             )
+            SyncJob.startOnProgress(Injekt.get<Application>())
         }
     }
 
