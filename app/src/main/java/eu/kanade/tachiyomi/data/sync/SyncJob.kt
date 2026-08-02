@@ -187,10 +187,16 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         const val IS_MANUAL_KEY = "is_manual"
         const val SYNC_REASON_KEY = "sync_reason"
 
-        // privateSettings must stay false: the uploaded backup lives on the same WebDAV server
-        // whose credentials are stored under private preference keys.
-        private val BACKUP_OPTIONS = BackupOptions(privateSettings = false)
-        private val RESTORE_OPTIONS = RestoreOptions()
+        // UI preferences (filters, layout, theme, and other device-local choices) must never ride
+        // the automatic sync: an older cloud snapshot would otherwise reset the device before the
+        // fresh backup is created. Library data, categories, extension stores, and per-source
+        // settings remain enabled. privateSettings also stays false because the WebDAV credentials
+        // live under private preference keys on the same server this backup is uploaded to.
+        private val BACKUP_OPTIONS = BackupOptions(
+            appSettings = false,
+            privateSettings = false,
+        )
+        private val RESTORE_OPTIONS = RestoreOptions(appSettings = false)
 
         private const val ONE_TIME_WORK_NAME = "Sync:once"
 
