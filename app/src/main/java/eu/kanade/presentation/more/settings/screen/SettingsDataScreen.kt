@@ -54,6 +54,8 @@ import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.cache.ChapterCache
 import eu.kanade.tachiyomi.data.export.LibraryExporter
 import eu.kanade.tachiyomi.data.export.LibraryExporter.ExportOptions
+import eu.kanade.tachiyomi.data.sync.SyncJob
+import eu.kanade.tachiyomi.data.sync.WebDavSyncClient
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +71,7 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetFavorites
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.storage.service.StoragePreferences
+import tachiyomi.domain.sync.service.SyncPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.i18n.stringResource
@@ -100,12 +103,14 @@ object SettingsDataScreen : SearchableSettings {
     override fun getPreferences(): List<Preference> {
         val backupPreferences = Injekt.get<BackupPreferences>()
         val storagePreferences = Injekt.get<StoragePreferences>()
+        val syncPreferences = Injekt.get<SyncPreferences>()
 
         return listOf(
             getStorageLocationPref(storagePreferences = storagePreferences),
             Preference.PreferenceItem.InfoPreference(stringResource(MR.strings.pref_storage_location_info)),
 
             getBackupAndRestoreGroup(backupPreferences = backupPreferences),
+            getSyncGroup(syncPreferences = syncPreferences),
             getDataGroup(),
             getExportGroup(),
         )
@@ -270,6 +275,87 @@ object SettingsDataScreen : SearchableSettings {
                 Preference.PreferenceItem.InfoPreference(
                     stringResource(MR.strings.backup_info) + "\n\n" +
                         stringResource(MR.strings.last_auto_backup_info, relativeTimeSpanString(lastAutoBackup)),
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun getSyncGroup(syncPreferences: SyncPreferences): Preference.PreferenceGroup {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+
+        val syncEnabled by syncPreferences.syncEnabled.collectAsState()
+        val syncUrl by syncPreferences.syncUrl.collectAsState()
+        val syncUsername by syncPreferences.syncUsername.collectAsState()
+        val syncPassword by syncPreferences.syncPassword.collectAsState()
+        val lastSyncTimestamp by syncPreferences.lastSyncTimestamp.collectAsState()
+
+        return Preference.PreferenceGroup(
+            title = "Đồng bộ giữa các thiết bị",
+            preferenceItems = listOf(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = syncPreferences.syncEnabled,
+                    title = "Bật đồng bộ",
+                    subtitle = "Ứng dụng đồng bộ khi mở và khi thoát, qua một file trên máy chủ WebDAV của bạn.",
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = syncPreferences.syncUrl,
+                    title = "Địa chỉ WebDAV",
+                    subtitle = syncUrl.ifBlank { "vd: https://app.koofr.net/dav/Koofr/kotori" },
+                    enabled = syncEnabled,
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = syncPreferences.syncUsername,
+                    title = "Tên đăng nhập",
+                    subtitle = syncUsername.ifBlank { "Chưa đặt" },
+                    enabled = syncEnabled,
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    preference = syncPreferences.syncPassword,
+                    title = "Mật khẩu",
+                    // Never echo the password: settings are easy to shoulder-surf and screenshot.
+                    subtitle = if (syncPassword.isNotBlank()) "Đã lưu" else "Chưa đặt",
+                    enabled = syncEnabled,
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = "Kiểm tra kết nối",
+                    enabled = syncEnabled,
+                    onClick = {
+                        scope.launch {
+                            val result = WebDavSyncClient(syncPreferences).testConnection()
+                            result.fold(
+                                onSuccess = { context.toast("Kết nối WebDAV thành công") },
+                                onFailure = { e -> context.toast(e.message) },
+                            )
+                        }
+                    },
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = syncPreferences.syncInterval,
+                    entries = mapOf(
+                        0 to "Tắt",
+                        1 to "Mỗi giờ",
+                        6 to "Mỗi 6 giờ",
+                        12 to "Mỗi 12 giờ",
+                        24 to "Mỗi ngày",
+                    ),
+                    title = "Đồng bộ định kỳ",
+                    enabled = syncEnabled,
+                    onValueChanged = {
+                        SyncJob.setupTask(context, it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = "Đồng bộ ngay",
+                    subtitle = if (lastSyncTimestamp == 0L) {
+                        "Chưa đồng bộ lần nào"
+                    } else {
+                        relativeTimeSpanString(lastSyncTimestamp)
+                    },
+                    enabled = syncEnabled,
+                    onClick = { SyncJob.startNow(context) },
                 ),
             ),
         )
