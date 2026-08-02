@@ -62,7 +62,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         var uploadFile: File? = null
 
         return try {
-            logcat { "WebDAV sync started ($reason)" }
+            logcat(LogPriority.INFO) { "WebDAV sync started ($reason)" }
             val client = WebDavSyncClient(prefs)
 
             // null = remote file missing (first ever sync) — skip restore and create it on upload
@@ -90,7 +90,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
             client.upload(uploadBytes)
 
             prefs.lastSyncTimestamp.set(System.currentTimeMillis())
-            logcat { "WebDAV sync completed ($reason)" }
+            logcat(LogPriority.INFO) { "WebDAV sync completed ($reason)" }
 
             // Snapshot is undo insurance only — never fail a sync that already succeeded.
             runCatching {
@@ -218,8 +218,8 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
          *
          * Waiting for `onStop` is a single point of failure: a force stop, or an OEM battery
          * manager that kills the process outright, skips it, and everything read in that session
-         * stays on the one device. [App] samples progress writes before calling this, so continuous
-         * reading still uploads without creating one job per database write.
+         * stays on the one device. History changes are emitted when a chapter/episode changes or
+         * the reader/player pauses, so this does not create one job per page or playback tick.
          */
         fun startOnProgress(context: Context) {
             if (!Injekt.get<SyncPreferences>().syncEnabled.get()) return

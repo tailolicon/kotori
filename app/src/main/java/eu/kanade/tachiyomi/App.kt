@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.sample
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
@@ -189,9 +188,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             Injekt.get<GetHistory>().subscribe("").drop(1),
             Injekt.get<GetAnimeHistory>().subscribe("").drop(1),
         )
-            // Sample instead of debounce: continuous reading must still upload periodically.
-            // Twenty seconds leaves scheduling/network headroom inside the 30-second target.
-            .sample(PROGRESS_SYNC_CADENCE_MS)
+            // Reader/player history is persisted on chapter/episode changes and pause. Enqueue at
+            // once: a real full-library WebDAV pass takes 15-22 seconds on the test library, so
+            // adding a debounce or sample window would exceed the 30-second cloud target.
             .onEach { SyncJob.startOnProgress(this) }
             .launchIn(scope)
     }
@@ -314,6 +313,3 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 }
 
 private const val ACTION_DISABLE_INCOGNITO_MODE = "tachi.action.DISABLE_INCOGNITO_MODE"
-
-/** Maximum time a progress event waits before an upload is requested. */
-private const val PROGRESS_SYNC_CADENCE_MS = 20_000L
