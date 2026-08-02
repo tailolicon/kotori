@@ -50,7 +50,10 @@ import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
@@ -66,6 +69,8 @@ import tachiyomi.core.common.util.system.ImageUtil
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.widget.WidgetManager
+import tachiyomi.domain.history.interactor.GetHistory
+import tachiyomi.domain.history.anime.interactor.GetAnimeHistory
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -175,6 +180,18 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         // Periodic WebDAV sync; other jobs (backup/library) register via ALWAYS migrations.
         SyncJob.setupTask(this)
+
+        // Push progress during the session, not only when the app is closed. `onStop` is one
+        // callback away from never running — a force stop, or an OEM battery manager killing the
+        // process outright, skips it — and everything read in that sitting would stay on this one
+        // device. `drop(1)` skips the snapshot every subscription opens with, which is not a change.
+        merge(
+            Injekt.get<GetHistory>().subscribe("").drop(1),
+            Injekt.get<GetAnimeHistory>().subscribe("").drop(1),
+        )
+            .debounce(PROGRESS_SYNC_DEBOUNCE_MS)
+            .onEach { SyncJob.startOnProgress(this) }
+            .launchIn(scope)
     }
 
     private fun initializeMigrator() {
@@ -295,3 +312,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 }
 
 private const val ACTION_DISABLE_INCOGNITO_MODE = "tachi.action.DISABLE_INCOGNITO_MODE"
+
+/** How long reading has to stay quiet before the session's progress is pushed. */
+private const val PROGRESS_SYNC_DEBOUNCE_MS = 60_000L

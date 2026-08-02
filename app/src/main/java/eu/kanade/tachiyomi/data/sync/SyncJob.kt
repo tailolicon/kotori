@@ -10,6 +10,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -156,16 +157,35 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
          */
         fun startOnLeave(context: Context) {
             if (!Injekt.get<SyncPreferences>().syncEnabled.get()) return
-            enqueueOnce(context, isManual = false)
+            enqueueOnce(context, isManual = false, expedited = true)
         }
 
-        private fun enqueueOnce(context: Context, isManual: Boolean) {
+        /**
+         * Progress changed while the app is open — push it now rather than at exit.
+         *
+         * Waiting for `onStop` is a single point of failure: a force stop, or an OEM battery
+         * manager that kills the process outright, skips it, and everything read in that session
+         * stays on the one device. Pushing during the session bounds that loss to the debounce
+         * window instead of a whole sitting. Rate limited by [startIfDue] so a long read does not
+         * become a stream of full-library uploads.
+         */
+        fun startOnProgress(context: Context) = startIfDue(context)
+
+        private fun enqueueOnce(context: Context, isManual: Boolean, expedited: Boolean = false) {
             val request = OneTimeWorkRequestBuilder<SyncJob>()
                 .addTag(if (isManual) TAG_MANUAL else TAG_AUTO)
                 .setConstraints(
                     Constraints(requiredNetworkType = NetworkType.CONNECTED),
                 )
                 .setInputData(workDataOf(IS_MANUAL_KEY to isManual))
+                .apply {
+                    // The push on leaving races the process being killed, so it asks to run now
+                    // rather than in the next batching window. RUN_AS_NON_EXPEDITED_WORK_REQUEST
+                    // is the required fallback for when the app has no expedited quota left.
+                    if (expedited) {
+                        setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    }
+                }
                 .build()
             context.workManager.enqueueUniqueWork(TAG_MANUAL, ExistingWorkPolicy.KEEP, request)
         }
