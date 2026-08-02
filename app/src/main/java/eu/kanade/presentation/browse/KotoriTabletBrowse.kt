@@ -40,12 +40,15 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import androidx.compose.runtime.remember
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.KotoriChip
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
 import eu.kanade.presentation.theme.kotori.KotoriInlineSearchField
 import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
 import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
 import eu.kanade.presentation.theme.kotori.KotoriTheme
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 
 /**
  * T6 · one compact source row of the 300 dp column: a 38 dp tile, the name, the
@@ -61,7 +64,10 @@ fun KotoriCompactSourceRow(
     subtitle: String,
     pinned: Boolean,
     selected: Boolean,
+    supportsLatest: Boolean,
     onClick: () -> Unit,
+    onClickLatest: () -> Unit,
+    onClickPopular: () -> Unit,
     onLongClick: () -> Unit,
     onTogglePin: () -> Unit,
     modifier: Modifier = Modifier,
@@ -69,7 +75,7 @@ fun KotoriCompactSourceRow(
 ) {
     val accent = KotoriTheme.accent
     val shape = KotoriTabletShapes.listRow
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -91,68 +97,89 @@ fun KotoriCompactSourceRow(
                 onLongClick = onLongClick,
             )
             .padding(horizontal = 10.dp, vertical = 9.dp),
-        horizontalArrangement = Arrangement.spacedBy(11.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(KotoriTabletShapes.sourceTile),
-            contentAlignment = Alignment.Center,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(11.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (icon != null) {
-                icon()
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(accent.gradient),
-                    contentAlignment = Alignment.Center,
-                ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(KotoriTabletShapes.sourceTile),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (icon != null) {
+                    icon()
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(accent.gradient),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = name.firstOrNull()?.uppercase() ?: "?",
+                            fontFamily = UnboundedFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    fontFamily = BeVietnamProFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = KotoriColors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (subtitle.isNotBlank()) {
                     Text(
-                        text = name.firstOrNull()?.uppercase() ?: "?",
-                        fontFamily = UnboundedFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color.White,
+                        text = subtitle,
+                        fontFamily = BeVietnamProFamily,
+                        fontSize = 10.sp,
+                        color = KotoriColors.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name,
-                fontFamily = BeVietnamProFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.5.sp,
-                color = KotoriColors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                imageVector = if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                contentDescription = null,
+                tint = if (pinned) accent.light else KotoriColors.textFaint,
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onTogglePin,
+                    ),
             )
-            if (subtitle.isNotBlank()) {
-                Text(
-                    text = subtitle,
-                    fontFamily = BeVietnamProFamily,
-                    fontSize = 10.sp,
-                    color = KotoriColors.textMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+        ) {
+            if (supportsLatest) {
+                KotoriChip(
+                    text = stringResource(MR.strings.latest),
+                    selected = false,
+                    onClick = onClickLatest,
                 )
             }
+            KotoriChip(
+                text = stringResource(MR.strings.popular),
+                selected = true,
+                onClick = onClickPopular,
+            )
         }
-        Icon(
-            imageVector = if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-            contentDescription = null,
-            tint = if (pinned) accent.light else KotoriColors.textFaint,
-            modifier = Modifier
-                .size(16.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onTogglePin,
-                ),
-        )
     }
 }
 
