@@ -103,3 +103,16 @@
 # Firebase
 -keep class com.google.firebase.installations.** { *; }
 -keep interface com.google.firebase.installations.** { *; }
+
+# Built-in sources
+#
+# `AnimeHttpSource.id` is `by lazy`, which compiles to a synthetic lambda. R8 horizontally merged
+# that lambda with one from the built-in subclass, so *every* source — including extension ones —
+# ran the built-in body and died casting itself to BuiltInHttpSource the moment the source list was
+# assembled. Debug never saw it because nothing merges there. Keeping the built-in hierarchy takes
+# it out of merging; these classes are a handful of scrapers, so nothing is lost by not shrinking
+# them.
+-keep class eu.kanade.tachiyomi.source.anime.builtin.** { *; }
+-keep class eu.kanade.tachiyomi.source.novel.builtin.** { *; }
+-keep class * implements eu.kanade.tachiyomi.animesource.BuiltInAnimeSource { *; }
+-keep class * implements eu.kanade.tachiyomi.source.NovelSource { *; }
