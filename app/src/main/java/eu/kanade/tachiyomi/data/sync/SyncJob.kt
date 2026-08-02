@@ -17,6 +17,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.hippo.unifile.UniFile
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
+import eu.kanade.tachiyomi.data.backup.BackupDecoder
 import eu.kanade.tachiyomi.data.backup.create.BackupCreator
 import eu.kanade.tachiyomi.data.backup.create.BackupOptions
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestorer
@@ -34,6 +35,7 @@ import tachiyomi.domain.sync.service.SyncPreferences
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -69,10 +71,8 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
             val remoteBytes = client.download()
             if (remoteBytes != null) {
                 downloadFile = File(context.cacheDir, DOWNLOAD_TEMP_NAME).also {
-                    it.writeBytes(remoteBytes)
+                    restoreNewestValidRemote(client, remoteBytes, it)
                 }
-                BackupRestorer(context, notifier, isSync = true)
-                    .restore(downloadFile.toUniFileUri(), RESTORE_OPTIONS)
             }
 
             // Fresh backup of the now-merged local state, then push it upstream
@@ -138,6 +138,49 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
         )
     }
 
+    /**
+     * A killed direct PUT could leave older clients' live backup truncated. Validate before any
+     * restore writes, then fall back through dated snapshots and heal the live file on upload.
+     */
+    private suspend fun restoreNewestValidRemote(
+        client: WebDavSyncClient,
+        liveBytes: ByteArray,
+        downloadFile: File,
+    ) {
+        suspend fun restoreIfValid(name: String, bytes: ByteArray): Boolean {
+            downloadFile.writeBytes(bytes)
+            try {
+                // Decode once before BackupRestorer starts mutating the database. This makes a
+                // corrupt/truncated remote snapshot safe to skip without a partial restore.
+                BackupDecoder(context).decode(downloadFile.toUniFileUri())
+            } catch (e: IOException) {
+                logcat(LogPriority.WARN, e) { "Ignoring invalid WebDAV backup ($name)" }
+                return false
+            }
+
+            if (name != REMOTE_LIVE_LABEL) {
+                logcat(LogPriority.WARN) { "Recovering WebDAV sync from snapshot $name" }
+            }
+            BackupRestorer(context, notifier, isSync = true)
+                .restore(downloadFile.toUniFileUri(), RESTORE_OPTIONS)
+            return true
+        }
+
+        if (restoreIfValid(REMOTE_LIVE_LABEL, liveBytes)) return
+
+        client.listFileNames()
+            .filter { SNAPSHOT_NAME_REGEX.matches(it) }
+            .sortedDescending()
+            .forEach { fileName ->
+                val bytes = client.download(fileName) ?: return@forEach
+                if (restoreIfValid(fileName, bytes)) {
+                    return
+                }
+            }
+
+        logcat(LogPriority.WARN) { "No valid WebDAV backup found; rebuilding it from local data" }
+    }
+
     companion object {
         const val TAG_AUTO = "Sync"
         const val TAG_MANUAL = "Sync:manual"
@@ -153,6 +196,7 @@ class SyncJob(private val context: Context, workerParams: WorkerParameters) :
 
         private const val DOWNLOAD_TEMP_NAME = "kotori-sync-download.tachibk"
         private const val UPLOAD_TEMP_NAME = "kotori-sync-upload.tachibk"
+        private const val REMOTE_LIVE_LABEL = "live"
 
         private const val MAX_SNAPSHOTS = 3
         private val SNAPSHOT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd")

@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.data.sync
 
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.await
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -14,6 +16,7 @@ import uy.kohesive.injekt.api.get
 import java.io.IOException
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 
 class WebDavSyncClient(
     private val preferences: SyncPreferences,
@@ -21,8 +24,8 @@ class WebDavSyncClient(
 
     private val client = Injekt.get<NetworkHelper>().client
 
-    suspend fun download(): ByteArray? = withIOContext {
-        val request = authenticatedRequest(remoteFileUrl())
+    suspend fun download(fileName: String = REMOTE_FILE_NAME): ByteArray? = withIOContext {
+        val request = authenticatedRequest(remoteFileUrl(fileName))
             .get()
             .build()
         client.newCall(request).await().use { response ->
@@ -37,6 +40,20 @@ class WebDavSyncClient(
     }
 
     suspend fun upload(bytes: ByteArray, fileName: String = REMOTE_FILE_NAME) = withIOContext {
+        val temporaryFileName = ".$fileName.${UUID.randomUUID()}.tmp"
+        try {
+            put(bytes, temporaryFileName)
+            move(temporaryFileName, fileName)
+        } finally {
+            // A cancelled upload must never touch the live destination. Remove its private
+            // temporary object even when WorkManager replaces the coroutine mid-request.
+            withContext(NonCancellable) {
+                runCatching { delete(temporaryFileName) }
+            }
+        }
+    }
+
+    private suspend fun put(bytes: ByteArray, fileName: String) = withIOContext {
         val putOnce = {
             authenticatedRequest(remoteFileUrl(fileName))
                 .put(bytes.toRequestBody(OCTET_STREAM))
@@ -63,6 +80,21 @@ class WebDavSyncClient(
             if (!response.isSuccessful) {
                 throw IOException(
                     "WebDAV upload failed: HTTP ${response.code} ${response.message}",
+                )
+            }
+        }
+    }
+
+    private suspend fun move(sourceFileName: String, destinationFileName: String) = withIOContext {
+        val request = authenticatedRequest(remoteFileUrl(sourceFileName))
+            .method("MOVE", null)
+            .header("Destination", remoteFileUrl(destinationFileName))
+            .header("Overwrite", "T")
+            .build()
+        client.newCall(request).await().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException(
+                    "WebDAV atomic replace failed: HTTP ${response.code} ${response.message}",
                 )
             }
         }
