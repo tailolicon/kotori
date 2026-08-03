@@ -95,12 +95,10 @@ class AnimeRestorer(
         return getAnimeByUrlAndSourceId.await(backupAnime.url, backupAnime.source)
     }
 
+    /** Same merge rule as MangaRestorer.restoreExistingAnime — see the note there for why. */
     private suspend fun restoreExistingAnime(anime: Anime, dbAnime: Anime): Anime {
-        return if (anime.version > dbAnime.version) {
-            updateAnime(dbAnime.copyFrom(anime).copy(id = dbAnime.id, parentId = anime.parentId))
-        } else {
-            updateAnime(anime.copyFrom(dbAnime).copy(id = dbAnime.id, parentId = anime.parentId))
-        }
+        val newer = if (anime.version > dbAnime.version) anime else dbAnime
+        return updateAnime(dbAnime.copyFrom(newer).copy(id = dbAnime.id, parentId = anime.parentId))
     }
 
     private fun Anime.copyFrom(newer: Anime): Anime {

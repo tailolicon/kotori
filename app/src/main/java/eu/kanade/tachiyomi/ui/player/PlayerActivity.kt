@@ -1074,10 +1074,13 @@ class PlayerActivity : BaseActivity() {
 
     private fun setupPlayerOrientation() {
         if (player.isExiting) return
-        if (!isPhysicalTablet) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-            return
-        }
+        // A phone used to be pinned to SENSOR_PORTRAIT here, unconditionally and including in
+        // fullscreen. That made landscape unreachable on the device most people watch on: rotating
+        // did nothing, so ORIENTATION_LANDSCAPE never arrived and the rotation-driven fullscreen
+        // below could never fire, while tapping fullscreen merely stretched the video down a
+        // portrait window. The rules that follow were always the right ones — they were just gated
+        // behind a tablet check.
+
         // Keep the portrait player sensor-aware so a physical landscape rotation can enter fullscreen.
         if (!playerFullscreen.value) {
             requestedOrientation = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {

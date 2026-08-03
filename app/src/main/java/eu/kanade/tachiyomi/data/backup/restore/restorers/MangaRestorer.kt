@@ -89,12 +89,25 @@ class MangaRestorer(
         return getMangaByUrlAndSourceId.await(backupManga.url, backupManga.source)
     }
 
+    /**
+     * Merges a backup entry into one already in the library, always building on the local row.
+     *
+     * [copyFrom] carries the *metadata* — author, description, cover and so on — from whichever side
+     * is newer. Everything it does not name stays with the base, and that set includes the reader
+     * settings: chapter sort order and direction, viewer flags, notes.
+     *
+     * The base used to be whichever side lost the version comparison, which meant that when the
+     * local row was the newer one the merge was built on the *backup* row, and every unnamed field
+     * silently reverted to whatever the backup held. Periodic sync restores before it uploads, so a
+     * sort order changed since the last upload survived only until the next sync ran — the setting
+     * appeared to reset itself minutes later, for no reason the user could see.
+     *
+     * Building on the local row makes those settings device-local by construction: they change only
+     * when the user changes them, or on a fresh restore where there is no local row to preserve.
+     */
     private suspend fun restoreExistingManga(manga: Manga, dbManga: Manga): Manga {
-        return if (manga.version > dbManga.version) {
-            updateManga(dbManga.copyFrom(manga).copy(id = dbManga.id))
-        } else {
-            updateManga(manga.copyFrom(dbManga).copy(id = dbManga.id))
-        }
+        val newer = if (manga.version > dbManga.version) manga else dbManga
+        return updateManga(dbManga.copyFrom(newer).copy(id = dbManga.id))
     }
 
     private fun Manga.copyFrom(newer: Manga): Manga {
