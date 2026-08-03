@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Public
@@ -183,6 +184,12 @@ private fun ExtensionContent(
                 key = "extensionHeader-${header.hashCode()}",
             ) {
                 when (header) {
+                    ExtensionUiModel.Header.Missing -> {
+                        ExtensionHeader(
+                            textRes = MR.strings.ext_missing_library_sources,
+                            modifier = Modifier.animateItemFastScroll(),
+                        )
+                    }
                     is ExtensionUiModel.Header.Resource -> {
                         if (header.textRes == MR.strings.ext_updates_pending) {
                             ExtensionUpdateBanner(
@@ -203,6 +210,22 @@ private fun ExtensionContent(
                             modifier = Modifier.animateItemFastScroll(),
                         )
                     }
+                }
+            }
+
+            if (header is ExtensionUiModel.Header.Missing) {
+                items(
+                    items = state.unresolvedMissingSources,
+                    contentType = { "missing-source" },
+                    key = { source -> "missing-source-${source.id}" },
+                ) { source ->
+                    MissingSourceItem(
+                        sourceId = source.id,
+                        sourceName = source.name,
+                        sourceLang = source.lang,
+                        entryCount = source.entryCount,
+                        modifier = Modifier.animateItemFastScroll(),
+                    )
                 }
             }
 
@@ -271,6 +294,73 @@ private fun ExtensionContent(
                 trustState = null
             },
         )
+    }
+}
+
+/** A library source that is absent and no longer exists in any configured extension store. */
+@Composable
+internal fun MissingSourceItem(
+    sourceId: Long,
+    sourceName: String,
+    sourceLang: String,
+    entryCount: Long,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier = modifier
+            .padding(horizontal = 18.dp, vertical = 7.dp)
+            .fillMaxWidth()
+            .clip(shape)
+            .background(KotoriColors.danger.copy(alpha = 0.11f))
+            .border(1.dp, KotoriColors.danger.copy(alpha = 0.3f), shape)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.ErrorOutline,
+            contentDescription = null,
+            tint = KotoriColors.danger,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = sourceName.ifBlank { sourceId.toString() },
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = KotoriColors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildString {
+                    append(stringResource(MR.strings.ext_missing_source_not_found))
+                    if (sourceLang.isNotBlank()) append(" · ${sourceLang.uppercase()}")
+                },
+                fontFamily = BeVietnamProFamily,
+                fontSize = 11.5.sp,
+                color = KotoriColors.danger,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(KotoriColors.danger.copy(alpha = 0.2f))
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = entryCount.toString(),
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = KotoriColors.danger,
+            )
+        }
     }
 }
 

@@ -43,6 +43,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.components.BaseBrowseItem
 import eu.kanade.presentation.browse.anime.components.AnimeExtensionIcon
 import eu.kanade.presentation.browse.ExtensionHeader
+import eu.kanade.presentation.browse.MissingSourceItem
 import eu.kanade.presentation.browse.ExtensionTrustDialog
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.entries.components.DotSeparatorNoSpaceText
@@ -168,6 +169,12 @@ private fun AnimeExtensionContent(
                 key = "extensionHeader-${header.hashCode()}",
             ) {
                 when (header) {
+                    AnimeExtensionUiModel.Header.Missing -> {
+                        ExtensionHeader(
+                            textRes = MR.strings.ext_missing_library_sources,
+                            modifier = Modifier.animateItemFastScroll(),
+                        )
+                    }
                     is AnimeExtensionUiModel.Header.Resource -> {
                         val action: @Composable RowScope.() -> Unit =
                             if (header.textRes == MR.strings.ext_updates_pending) {
@@ -196,6 +203,22 @@ private fun AnimeExtensionContent(
                             modifier = Modifier.animateItemFastScroll(),
                         )
                     }
+                }
+            }
+
+            if (header is AnimeExtensionUiModel.Header.Missing) {
+                items(
+                    items = state.unresolvedMissingSources,
+                    contentType = { "missing-anime-source" },
+                    key = { source -> "missing-anime-source-${source.id}" },
+                ) { source ->
+                    MissingSourceItem(
+                        sourceId = source.id,
+                        sourceName = source.name,
+                        sourceLang = source.lang,
+                        entryCount = source.entryCount,
+                        modifier = Modifier.animateItemFastScroll(),
+                    )
                 }
             }
 

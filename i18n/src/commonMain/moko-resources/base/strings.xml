@@ -332,6 +332,8 @@
       <!-- Extension section -->
     <string name="multi_lang">Multi</string>
     <string name="ext_updates_pending">Updates pending</string>
+    <string name="ext_missing_library_sources">Missing sources from library</string>
+    <string name="ext_missing_source_not_found">Not found in configured extension stores</string>
     <string name="ext_update">Update</string>
     <string name="ext_update_all">Update all</string>
     <string name="ext_obsolete">Orphaned</string>

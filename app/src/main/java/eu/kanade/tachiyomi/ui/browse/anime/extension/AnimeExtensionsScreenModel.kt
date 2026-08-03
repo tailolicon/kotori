@@ -7,6 +7,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.extension.anime.interactor.GetAnimeExtensionsByType
+import eu.kanade.domain.source.anime.interactor.GetAnimeSourcesWithFavoriteCount
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.source.anime.model.AnimeSource
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -39,6 +41,7 @@ class AnimeExtensionsScreenModel(
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: AnimeExtensionManager = Injekt.get(),
     private val getExtensions: GetAnimeExtensionsByType = Injekt.get(),
+    private val getSourcesWithFavoriteCount: GetAnimeSourcesWithFavoriteCount = Injekt.get(),
 ) : StateScreenModel<AnimeExtensionsScreenModel.State>(State()) {
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
@@ -94,10 +97,29 @@ class AnimeExtensionsScreenModel(
                 state.map { it.searchQuery }.distinctUntilChanged().debounce(SEARCH_DEBOUNCE_MILLIS),
                 currentDownloads,
                 getExtensions.subscribe(),
-            ) { query, downloads, (_updates, _installed, _available, _untrusted) ->
+                getSourcesWithFavoriteCount.subscribe(),
+            ) { query, downloads, (_updates, _installed, _available, _untrusted), librarySources ->
                 val searchQuery = query ?: ""
 
                 val itemsGroups: ItemGroups = mutableMapOf()
+
+                val missingSources = librarySources
+                    .filter { (source, _) -> source.isStub }
+                    .map { (source, count) -> source.toMissingAnimeSource(count) }
+                val missingAvailableExtensions = findMissingAnimeExtensions(
+                    missingSources = missingSources,
+                    availableExtensions = _available,
+                )
+                val missingPackageNames = missingAvailableExtensions.mapTo(hashSetOf()) { it.pkgName }
+                val missingExtensions = missingAvailableExtensions
+                    .filter(queryFilter(searchQuery))
+                    .map(extensionMapper(downloads))
+                val unresolvedMissingSources = missingSources
+                    .filter { missing -> _available.none { it.containsAnimeSource(missing) } }
+                    .filter { it.matchesQuery(searchQuery) }
+                if (missingExtensions.isNotEmpty() || unresolvedMissingSources.isNotEmpty()) {
+                    itemsGroups[AnimeExtensionUiModel.Header.Missing] = missingExtensions
+                }
 
                 val updates = _updates.filter(queryFilter(searchQuery)).map(
                     extensionMapper(downloads),
@@ -117,6 +139,7 @@ class AnimeExtensionsScreenModel(
                 }
 
                 val languagesWithExtensions = _available
+                    .filterNot { it.pkgName in missingPackageNames }
                     .filter(queryFilter(searchQuery))
                     .groupBy { it.lang }
                     .toSortedMap(LocaleHelper.comparator)
@@ -130,13 +153,14 @@ class AnimeExtensionsScreenModel(
                     itemsGroups.putAll(languagesWithExtensions)
                 }
 
-                itemsGroups
+                itemsGroups to unresolvedMissingSources
             }
-                .collectLatest {
+                .collectLatest { (items, unresolvedMissingSources) ->
                     mutableState.update { state ->
                         state.copy(
                             isLoading = false,
-                            items = it,
+                            items = items,
+                            unresolvedMissingSources = unresolvedMissingSources,
                         )
                     }
                 }
@@ -228,6 +252,7 @@ class AnimeExtensionsScreenModel(
         val updates: Int = 0,
         val installer: BasePreferences.ExtensionInstaller? = null,
         val searchQuery: String? = null,
+        val unresolvedMissingSources: List<AnimeExtensionUiModel.MissingSource> = emptyList(),
     ) {
         val isEmpty = items.isEmpty()
     }
@@ -235,11 +260,59 @@ class AnimeExtensionsScreenModel(
 
 typealias ItemGroups = MutableMap<AnimeExtensionUiModel.Header, List<AnimeExtensionUiModel.Item>>
 
+private fun findMissingAnimeExtensions(
+    missingSources: List<AnimeExtensionUiModel.MissingSource>,
+    availableExtensions: List<AnimeExtension.Available>,
+): List<AnimeExtension.Available> {
+    return availableExtensions
+        .filter { extension -> missingSources.any(extension::containsAnimeSource) }
+        .distinctBy { it.pkgName }
+        .sortedBy { it.name.lowercase() }
+}
+
+private fun AnimeExtension.Available.containsAnimeSource(
+    missing: AnimeExtensionUiModel.MissingSource,
+): Boolean {
+    val missingName = missing.name.normalizedAnimeSourceName()
+    return sources.any { source ->
+        source.id == missing.id ||
+            (missingName.isNotEmpty() && source.name.normalizedAnimeSourceName() == missingName)
+    }
+}
+
+private fun AnimeSource.toMissingAnimeSource(entryCount: Long) = AnimeExtensionUiModel.MissingSource(
+    id = id,
+    name = name,
+    lang = lang,
+    entryCount = entryCount,
+)
+
+private fun AnimeExtensionUiModel.MissingSource.matchesQuery(query: String): Boolean {
+    if (query.isBlank()) return true
+    return query.split(',').any { part ->
+        val term = part.trim()
+        term.isNotEmpty() && (
+            id == term.toLongOrNull() ||
+                name.contains(term, ignoreCase = true)
+            )
+    }
+}
+
+private fun String.normalizedAnimeSourceName(): String =
+    lowercase().filter(Char::isLetterOrDigit)
+
 object AnimeExtensionUiModel {
     sealed interface Header {
+        data object Missing : Header
         data class Resource(val textRes: StringResource) : Header
         data class Text(val text: String) : Header
     }
+    data class MissingSource(
+        val id: Long,
+        val name: String,
+        val lang: String,
+        val entryCount: Long,
+    )
     data class Item(
         val extension: AnimeExtension,
         val installStep: InstallStep,

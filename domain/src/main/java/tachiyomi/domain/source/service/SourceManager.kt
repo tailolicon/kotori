@@ -12,6 +12,8 @@ interface SourceManager {
 
     val sources: Flow<List<Source>>
 
+    val stubSources: Flow<List<StubSource>>
+
     fun get(sourceKey: Long): Source?
 
     fun getOrStub(sourceKey: Long): Source

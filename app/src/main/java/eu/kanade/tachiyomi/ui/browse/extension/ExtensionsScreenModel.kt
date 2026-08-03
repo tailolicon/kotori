@@ -7,6 +7,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.extension.interactor.GetExtensionsByType
+import eu.kanade.domain.source.interactor.GetSourcesWithFavoriteCount
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.model.Extension
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -39,6 +41,7 @@ class ExtensionsScreenModel(
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val getExtensions: GetExtensionsByType = Injekt.get(),
+    private val getSourcesWithFavoriteCount: GetSourcesWithFavoriteCount = Injekt.get(),
 ) : StateScreenModel<ExtensionsScreenModel.State>(State()) {
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
@@ -59,8 +62,33 @@ class ExtensionsScreenModel(
                     .map { searchQueryPredicate(it ?: "") },
                 currentDownloads,
                 getExtensions.subscribe(),
-            ) { predicate, downloads, (_updates, _installed, _available, _untrusted) ->
-                buildMap {
+                getSourcesWithFavoriteCount.subscribe(),
+            ) { predicate, downloads, (_updates, _installed, _available, _untrusted), librarySources ->
+                val missingSources = librarySources
+                    .filter { (source, _) -> source.isStub }
+                    .map { (source, count) -> source.toMissingSource(count) }
+                val missingAvailableExtensions = findMissingExtensions(
+                    missingSources = missingSources,
+                    availableExtensions = _available,
+                )
+                val missingPackageNames = missingAvailableExtensions.mapTo(hashSetOf()) { it.pkgName }
+                val missingExtensions = missingAvailableExtensions
+                    .filter(predicate)
+                    .map(extensionMapper(downloads))
+                val unresolvedMissingSources = missingSources
+                    .filter { missing -> _available.none { it.containsSource(missing) } }
+                    .filter { it.matchesQuery(state.value.searchQuery.orEmpty()) }
+
+                val items = buildMap {
+                    if (missingExtensions.isNotEmpty() || unresolvedMissingSources.isNotEmpty()) {
+                        // Restoring the missing source is more useful than an ordinary update, so
+                        // this installable group deliberately precedes every canonical section.
+                        put(
+                            ExtensionUiModel.Header.Missing,
+                            missingExtensions,
+                        )
+                    }
+
                     val updates = _updates.filter(predicate).map(extensionMapper(downloads))
                     if (updates.isNotEmpty()) {
                         put(ExtensionUiModel.Header.Resource(MR.strings.ext_updates_pending), updates)
@@ -73,6 +101,7 @@ class ExtensionsScreenModel(
                     }
 
                     val languagesWithExtensions = _available
+                        .filterNot { it.pkgName in missingPackageNames }
                         .filter(predicate)
                         .groupBy { it.lang }
                         .toSortedMap(LocaleHelper.comparator)
@@ -84,12 +113,14 @@ class ExtensionsScreenModel(
                         putAll(languagesWithExtensions)
                     }
                 }
+                items to unresolvedMissingSources
             }
-                .collectLatest { items ->
+                .collectLatest { (items, unresolvedMissingSources) ->
                     mutableState.update { state ->
                         state.copy(
                             isLoading = false,
                             items = items,
+                            unresolvedMissingSources = unresolvedMissingSources,
                         )
                     }
                 }
@@ -215,6 +246,7 @@ class ExtensionsScreenModel(
         val updates: Int = 0,
         val installer: BasePreferences.ExtensionInstaller? = null,
         val searchQuery: String? = null,
+        val unresolvedMissingSources: List<ExtensionUiModel.MissingSource> = emptyList(),
     ) {
         val isEmpty = items.isEmpty()
     }
@@ -222,11 +254,58 @@ class ExtensionsScreenModel(
 
 typealias ItemGroups = Map<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>
 
+private fun findMissingExtensions(
+    missingSources: List<ExtensionUiModel.MissingSource>,
+    availableExtensions: List<Extension.Available>,
+): List<Extension.Available> {
+    return availableExtensions
+        .filter { extension -> missingSources.any(extension::containsSource) }
+        .distinctBy { it.pkgName }
+        .sortedBy { it.name.lowercase() }
+}
+
+private fun Extension.Available.containsSource(missing: ExtensionUiModel.MissingSource): Boolean {
+    val missingName = missing.name.normalizedSourceName()
+    return sources.any { source ->
+        source.id == missing.id ||
+            (missingName.isNotEmpty() && source.name.normalizedSourceName() == missingName)
+    }
+}
+
+private fun Source.toMissingSource(entryCount: Long) = ExtensionUiModel.MissingSource(
+    id = id,
+    name = name,
+    lang = lang,
+    entryCount = entryCount,
+)
+
+private fun ExtensionUiModel.MissingSource.matchesQuery(query: String): Boolean {
+    if (query.isBlank()) return true
+    return query.split(',').any { part ->
+        val term = part.trim()
+        term.isNotEmpty() && (
+            id == term.toLongOrNull() ||
+                name.contains(term, ignoreCase = true)
+            )
+    }
+}
+
+private fun String.normalizedSourceName(): String =
+    lowercase().filter(Char::isLetterOrDigit)
+
 object ExtensionUiModel {
     sealed interface Header {
+        data object Missing : Header
         data class Resource(val textRes: StringResource) : Header
         data class Text(val text: String) : Header
     }
+
+    data class MissingSource(
+        val id: Long,
+        val name: String,
+        val lang: String,
+        val entryCount: Long,
+    )
 
     data class Item(
         val extension: Extension,

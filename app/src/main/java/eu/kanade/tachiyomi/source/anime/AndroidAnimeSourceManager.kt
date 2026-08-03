@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -64,6 +65,13 @@ class AndroidAnimeSourceManager(
         it.values.filterIsInstance<AnimeCatalogueSource>()
     }
 
+    override val stubSources: Flow<List<StubAnimeSource>> = combine(
+        sourceRepository.subscribeAllAnime(),
+        sourcesMapFlow,
+    ) { stubs, installed ->
+        stubs.filterNot { installed.containsKey(it.id) }
+    }
+
     init {
         scope.launch {
             extensionManager.installedExtensionsFlow
@@ -95,10 +103,7 @@ class AndroidAnimeSourceManager(
         scope.launch {
             sourceRepository.subscribeAllAnime()
                 .collectLatest { sources ->
-                    val mutableMap = stubSourcesMap.toMutableMap()
-                    sources.forEach {
-                        mutableMap[it.id] = it
-                    }
+                    sources.forEach { stubSourcesMap[it.id] = it }
                 }
         }
     }

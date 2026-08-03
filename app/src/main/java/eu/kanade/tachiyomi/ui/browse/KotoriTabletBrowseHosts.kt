@@ -88,8 +88,6 @@ import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.upcoming.UpcomingScreen
 import mihon.feature.upcoming.anime.UpcomingAnimeScreen
-import tachiyomi.domain.source.anime.service.AnimeSourceManager
-import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -114,6 +112,7 @@ fun Screen.KotoriTabletMangaBrowse(
     val extensionModel = rememberScreenModel { ExtensionsScreenModel() }
     val searchModel = rememberScreenModel { GlobalSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
+    val extensionState by extensionModel.state.collectAsState()
     var libraryOnly by rememberSaveable { mutableStateOf(false) }
     val mode = remember { Injekt.get<UiPreferences>().activeMediaMode.get() }
 
@@ -124,7 +123,16 @@ fun Screen.KotoriTabletMangaBrowse(
             tabs = tabs,
             activeTab = activeTab,
             onSelectTab = { activeTab = it },
-            searchQuery = searchState.searchQuery.orEmpty(),
+            // Read back from whichever model the typing goes to. Reading the global search state
+            // unconditionally while routing Tiện ích keystrokes into the extension model left the
+            // box permanently empty on that tab: the field is controlled, so it renders the value
+            // it is given, and it was being given a state nothing was writing to. Typing looked
+            // like it did nothing at all.
+            searchQuery = if (activeTab == EXTENSIONS_TAB) {
+                extensionState.searchQuery.orEmpty()
+            } else {
+                searchState.searchQuery.orEmpty()
+            },
             activeSearchFilters = buildSet {
                 add(if (searchState.sourceFilter == SourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
@@ -164,18 +172,13 @@ fun Screen.KotoriTabletMangaBrowse(
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
             pendingUpdates = {
-                // A Box hosts this slot, so anything with more than one child has to say how the
-                // children stack — otherwise they paint over each other.
-                Column(modifier = Modifier.fillMaxSize()) {
-                    MissingSources()
-                    if (mode == MediaType.NOVEL) {
-                        NoPendingUpdates()
-                    } else {
-                        MangaPendingUpdates(
-                            screenModel = extensionModel,
-                            onOpenExtension = { navigator.push(ExtensionDetailsScreen(it)) },
-                        )
-                    }
+                if (mode == MediaType.NOVEL) {
+                    NoPendingUpdates()
+                } else {
+                    MangaPendingUpdates(
+                        screenModel = extensionModel,
+                        onOpenExtension = { navigator.push(ExtensionDetailsScreen(it)) },
+                    )
                 }
             },
             searchResults = {
@@ -210,6 +213,7 @@ fun Screen.KotoriTabletAnimeBrowse(
     val extensionModel = rememberScreenModel { AnimeExtensionsScreenModel() }
     val searchModel = rememberScreenModel { GlobalAnimeSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
+    val extensionState by extensionModel.state.collectAsState()
     var libraryOnly by rememberSaveable { mutableStateOf(false) }
 
     KotoriScreenScaffold(
@@ -219,7 +223,12 @@ fun Screen.KotoriTabletAnimeBrowse(
             tabs = tabs,
             activeTab = activeTab,
             onSelectTab = { activeTab = it },
-            searchQuery = searchState.searchQuery.orEmpty(),
+            // See the note in KotoriTabletBrowse — same field, same fault.
+            searchQuery = if (activeTab == EXTENSIONS_TAB) {
+                extensionState.searchQuery.orEmpty()
+            } else {
+                searchState.searchQuery.orEmpty()
+            },
             activeSearchFilters = buildSet {
                 add(if (searchState.sourceFilter == AnimeSourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
@@ -259,13 +268,10 @@ fun Screen.KotoriTabletAnimeBrowse(
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
             pendingUpdates = {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    MissingSources()
-                    AnimePendingUpdates(
-                        screenModel = extensionModel,
-                        onOpenExtension = { navigator.push(AnimeExtensionDetailsScreen(it)) },
-                    )
-                }
+                AnimePendingUpdates(
+                    screenModel = extensionModel,
+                    onOpenExtension = { navigator.push(AnimeExtensionDetailsScreen(it)) },
+                )
             },
             searchResults = {
                 val items = searchState.items.filterLibraryAnime(libraryOnly)
@@ -639,66 +645,6 @@ private fun NoPendingUpdates() {
         stringRes = MR.strings.update_check_no_new_updates,
         modifier = Modifier.fillMaxSize(),
     )
-}
-
-/**
- * Sources this device has entries for but no extension installed for.
- *
- * A backup carries the source id of every entry, not the extension itself, so a library restored
- * from another device points at extensions that are not here. Those entries then fail to load with
- * nothing on screen explaining why, and nothing naming what to install. `getStubSources()` is
- * exactly that list — every source id the database has seen, minus the ones actually installed.
- */
-@Composable
-private fun MissingSources() {
-    val sourceManager = remember { Injekt.get<SourceManager>() }
-    val animeSourceManager = remember { Injekt.get<AnimeSourceManager>() }
-    val installed by sourceManager.sources.collectAsState(initial = emptyList())
-    val missing = remember(installed) {
-        (
-            sourceManager.getStubSources().map { it.name to it.lang } +
-                animeSourceManager.getStubSources().map { it.name to it.lang }
-            )
-            .filter { it.first.isNotBlank() }
-            .distinct()
-            .sortedBy { it.first }
-    }
-    if (missing.isEmpty()) return
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(KotoriColors.danger.copy(alpha = 0.12f))
-            .border(1.dp, KotoriColors.danger.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(
-            text = "Thiếu ${missing.size} tiện ích",
-            fontFamily = BeVietnamProFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
-            color = KotoriColors.danger,
-        )
-        Text(
-            text = "Thư viện có truyện từ những nguồn này nhưng tiện ích chưa được cài trên máy. " +
-                "Cài lại chúng ở tab Tiện ích để mở được các mục đó.",
-            fontFamily = BeVietnamProFamily,
-            fontSize = 11.5.sp,
-            color = KotoriColors.textSecondary,
-        )
-        missing.forEach { (name, lang) ->
-            Text(
-                text = "· $name" + if (lang.isNotBlank()) "  ($lang)" else "",
-                fontFamily = BeVietnamProFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                color = KotoriColors.textPrimary,
-            )
-        }
-    }
 }
 
 private fun <K> Map<K, SearchItemResult>.filterLibraryManga(

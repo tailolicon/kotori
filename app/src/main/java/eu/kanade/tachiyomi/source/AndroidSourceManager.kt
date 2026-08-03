@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -45,6 +46,13 @@ class AndroidSourceManager(
     private val stubSourcesMap = ConcurrentHashMap<Long, StubSource>()
 
     override val sources: Flow<List<Source>> = sourcesMapFlow.map { it.values.toList() }
+
+    override val stubSources: Flow<List<StubSource>> = combine(
+        sourceRepository.subscribeAll(),
+        sourcesMapFlow,
+    ) { stubs, installed ->
+        stubs.filterNot { installed.containsKey(it.id) }
+    }
 
     /**
      * Novel sources compiled into the app. Novels ride the manga stack — same database, downloads
@@ -83,10 +91,10 @@ class AndroidSourceManager(
         scope.launch {
             sourceRepository.subscribeAll()
                 .collectLatest { sources ->
-                    val mutableMap = stubSourcesMap.toMutableMap()
-                    sources.forEach {
-                        mutableMap[it.id] = it
-                    }
+                    // The previous code populated a temporary copy and then discarded it. After
+                    // a process restart every persisted stub therefore vanished until some screen
+                    // happened to call getOrStub() again.
+                    sources.forEach { stubSourcesMap[it.id] = it }
                 }
         }
     }

@@ -13,6 +13,8 @@ interface AnimeSourceManager {
 
     val catalogueSources: Flow<List<AnimeCatalogueSource>>
 
+    val stubSources: Flow<List<StubAnimeSource>>
+
     fun get(sourceKey: Long): AnimeSource?
 
     fun getOrStub(sourceKey: Long): AnimeSource
