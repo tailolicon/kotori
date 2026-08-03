@@ -88,6 +88,8 @@ import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import mihon.feature.upcoming.UpcomingScreen
 import mihon.feature.upcoming.anime.UpcomingAnimeScreen
+import tachiyomi.domain.source.anime.service.AnimeSourceManager
+import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -127,8 +129,22 @@ fun Screen.KotoriTabletMangaBrowse(
                 add(if (searchState.sourceFilter == SourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
             },
-            onSearchQueryChange = searchModel::updateSearchQuery,
-            onSubmitSearch = searchModel::search,
+            searchPlaceholder = if (activeTab == EXTENSIONS_TAB) {
+                "Tìm tiện ích…"
+            } else {
+                "Tìm trên mọi nguồn…"
+            },
+            onSearchQueryChange = { query ->
+                // The box sits above whichever tab is open, so it has to ask that tab's question.
+                // Typing on Tiện ích used to run a global title search and leave the extension
+                // list untouched.
+                if (activeTab == EXTENSIONS_TAB) {
+                    extensionModel.search(query)
+                } else {
+                    searchModel.updateSearchQuery(query)
+                }
+            },
+            onSubmitSearch = { if (activeTab != EXTENSIONS_TAB) searchModel.search() },
             onSelectSearchFilter = { index ->
                 when (index) {
                     0 -> searchModel.setSourceFilter(SourceFilter.All)
@@ -138,6 +154,7 @@ fun Screen.KotoriTabletMangaBrowse(
             },
             onResetSearch = {
                 searchModel.updateSearchQuery("")
+                extensionModel.search(null)
                 libraryOnly = false
             },
             onOpenCalendar = { navigator.push(UpcomingScreen()) },
@@ -147,13 +164,18 @@ fun Screen.KotoriTabletMangaBrowse(
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
             pendingUpdates = {
-                if (mode == MediaType.NOVEL) {
-                    NoPendingUpdates()
-                } else {
-                    MangaPendingUpdates(
-                        screenModel = extensionModel,
-                        onOpenExtension = { navigator.push(ExtensionDetailsScreen(it)) },
-                    )
+                // A Box hosts this slot, so anything with more than one child has to say how the
+                // children stack — otherwise they paint over each other.
+                Column(modifier = Modifier.fillMaxSize()) {
+                    MissingSources()
+                    if (mode == MediaType.NOVEL) {
+                        NoPendingUpdates()
+                    } else {
+                        MangaPendingUpdates(
+                            screenModel = extensionModel,
+                            onOpenExtension = { navigator.push(ExtensionDetailsScreen(it)) },
+                        )
+                    }
                 }
             },
             searchResults = {
@@ -202,8 +224,22 @@ fun Screen.KotoriTabletAnimeBrowse(
                 add(if (searchState.sourceFilter == AnimeSourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
             },
-            onSearchQueryChange = searchModel::updateSearchQuery,
-            onSubmitSearch = searchModel::search,
+            searchPlaceholder = if (activeTab == EXTENSIONS_TAB) {
+                "Tìm tiện ích…"
+            } else {
+                "Tìm trên mọi nguồn…"
+            },
+            onSearchQueryChange = { query ->
+                // The box sits above whichever tab is open, so it has to ask that tab's question.
+                // Typing on Tiện ích used to run a global title search and leave the extension
+                // list untouched.
+                if (activeTab == EXTENSIONS_TAB) {
+                    extensionModel.search(query)
+                } else {
+                    searchModel.updateSearchQuery(query)
+                }
+            },
+            onSubmitSearch = { if (activeTab != EXTENSIONS_TAB) searchModel.search() },
             onSelectSearchFilter = { index ->
                 when (index) {
                     0 -> searchModel.setSourceFilter(AnimeSourceFilter.All)
@@ -213,6 +249,7 @@ fun Screen.KotoriTabletAnimeBrowse(
             },
             onResetSearch = {
                 searchModel.updateSearchQuery("")
+                extensionModel.search(null)
                 libraryOnly = false
             },
             onOpenCalendar = { navigator.push(UpcomingAnimeScreen()) },
@@ -222,10 +259,13 @@ fun Screen.KotoriTabletAnimeBrowse(
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
             pendingUpdates = {
-                AnimePendingUpdates(
-                    screenModel = extensionModel,
-                    onOpenExtension = { navigator.push(AnimeExtensionDetailsScreen(it)) },
-                )
+                Column(modifier = Modifier.fillMaxSize()) {
+                    MissingSources()
+                    AnimePendingUpdates(
+                        screenModel = extensionModel,
+                        onOpenExtension = { navigator.push(AnimeExtensionDetailsScreen(it)) },
+                    )
+                }
             },
             searchResults = {
                 val items = searchState.items.filterLibraryAnime(libraryOnly)
@@ -253,6 +293,7 @@ private fun TabletBrowseHost(
     activeTab: Int,
     onSelectTab: (Int) -> Unit,
     searchQuery: String,
+    searchPlaceholder: String,
     activeSearchFilters: Set<Int>,
     onSearchQueryChange: (String) -> Unit,
     onSubmitSearch: () -> Unit,
@@ -330,7 +371,7 @@ private fun TabletBrowseHost(
                         searchActive = true
                         onSearchQueryChange(it)
                     },
-                    placeholder = "Tìm trên mọi nguồn…",
+                    placeholder = searchPlaceholder,
                     leadingIcon = Icons.Outlined.TravelExplore,
                     gradientBorder = true,
                     onClear = closeSearch,
@@ -368,6 +409,10 @@ private fun TabletBrowseHost(
                     .padding(top = 16.dp),
             ) {
                 when {
+                    // Tiện ích filters itself from the same box, so the pane keeps showing that
+                    // list. Handing it the global title results instead left an empty pane while
+                    // the thing being searched sat filtered out of view.
+                    activeTab == EXTENSIONS_TAB -> tabContent()
                     searchActive -> searchResults()
                     activeTab == 0 -> pendingUpdates()
                     else -> tabContent()
@@ -596,6 +641,66 @@ private fun NoPendingUpdates() {
     )
 }
 
+/**
+ * Sources this device has entries for but no extension installed for.
+ *
+ * A backup carries the source id of every entry, not the extension itself, so a library restored
+ * from another device points at extensions that are not here. Those entries then fail to load with
+ * nothing on screen explaining why, and nothing naming what to install. `getStubSources()` is
+ * exactly that list — every source id the database has seen, minus the ones actually installed.
+ */
+@Composable
+private fun MissingSources() {
+    val sourceManager = remember { Injekt.get<SourceManager>() }
+    val animeSourceManager = remember { Injekt.get<AnimeSourceManager>() }
+    val installed by sourceManager.sources.collectAsState(initial = emptyList())
+    val missing = remember(installed) {
+        (
+            sourceManager.getStubSources().map { it.name to it.lang } +
+                animeSourceManager.getStubSources().map { it.name to it.lang }
+            )
+            .filter { it.first.isNotBlank() }
+            .distinct()
+            .sortedBy { it.first }
+    }
+    if (missing.isEmpty()) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(KotoriColors.danger.copy(alpha = 0.12f))
+            .border(1.dp, KotoriColors.danger.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "Thiếu ${missing.size} tiện ích",
+            fontFamily = BeVietnamProFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            color = KotoriColors.danger,
+        )
+        Text(
+            text = "Thư viện có truyện từ những nguồn này nhưng tiện ích chưa được cài trên máy. " +
+                "Cài lại chúng ở tab Tiện ích để mở được các mục đó.",
+            fontFamily = BeVietnamProFamily,
+            fontSize = 11.5.sp,
+            color = KotoriColors.textSecondary,
+        )
+        missing.forEach { (name, lang) ->
+            Text(
+                text = "· $name" + if (lang.isNotBlank()) "  ($lang)" else "",
+                fontFamily = BeVietnamProFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                color = KotoriColors.textPrimary,
+            )
+        }
+    }
+}
+
 private fun <K> Map<K, SearchItemResult>.filterLibraryManga(
     libraryOnly: Boolean,
 ): Map<K, SearchItemResult> {
@@ -627,3 +732,6 @@ private fun <K> Map<K, AnimeSearchItemResult>.filterLibraryAnime(
         }
     }.toMap()
 }
+
+/** Index of the Tiện ích tab. Sources, Extensions, Migrate — the order Browse has always used. */
+private const val EXTENSIONS_TAB = 1

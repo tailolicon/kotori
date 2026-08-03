@@ -287,3 +287,26 @@ fonts         Unbounded (display) · Be Vietnam Pro (UI) · Literata (novel) · 
 2. Restyle existing Mihon screens (01, 04–09, 11–21) with new components.
 3. New domain: `MediaType`, anime/novel source APIs in extension contract.
 4. New features: video player (03), novel reader (10, 22), calendar upgrades (11).
+
+
+---
+
+## Tablet (1280 × 800, landscape) — `Kotori Tablet.dc.html`
+
+Same Aurora Glass tokens; the layout is **re-composed, not scaled**. Breakpoint: apply at ≥ 840 dp width (Compose `WindowWidthSizeClass.Expanded`; Medium 600–839 dp = phone layout + rail).
+
+**Global changes vs phone**
+- Bottom nav → **navigation rail** 92 dp on the left: 46 dp gradient `K` tile, hairline divider, 5 destinations (64 dp wide, icon + 9.5 sp label, active = mode-gradient pill radius `20 20 20 7`), bottom: downloaded-only toggle + settings circles.
+- Mode switcher moves into the top bar next to a persistent inline search field (no search screen push).
+- List screens become **two/three-pane** (list ↔ detail on one canvas, no navigation push).
+
+**T1 Thư viện** — rail + top bar (mode switcher · search · tune/sync/grid) + category chips; 6-column cover grid (aspect 3/4.15, rotating clipped corner) filling the height (18 items visible); right column 316 dp: resume hero card (radius `26 26 26 8`) + persistent panel `TIẾP TỤC` (4 mixed-type items) and `HÔM NAY LÊN SÓNG` (time · title · bell).
+**T2 Chi tiết** — left 520 dp full-height key visual with horizontal scrim into the background; all metadata, synopsis and the action cluster overlay it; right pane = tabs (`12 tập / Tương tự / Nhân vật`), `Tải 5 tập kế` chip, filter, and a **2-column episode grid** (12 rows visible, 104×62 thumbs) that fills the canvas.
+**T3 Player** — full-bleed video; **episode drawer permanently docked right** (322 dp glass panel, radius `26 26 26 9`, current episode violet-highlighted, auto-next card pinned at its bottom); transport cluster centred in the remaining area (offset −170 px), 88 dp play button; bottom bar = time · full-width seek · quick-setting chips + inline volume and brightness sliders.
+**T4 Manga reader** — 126 dp page-thumbnail rail (86×120 plates, current spread outlined pink) + **two-page spread** (2 × 376 dp plates with drop shadow); bottom chrome: prev / seek / `12–13 / 28` / next, then 6 tool chips (active `Trải đôi` = pink gradient).
+**T5 Novel reader** — three panes: 268 dp chapter list on the paper tone `#EADFC7` (search, 48-chapter list with read/active/new states, progress card) · **two-column justified text** with column rule and teal drop cap · 216 dp dark settings sidebar (size slider, font list, paper swatches, 2-cột/1-cột layout switch, night toggle).
+**T6 Duyệt** — rail + 300 dp source column (segmented Nguồn/Tiện ích/Di dời, pinned list) + results pane: gradient-bordered global search, filter chips, per-source horizontal shelves (118×164 covers, `✓ THƯ VIỆN` badge).
+**T7 Lịch mùa** — 7-column week board; day header pill (today = gradient), release cards with 64 dp art, time chip and bell; week arrows + `Chỉ thư viện` / `Nhắc tất cả` in the header.
+**T8 Cài đặt** — 330 dp settings list (active row = violet fill + gradient icon tile) + right detail pane as a 2-column card grid (Phát lại toggles · Chất lượng & tốc độ · Phụ đề + preview · Cử chỉ & tải · Nguồn phát · Mốc intro/outro).
+
+Tablet-specific rules: keep 18–26 dp screen padding; panels are the same glass tokens; the aurora blobs scale to 480–520 dp; multi-select, drag-reorder and swipe actions behave as on phone. Foldables/split-screen at < 840 dp fall back to the phone composition.

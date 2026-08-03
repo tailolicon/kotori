@@ -1,28 +1,32 @@
-# Current Plan: Publish Latest Kotori GitHub Release
+# Current Plan: Match the Tablet Browse Mockup
 
 ## Consulted Skills
 
-- Codex `github:yeet`
-- ECC `android-clean-architecture`
-- ECC `deployment-patterns`
-- ECC `github-ops`
+- ECC `compose-multiplatform-patterns`
+- ECC `kotlin-patterns`
 
-Ledger constraints: preserve `app.mihon`, retain ARM builds for normal Android
-devices, retain x86_64 for MuMu, and do not regress the verified software-decoder
-path on x86.
+Ledger constraints: make a surgical presentation-layer change, preserve phone
+behaviour, and avoid rewiring the existing source, extension, and calendar
+screens. `graphify` is unavailable in this environment, so dependencies were
+hydrated directly from the relevant Compose hosts, models, and navigation routes.
 
 ## Plan
 
-1. Audit the seven commits ahead of `origin/main`, repository state, signing
-   configuration, and existing release/tag convention.
-2. Commit only these Spec-Kit release records, yielding the next commit-count
-   version (`0.20.1-115` after the HTTPS review fix).
-3. Run debug unit tests and build the signed release APK variants. Fix and retest
-   any failures before proceeding.
-4. Inspect APK metadata, signatures, ABI contents, filenames, and hashes; select
-   the universal/ARM-capable artifact and the separate x86_64 artifact.
-5. Review the outgoing commits and staged release records for secrets, generated
-   files, compatibility risks, and HIGH/CRITICAL findings.
-6. Push `main`, create and push tag `v0.20.1-115`, and publish the GitHub release
-   with Vietnamese notes and both verified APKs.
-7. Verify the remote branch SHA, tag SHA, release URL, assets, and final CI state.
+1. Keep the existing phone `TabbedScreen` flow unchanged and alter only the
+   tablet Browse host.
+2. Reproduce the prototype hierarchy inside the tablet host: a 300dp left pane
+   containing Browse title, segment, and pane content; a flexible right pane
+   containing the global-search field and contextual action/content.
+3. Keep the canonical Sources tab permanently mounted on the left so its language
+   and disabled-source filters remain reactive. Global-search query/chips still
+   belong exclusively to the right pane.
+4. Replace right-pane pending updates in place when the search field gains focus;
+   embed the canonical manga/anime global-search model and result shelves rather
+   than pushing a new Voyager screen. Back/close restores pending updates and
+   Seasonal Calendar.
+5. Keep Extensions and Migrate selectable with their existing canonical content;
+   show the Sources filter on Sources and the Extensions filter on Extensions.
+6. Compile/test, fix and retest until green; install the newest APK on MuMu and
+   verify both media paths and all required actions.
+7. Review navigation, state duplication, empty/loading states, localization,
+   accessibility, and regressions; resolve every HIGH/CRITICAL issue.
