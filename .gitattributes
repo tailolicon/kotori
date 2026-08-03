@@ -20,5 +20,28 @@
 *.ttf binary
 *.eot binary
 *.woff binary
+*.woff2 binary
+*.otf binary
+
+# Models and other opaque payloads.
+#
+# Without these, `* text=auto` decides for itself, and for at least one ONNX model it decided
+# wrong: every 0x0D byte was stripped on commit. The file lost 130 bytes, stopped parsing, and
+# translation failed on every page for every provider — with the copy on disk, the blob in git
+# and the one inside the APK all agreeing, because all three had been through the same filter.
+*.onnx binary
+*.tflite binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.so binary
+*.dex binary
+*.apk binary
+*.aar binary
+*.keystore binary
+*.jks binary
+*.mp3 binary
+*.mp4 binary
+*.webm binary
 *.pyc binary
 *.swp binary
