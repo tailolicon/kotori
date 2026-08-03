@@ -288,13 +288,14 @@ class BubbleRenderer(private val context: Context) {
         // Measured from the original lettering, before any of it is erased.
         val leftAligned = looksLeftAligned(bubble.lines)
 
-        // Status panels take a different route entirely — see [BubbleBox.isTextBlock]. It declines
-        // when the background is too busy to rebuild, and the ordinary path then runs as usual.
-        if (bubble.box.isTextBlock && textLines.isNotEmpty()) {
-            eraseTextBlock(
-                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
-            )?.let { return it }
-        }
+        // Text blocks are handled below, *after* the flood fill has had its chance.
+        //
+        // Order matters here and the obvious order is wrong. Wiping OCR line strips only clears what
+        // OCR saw; the ends of each line, where the boxes stop short, survive — the reader gets the
+        // translation with the original's first and last letters still showing on either side of it.
+        // A flood fill has no such gap: it repaints the bubble's whole interior. So the strip wipe is
+        // strictly the fallback, for the panels that have no floodable interior at all.
+        val isTextBlock = bubble.box.isTextBlock && textLines.isNotEmpty()
 
         val flat = BubbleFill.detect(pixels, width, height, searchArea, textLines)
         if (flat != null) {
@@ -334,6 +335,14 @@ class BubbleRenderer(private val context: Context) {
                     "fill=${Integer.toHexString(flat.fillColor)} ink=${Integer.toHexString(flat.textColor)}"
             }
             return Plan(page, bubble.translated, flat.textColor, flat.fillColor, leftAligned)
+        }
+
+        // No floodable interior. A status panel lands here — translucent gradient, no flat region to
+        // fill — and this is where wiping the OCR line strips is the right tool.
+        if (isTextBlock) {
+            eraseTextBlock(
+                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
+            )?.let { return it }
         }
 
         val mask = GlyphMask.detect(pixels, width, height, searchArea)
@@ -431,10 +440,17 @@ class BubbleRenderer(private val context: Context) {
         regionTop: Int,
         leftAligned: Boolean,
     ): Plan? {
+        // Grow each strip sideways much more than vertically.
+        //
+        // ML Kit's boxes hug the glyphs it recognised, and the first and last glyph of a line are
+        // exactly the ones it clips or misses. Padding by a fraction of line height — symmetric and
+        // small — left those ends behind, so the translation appeared with the original's opening
+        // and closing letters still flanking it. Vertical padding stays tight because neighbouring
+        // lines are close and over-reaching would eat into the line above.
         val strips = textLines
             .map { line ->
-                val growX = max(2, (line.height() * LINE_STRIP_PAD).roundToInt())
-                val growY = max(2, (line.height() * LINE_STRIP_PAD).roundToInt())
+                val growX = max(6, (line.height() * LINE_STRIP_PAD_X).roundToInt())
+                val growY = max(2, (line.height() * LINE_STRIP_PAD_Y).roundToInt())
                 Rect(line).apply {
                     inset(-growX, -growY)
                     left = left.coerceIn(0, width)
@@ -933,8 +949,10 @@ class BubbleRenderer(private val context: Context) {
         const val INK_PERCENTILE = 0.40f
         /** Lettering is a minority of a text strip, so a narrower tail than a glyph mask needs. */
         const val TEXT_BLOCK_INK_PERCENTILE = 0.15f
-        /** Padding around an OCR line box before it is inpainted, as a fraction of line height. */
-        const val LINE_STRIP_PAD = 0.18f
+        /** Horizontal padding of an OCR line box before inpainting, as a fraction of line height. */
+        const val LINE_STRIP_PAD_X = 0.45f
+        /** Vertical padding: kept tight so a strip does not reach into the line above or below. */
+        const val LINE_STRIP_PAD_Y = 0.18f
         /**
          * Summed absolute RGB step between neighbouring pixels counted as a drawn edge. Matches the
          * threshold the measurement was tuned at against real pages.
