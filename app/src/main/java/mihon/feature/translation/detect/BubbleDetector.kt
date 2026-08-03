@@ -26,16 +26,68 @@ class BubbleDetector(private val context: Context) {
 
     private val env: OrtEnvironment by lazy { OrtEnvironment.getEnvironment() }
 
+    /**
+     * The extracted model, created on first use and repaired if it turns out to be unusable.
+     *
+     * "Exists and is non-empty" was the old test for whether extraction was needed, and it is not
+     * enough. A copy interrupted by a crash, a full disk, or a shipped asset that is itself damaged
+     * leaves a file that passes that test and fails to parse — and because nothing ever replaced it,
+     * translation stayed dead for every page, every provider, indefinitely. Extraction is now atomic
+     * (write to a temporary file, then rename), the copy is size-checked against the asset, and a
+     * session that fails to open gets exactly one retry from a freshly extracted copy.
+     */
     private val session: OrtSession by lazy {
         val modelFile = File(context.filesDir, MODEL_FILE_NAME)
-        if (!modelFile.exists() || modelFile.length() == 0L) {
-            context.assets.open(MODEL_ASSET_PATH).use { input ->
-                modelFile.outputStream().use(input::copyTo)
-            }
+        if (!isExtractionCurrent(modelFile)) extractModel(modelFile)
+        try {
+            openSession(modelFile)
+        } catch (first: Throwable) {
+            logcat { "Bubble detector failed to load: ${first.message}; re-extracting and retrying" }
+            extractModel(modelFile)
+            openSession(modelFile)
         }
+    }
+
+    private fun openSession(modelFile: File): OrtSession =
         env.createSession(modelFile.absolutePath).also {
             logcat { "Bubble detector ready: inputs=${it.inputNames} outputs=${it.outputNames}" }
         }
+
+    /** True when the extracted file is present and the same size as the asset it came from. */
+    private fun isExtractionCurrent(modelFile: File): Boolean {
+        if (!modelFile.isFile || modelFile.length() == 0L) return false
+        val assetLength = runCatching {
+            context.assets.openFd(MODEL_ASSET_PATH).use { it.length }
+        }.getOrElse {
+            // Compressed assets have no file descriptor; fall back to reading the stream's length.
+            runCatching {
+                context.assets.open(MODEL_ASSET_PATH).use { input ->
+                    var total = 0L
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        total += read
+                    }
+                    total
+                }
+            }.getOrNull()
+        } ?: return true // Cannot measure the asset; assume what is on disk is fine.
+        return modelFile.length() == assetLength
+    }
+
+    private fun extractModel(modelFile: File) {
+        val temp = File(modelFile.parentFile, "${modelFile.name}.tmp")
+        temp.delete()
+        context.assets.open(MODEL_ASSET_PATH).use { input ->
+            temp.outputStream().use { output ->
+                input.copyTo(output)
+                output.fd.sync()
+            }
+        }
+        modelFile.delete()
+        check(temp.renameTo(modelFile)) { "Could not install the bubble detector model" }
+        logcat { "Extracted bubble detector model (${modelFile.length()} bytes)" }
     }
 
     /**

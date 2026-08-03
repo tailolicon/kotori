@@ -59,6 +59,9 @@ class TranslationManager(
 
     @Volatile private var backoffSettings = ""
 
+    /** Reset by any page that succeeds, so an isolated failure never accumulates into a pause. */
+    @Volatile private var consecutiveFailures = 0
+
     fun isRateLimited(): Boolean =
         System.currentTimeMillis() < backoffUntilMillis && backoffSettings == providerSettings()
 
@@ -137,10 +140,12 @@ class TranslationManager(
                 }
                 if (!written) return@withLock null
                 cache.trimToSize()
+                consecutiveFailures = 0
                 target
             } catch (e: PageTranslator.NothingToTranslate) {
                 logcat { "Page $pageIndex of chapter $chapterId has no dialogue" }
                 runCatching { noneMarker.createNewFile() }
+                consecutiveFailures = 0
                 null
             } catch (e: ProviderRateLimited) {
                 armBackoff(e)
@@ -148,11 +153,41 @@ class TranslationManager(
                 null
             } catch (e: Throwable) {
                 logcat { "Translation failed for page $pageIndex: ${e.message}" }
-                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+                _status.value = TranslationStatus.Failed(friendlyMessage(e))
+                // A fault that is not about this page — a model that will not load, no network —
+                // fails every page identically, and the reader retries each one on every view. The
+                // observed result was three pages failing in a loop several times a second, forever.
+                // Pausing after a run of identical failures costs nothing when the fault is real and
+                // recovers on its own when it is not.
+                consecutiveFailures++
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    backoffSettings = providerSettings()
+                    backoffUntilMillis = System.currentTimeMillis() + FAILURE_PAUSE_SECONDS * 1000
+                    logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
+                }
                 null
             } finally {
                 source.recycle()
             }
+        }
+    }
+
+    /**
+     * Turns an internal failure into something a reader can act on.
+     *
+     * The detector's own message is a protobuf parser error naming a file path — accurate, and
+     * useless to the person holding the phone, who needs to know whether to wait, retry or
+     * reinstall.
+     */
+    private fun friendlyMessage(e: Throwable): String {
+        val raw = e.message.orEmpty()
+        return when {
+            "onnx" in raw.lowercase() || "protobuf" in raw.lowercase() ->
+                "Không nạp được mô hình nhận diện khung thoại. Hãy cài lại ứng dụng — bản dịch sẽ " +
+                    "chạy lại ngay sau đó."
+            e is java.io.IOException ->
+                "Mất kết nối khi đang dịch. Sẽ thử lại khi có mạng."
+            else -> raw.ifBlank { "Dịch thất bại" }
         }
     }
 
@@ -287,6 +322,10 @@ class TranslationManager(
         const val DAILY_QUOTA_PAUSE_SECONDS = 30L * 60
         /** Pause after a per-minute 429 that carried no server-suggested delay. */
         const val DEFAULT_RATE_PAUSE_SECONDS = 60L
+
+        /** Identical failures in a row before translation pauses instead of retrying every page. */
+        const val MAX_CONSECUTIVE_FAILURES = 5
+        const val FAILURE_PAUSE_SECONDS = 5L * 60
 
         /** ~48 MP: above any real comic page, below what would exhaust the heap. */
         const val MAX_WORKING_PIXELS = 48_000_000L

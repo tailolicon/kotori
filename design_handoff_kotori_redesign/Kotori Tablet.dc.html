@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400..900&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Literata:opsz,wght@7..72,400..700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+  <script src="image-slot.js"></script>
+  <style>
+    body { margin: 0; background: #0A0A0F; color: #ECEAF4; font-family: 'Be Vietnam Pro', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #A78BFA; } a:hover { color: #C4B5FD; }
+    @keyframes kAurora { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,-30px) scale(1.18); } 100% { transform: translate(0,0) scale(1); } }
+  </style>
+</helmet>
+
+<section style="padding:56px 64px 96px;display:flex;flex-direction:column;gap:34px;width:max-content;">
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1200px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="font-family:'Unbounded';font-size:11px;letter-spacing:.2em;color:#C4B5FD;border:1px solid rgba(167,139,250,.4);border-radius:12px;padding:6px 12px;">LƯỢT 4 · TABLET</div>
+      <div style="font-family:'Unbounded';font-size:11px;letter-spacing:.2em;color:#6E6590;">1280 × 800 · NGANG · AURORA GLASS</div>
+    </div>
+    <h1 style="margin:0;font-family:'Unbounded';font-weight:700;font-size:30px;">Kotori cho tablet</h1>
+    <p style="margin:0;color:#8F8CA3;font-size:14px;line-height:1.6;max-width:960px;">Không phóng to bản điện thoại: thanh điều hướng dọc thay thanh dưới, bố cục hai khung (danh sách – chi tiết), lưới 6 cột, bảng phụ luôn hiển thị. 8 màn: Thư viện · Chi tiết · Player · Manga reader trải đôi · Novel reader hai cột · Duyệt &amp; tìm · Lịch mùa · Cài đặt.</p>
+  </div>
+
+  <div id="4a" style="display:flex;flex-direction:column;gap:30px;">
+
+    <!-- T1 · THƯ VIỆN -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);position:relative;width:max-content;">
+        <div style="position:absolute;left:6px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.18);"></div>
+        <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#14101F;color:#F3EFFB;display:flex;">
+          <div style="position:absolute;top:-120px;left:180px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.3),transparent 70%);filter:blur(14px);animation:kAurora 11s ease-in-out infinite;"></div>
+          <div style="position:absolute;bottom:-160px;right:120px;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(244,114,182,.18),transparent 70%);filter:blur(14px);animation:kAurora 13s ease-in-out infinite reverse;"></div>
+
+          <div style="position:relative;width:92px;flex:none;background:rgba(24,19,38,.62);border-right:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;padding:18px 0 16px;gap:16px;">
+            <div style="width:46px;height:46px;border-radius:17px 17px 17px 5px;background:linear-gradient(130deg,#8B5CF6,#F472B6);display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-weight:800;font-size:21px;color:#fff;box-shadow:0 10px 26px rgba(139,92,246,.5);">K</div>
+            <div style="width:34px;height:1px;background:rgba(255,255,255,.1);"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+              <sc-for list="{{ railLib }}" as="r" hint-placeholder-count="5">
+                <div style="width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0;border-radius:20px 20px 20px 7px;background:{{ r.bg }};">
+                  <span style="font-family:'Material Symbols Rounded';font-size:23px;color:{{ r.col }};font-variation-settings:'FILL' {{ r.fill }};">{{ r.ic }}</span>
+                  <span style="font-size:9.5px;font-weight:600;color:{{ r.col }};">{{ r.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1;"></div>
+            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#C4B5FD;">cloud_off</span></div>
+            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">settings</span></div>
+          </div>
+
+          <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;">
+            <div style="padding:16px 26px 0;display:flex;align-items:center;gap:18px;">
+              <div style="display:flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:5px;backdrop-filter:blur(16px);">
+                <div style="display:flex;align-items:center;gap:7px;padding:9px 20px;border-radius:18px;color:#8D84AC;"><span style="font-family:'Material Symbols Rounded';font-size:18px;">menu_book</span><span style="font-size:13px;font-weight:600;">Manga</span></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:9px 20px;border-radius:18px 6px 18px 18px;background:linear-gradient(120deg,#8B5CF6,#C084FC);box-shadow:0 6px 20px rgba(139,92,246,.45);color:#fff;"><span style="font-family:'Material Symbols Rounded';font-size:18px;font-variation-settings:'FILL' 1;">smart_display</span><span style="font-size:13px;font-weight:700;">Anime</span></div>
+                <div style="display:flex;align-items:center;gap:7px;padding:9px 20px;border-radius:18px;color:#8D84AC;"><span style="font-family:'Material Symbols Rounded';font-size:18px;">article</span><span style="font-size:13px;font-weight:600;">Novel</span></div>
+              </div>
+              <div style="flex:1;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:11px 16px;backdrop-filter:blur(12px);">
+                <span style="font-family:'Material Symbols Rounded';font-size:19px;color:#8D84AC;">search</span>
+                <span style="font-size:13px;color:#8D84AC;">Tìm trong thư viện…</span>
+              </div>
+              <div style="display:flex;gap:9px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">tune</span></div>
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">sync</span></div>
+                <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">grid_view</span></div>
+              </div>
+            </div>
+
+            <div style="padding:16px 26px 0;display:flex;gap:9px;">
+              <sc-for list="{{ catsT }}" as="c" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:7px;padding:8px 15px;border-radius:17px;background:{{ c.bg }};border:1px solid {{ c.bd }};color:{{ c.col }};font-size:12.5px;font-weight:600;white-space:nowrap;">{{ c.t }}<span style="font-size:11px;opacity:.75;">{{ c.n }}</span></div>
+              </sc-for>
+            </div>
+
+            <div style="flex:1;min-height:0;display:flex;gap:20px;padding:20px 26px 22px;">
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;">
+                <div style="display:flex;align-items:baseline;gap:12px;">
+                  <div style="font-family:'Unbounded';font-weight:700;font-size:19px;">Thư viện</div>
+                  <div style="font-size:12px;color:#8D84AC;">24 bộ · sắp theo cập nhật gần nhất</div>
+                </div>
+                <div style="flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:16px 14px;align-content:start;">
+                  <sc-for list="{{ libT }}" as="it" hint-placeholder-count="12">
+                    <div>
+                      <div style="aspect-ratio:3/4.15;border-radius:{{ it.rad }};background:linear-gradient(160deg,{{ it.g1 }},{{ it.g2 }});border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden;">
+                        <div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 80% 0%,rgba(255,255,255,.17),transparent 52%);"></div>
+                        <div style="position:absolute;inset:auto 0 0 0;padding:26px 10px 9px;background:linear-gradient(180deg,transparent,rgba(11,8,18,.88));">
+                          <div style="font-family:'Unbounded';font-weight:600;font-size:11.5px;line-height:1.25;color:#fff;">{{ it.t }}</div>
+                          <div style="font-size:9.5px;color:rgba(255,255,255,.7);margin-top:3px;">{{ it.ep }}</div>
+                        </div>
+                        <div style="position:absolute;top:8px;right:8px;font-size:9.5px;font-weight:700;color:#fff;background:linear-gradient(120deg,#8B5CF6,#F472B6);border-radius:9px;padding:3px 7px;display:{{ it.unDisp }};box-shadow:0 4px 14px rgba(139,92,246,.5);">{{ it.un }}</div>
+                        <div style="position:absolute;top:8px;left:8px;width:20px;height:20px;border-radius:50%;background:rgba(20,16,31,.65);backdrop-filter:blur(8px);display:{{ it.dlDisp }};align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:12px;color:#5EEAD4;">download_done</span></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="width:316px;flex:none;display:flex;flex-direction:column;gap:14px;">
+                <div style="border-radius:26px 26px 26px 8px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);backdrop-filter:blur(18px);">
+                  <div style="height:158px;position:relative;">
+                    <image-slot style="color:rgba(255,255,255,.72);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);" id="t-hero" shape="rect" placeholder="Khung phim 16:9"></image-slot>
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(20,16,31,.9));pointer-events:none;"></div>
+                    <div style="position:absolute;left:14px;bottom:12px;right:14px;pointer-events:none;">
+                      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#C4B5FD;">ĐANG XEM DỞ</div>
+                      <div style="font-family:'Unbounded';font-weight:600;font-size:15px;margin-top:3px;">Dạ Hành Ký</div>
+                    </div>
+                  </div>
+                  <div style="padding:12px 14px 14px;display:flex;align-items:center;gap:12px;">
+                    <div style="flex:1;">
+                      <div style="font-size:11.5px;color:#A79FC0;">Tập 7 · còn 09:12</div>
+                      <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.12);margin-top:7px;"><div style="width:62%;height:100%;border-radius:2px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                    </div>
+                    <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(130deg,#8B5CF6,#F472B6);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(139,92,246,.5);flex:none;"><span style="font-family:'Material Symbols Rounded';font-size:24px;color:#fff;font-variation-settings:'FILL' 1;">play_arrow</span></div>
+                  </div>
+                </div>
+
+                <div style="flex:1;min-height:0;border-radius:24px 24px 24px 8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);backdrop-filter:blur(14px);padding:14px;display:flex;flex-direction:column;gap:11px;overflow:hidden;">
+                  <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">TIẾP TỤC</div>
+                  <sc-for list="{{ resumeT }}" as="r" hint-placeholder-count="4">
+                    <div style="display:flex;gap:11px;align-items:center;">
+                      <div style="width:56px;height:36px;border-radius:11px 11px 11px 4px;flex:none;background:linear-gradient(150deg,{{ r.g1 }},{{ r.g2 }});position:relative;overflow:hidden;">
+                        <div style="position:absolute;inset:auto 0 0 0;height:3px;background:rgba(0,0,0,.4);"><div style="width:{{ r.w }};height:100%;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                      </div>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.t }}</div>
+                        <div style="font-size:10px;color:#8D84AC;margin-top:2px;">{{ r.sub }}</div>
+                      </div>
+                      <span style="font-family:'Material Symbols Rounded';font-size:19px;color:#C4B5FD;">{{ r.ic }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="height:1px;background:rgba(255,255,255,.08);"></div>
+                  <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">HÔM NAY LÊN SÓNG</div>
+                  <sc-for list="{{ airT }}" as="a" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span style="font-family:'Unbounded';font-size:10.5px;color:#F0ABFC;width:38px;">{{ a.time }}</span>
+                      <div style="flex:1;min-width:0;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.t }}</div>
+                      <span style="font-family:'Material Symbols Rounded';font-size:17px;color:{{ a.bellCol }};font-variation-settings:'FILL' {{ a.bellFill }};">notifications</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T1 · THƯ VIỆN — RAIL DỌC + LƯỚI 6 CỘT + BẢNG TIẾP TỤC</div>
+    </div>
+
+    <!-- T2 · CHI TIẾT + T3 · PLAYER -->
+    <div style="display:flex;gap:30px;">
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#14101F;color:#F3EFFB;display:flex;">
+            <div style="position:relative;width:520px;flex:none;">
+              <image-slot style="color:rgba(255,255,255,.72);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);" id="t-detail-art" shape="rect" placeholder="Key visual dọc"></image-slot>
+              <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,16,31,.15),rgba(20,16,31,.55) 55%,#14101F);pointer-events:none;"></div>
+              <div style="position:absolute;top:18px;left:20px;width:42px;height:42px;border-radius:50%;background:rgba(20,16,31,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;pointer-events:none;"><span style="font-family:'Material Symbols Rounded';font-size:21px;">arrow_back</span></div>
+              <div style="position:absolute;left:34px;right:26px;bottom:32px;pointer-events:none;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;gap:7px;">
+                  <span style="font-size:11px;font-weight:700;color:#fff;background:linear-gradient(120deg,#8B5CF6,#C084FC);border-radius:11px;padding:4px 11px;">Đang chiếu</span>
+                  <span style="font-size:11px;font-weight:600;color:#E9E4F7;background:rgba(255,255,255,.13);backdrop-filter:blur(8px);border-radius:11px;padding:4px 11px;">2026</span>
+                  <span style="font-size:11px;font-weight:600;color:#E9E4F7;background:rgba(255,255,255,.13);backdrop-filter:blur(8px);border-radius:11px;padding:4px 11px;">12 tập · 24 phút</span>
+                </div>
+                <div style="font-family:'Unbounded';font-weight:700;font-size:38px;line-height:1.05;">Kiếm Vực</div>
+                <div style="font-size:13px;color:#C9C1E2;">Ame Studio · AniSrc VN · Hành động, Kỳ ảo</div>
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <span style="display:flex;align-items:center;gap:5px;font-size:14px;font-weight:700;color:#FDE68A;"><span style="font-family:'Material Symbols Rounded';font-size:17px;font-variation-settings:'FILL' 1;">star</span>4.6</span>
+                  <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#5EEAD4;"><span style="font-family:'Material Symbols Rounded';font-size:15px;">sync</span>AniList · Đang xem 6/12</span>
+                </div>
+                <div style="font-size:12.5px;line-height:1.65;color:#A79FC0;max-width:440px;">Ở rìa vực sâu nuốt mọi ánh sáng, kiếm sĩ mù Renji đánh đổi ký ức lấy từng nhát chém. Mỗi tập là một mảnh ký ức anh không nhớ mình đã bán. <span style="color:#C4B5FD;font-weight:600;">Xem thêm</span></div>
+                <div style="display:flex;gap:10px;align-items:center;margin-top:2px;">
+                  <div style="display:flex;align-items:center;justify-content:center;gap:9px;background:linear-gradient(120deg,#8B5CF6,#F472B6);border-radius:22px 8px 22px 22px;padding:14px 26px;box-shadow:0 12px 32px rgba(139,92,246,.5);">
+                    <span style="font-family:'Material Symbols Rounded';font-size:22px;color:#fff;font-variation-settings:'FILL' 1;">play_arrow</span>
+                    <span style="font-size:14px;font-weight:700;color:#fff;">Xem tiếp · Tập 7</span>
+                  </div>
+                  <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#F472B6;font-variation-settings:'FILL' 1;">favorite</span></div>
+                  <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#C4B5FD;">sync</span></div>
+                  <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#C4B5FD;">download</span></div>
+                  <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:22px;color:#CFC7E8;">more_horiz</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;padding:22px 26px 22px 10px;">
+              <div style="position:absolute;top:-100px;right:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.26),transparent 70%);filter:blur(14px);animation:kAurora 11s ease-in-out infinite;"></div>
+              <div style="position:relative;display:flex;align-items:center;gap:24px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:11px;">
+                <div style="position:relative;padding-bottom:11px;margin-bottom:-12px;"><span style="font-size:14.5px;font-weight:700;">12 tập</span><div style="position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:2px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                <span style="font-size:14.5px;font-weight:600;color:#8D84AC;">Tương tự</span>
+                <span style="font-size:14.5px;font-weight:600;color:#8D84AC;">Nhân vật</span>
+                <div style="flex:1;"></div>
+                <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:15px;padding:7px 13px;"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#C4B5FD;">download</span><span style="font-size:11.5px;font-weight:600;">Tải 5 tập kế</span></div>
+                <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#8D84AC;">filter_list</span>
+              </div>
+              <div style="position:relative;flex:1;min-height:0;margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:11px;align-content:start;">
+                <sc-for list="{{ epsT }}" as="e" hint-placeholder-count="8">
+                  <div style="display:flex;gap:13px;align-items:center;background:rgba(255,255,255,.05);border:1px solid {{ e.bd }};border-radius:18px 18px 18px 6px;padding:10px;backdrop-filter:blur(10px);opacity:{{ e.op }};">
+                    <div style="width:104px;height:62px;border-radius:13px 13px 13px 4px;flex:none;background:linear-gradient(150deg,{{ e.g1 }},{{ e.g2 }});position:relative;overflow:hidden;">
+                      <div style="position:absolute;left:8px;bottom:6px;font-family:'Unbounded';font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.7);">T{{ e.n }}</div>
+                      <div style="position:absolute;inset:auto 0 0 0;height:3px;background:rgba(0,0,0,.4);display:{{ e.barDisp }};"><div style="width:{{ e.barW }};height:100%;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ e.t }}</div>
+                      <div style="font-size:11px;color:#8D84AC;margin-top:3px;">{{ e.sub }}</div>
+                    </div>
+                    <span style="font-family:'Material Symbols Rounded';font-size:21px;color:{{ e.icCol }};">{{ e.ic }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T2 · CHI TIẾT — HAI KHUNG, KEY VISUAL TRÀN TRÁI</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#07050B;color:#F3EFFB;">
+            <image-slot style="color:rgba(255,255,255,.72);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);" id="t-player" shape="rect" placeholder="Khung phim toàn màn hình"></image-slot>
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,4,10,.72),transparent 26%,transparent 52%,rgba(6,4,10,.9));pointer-events:none;"></div>
+
+            <div style="position:absolute;top:20px;left:26px;right:26px;display:flex;align-items:center;gap:16px;pointer-events:none;">
+              <div style="width:44px;height:44px;border-radius:50%;background:rgba(10,7,16,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:22px;">arrow_back</span></div>
+              <div>
+                <div style="font-family:'Unbounded';font-weight:700;font-size:17px;">Kiếm Vực</div>
+                <div style="font-size:12px;color:#C4B5FD;margin-top:2px;">Tập 7 — Dưới trăng đỏ · AniSrc VN</div>
+              </div>
+              <div style="flex:1;"></div>
+              <div style="display:flex;gap:10px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(10,7,16,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;">cast</span></div>
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(10,7,16,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;">picture_in_picture_alt</span></div>
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(10,7,16,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;">lock</span></div>
+              </div>
+            </div>
+
+            <div style="position:absolute;top:38%;left:calc(50% - 170px);transform:translate(-50%,-50%);display:flex;align-items:center;gap:44px;pointer-events:none;">
+              <div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:30px;">replay_10</span></div>
+              <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(130deg,#8B5CF6,#F472B6);display:flex;align-items:center;justify-content:center;box-shadow:0 16px 46px rgba(139,92,246,.6);"><span style="font-family:'Material Symbols Rounded';font-size:46px;color:#fff;font-variation-settings:'FILL' 1;">pause</span></div>
+              <div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:30px;">forward_10</span></div>
+            </div>
+
+            <div style="position:absolute;top:88px;right:26px;bottom:150px;width:322px;border-radius:26px 26px 26px 9px;background:rgba(16,12,24,.72);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(24px);padding:16px;display:flex;flex-direction:column;gap:12px;pointer-events:none;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;flex:1;">DANH SÁCH TẬP · 12</div>
+                <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#8D84AC;">close</span>
+              </div>
+              <sc-for list="{{ drawerT }}" as="d" hint-placeholder-count="5">
+                <div style="display:flex;gap:11px;align-items:center;border-radius:16px 16px 16px 5px;padding:8px;background:{{ d.bg }};border:1px solid {{ d.bd }};opacity:{{ d.op }};">
+                  <div style="width:74px;height:44px;border-radius:11px 11px 11px 4px;flex:none;background:linear-gradient(150deg,{{ d.g1 }},{{ d.g2 }});position:relative;overflow:hidden;">
+                    <div style="position:absolute;inset:auto 0 0 0;height:3px;background:rgba(0,0,0,.4);display:{{ d.barDisp }};"><div style="width:{{ d.barW }};height:100%;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">T{{ d.n }} · {{ d.t }}</div>
+                    <div style="font-size:10px;color:#8D84AC;margin-top:2px;">{{ d.sub }}</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded';font-size:18px;color:{{ d.icCol }};">{{ d.ic }}</span>
+                </div>
+              </sc-for>
+              <div style="flex:1;"></div>
+              <div style="border-radius:16px;background:rgba(139,92,246,.16);border:1px solid rgba(167,139,250,.45);padding:10px 12px;display:flex;align-items:center;gap:10px;">
+                <span style="font-family:'Material Symbols Rounded';font-size:18px;color:#C4B5FD;">skip_next</span>
+                <div style="flex:1;font-size:11px;font-weight:600;">Tự phát tập kế · 5s</div>
+                <span style="font-size:10.5px;font-weight:700;color:#F3EFFB;background:rgba(255,255,255,.1);border-radius:11px;padding:5px 10px;">Hủy</span>
+              </div>
+            </div>
+
+            <div style="position:absolute;right:calc(322px + 46px);bottom:132px;font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.22);border-radius:16px;padding:10px 18px;pointer-events:none;">Bỏ qua intro ›</div>
+
+            <div style="position:absolute;left:26px;right:26px;bottom:22px;display:flex;flex-direction:column;gap:14px;pointer-events:none;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <span style="font-family:'Unbounded';font-size:12px;color:#F0ABFC;width:46px;">09:12</span>
+                <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.16);position:relative;">
+                  <div style="width:52%;height:100%;border-radius:3px;background:rgba(255,255,255,.28);"></div>
+                  <div style="position:absolute;inset:0;width:38%;border-radius:3px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div>
+                  <div style="position:absolute;left:38%;top:50%;width:16px;height:16px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 18px rgba(244,114,182,.95);"></div>
+                </div>
+                <span style="font-family:'Unbounded';font-size:12px;color:#C9C1E2;width:46px;text-align:right;">24:00</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <sc-for list="{{ pctlT }}" as="p" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px);border-radius:17px;padding:9px 15px;">
+                    <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">{{ p.ic }}</span>
+                    <span style="font-size:12px;font-weight:600;">{{ p.t }}</span>
+                  </div>
+                </sc-for>
+                <div style="flex:1;"></div>
+                <div style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px);border-radius:17px;padding:9px 15px;">
+                  <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">volume_up</span>
+                  <div style="width:88px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);"><div style="width:80%;height:100%;border-radius:2px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(12px);border-radius:17px;padding:9px 15px;">
+                  <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">brightness_6</span>
+                  <div style="width:88px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);"><div style="width:62%;height:100%;border-radius:2px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T3 · PLAYER — NGĂN TẬP LUÔN HIỆN, THANH ĐIỀU KHIỂN NGANG</div>
+      </div>
+    </div>
+
+    <!-- T4 · MANGA READER + T5 · NOVEL READER -->
+    <div style="display:flex;gap:30px;">
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#0B0910;color:#F3EFFB;display:flex;">
+            <div style="width:126px;flex:none;background:rgba(16,12,22,.9);border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;padding:14px 0;gap:10px;align-items:center;">
+              <div style="font-family:'Unbounded';font-size:9px;letter-spacing:.16em;color:#F9A8D4;">TRANG</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:9px;overflow:hidden;align-items:center;">
+                <sc-for list="{{ pagesT }}" as="p" hint-placeholder-count="6">
+                  <div style="width:86px;height:120px;border-radius:10px;background:linear-gradient(160deg,{{ p.g1 }},{{ p.g2 }});border:2px solid {{ p.bd }};position:relative;overflow:hidden;">
+                    <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 5px);"></div>
+                    <div style="position:absolute;right:5px;bottom:4px;font-family:'Unbounded';font-size:9px;font-weight:700;color:{{ p.numCol }};">{{ p.n }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="flex:1;min-width:0;position:relative;display:flex;flex-direction:column;">
+              <div style="position:absolute;top:0;left:0;right:0;padding:14px 24px 30px;background:linear-gradient(180deg,rgba(11,9,16,.94),transparent);display:flex;align-items:center;gap:16px;z-index:2;pointer-events:none;">
+                <span style="font-family:'Material Symbols Rounded';font-size:22px;">arrow_back</span>
+                <div style="flex:1;">
+                  <div style="font-size:15px;font-weight:700;">Cửu Vĩ Truyện</div>
+                  <div style="font-size:11.5px;color:#F9A8D4;margin-top:2px;">Chương 42 — Cáo đêm · TruyenViet</div>
+                </div>
+                <div style="display:flex;gap:9px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#F9A8D4;">bookmark</span></div>
+                  <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#CFC7E8;">public</span></div>
+                  <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#CFC7E8;">settings</span></div>
+                </div>
+              </div>
+
+              <div style="flex:1;display:flex;gap:8px;padding:66px 24px 100px;justify-content:center;">
+                <div style="width:376px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);">
+                  <image-slot style="color:rgba(255,255,255,.72);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);" id="t-page-l" shape="rect" placeholder="Trang trái"></image-slot>
+                </div>
+                <div style="width:376px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);">
+                  <image-slot style="color:rgba(255,255,255,.72);background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);" id="t-page-r" shape="rect" placeholder="Trang phải"></image-slot>
+                </div>
+              </div>
+
+              <div style="position:absolute;left:0;right:0;bottom:0;padding:30px 24px 18px;background:linear-gradient(0deg,rgba(11,9,16,.95),transparent);display:flex;flex-direction:column;gap:13px;pointer-events:none;">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#C9C1E2;">skip_previous</span>
+                  <div style="flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.16);position:relative;">
+                    <div style="position:absolute;inset:0;width:43%;border-radius:3px;background:linear-gradient(90deg,#EC4899,#F472B6);"></div>
+                    <div style="position:absolute;left:43%;top:50%;width:15px;height:15px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 16px rgba(244,114,182,.9);"></div>
+                  </div>
+                  <span style="font-family:'Unbounded';font-size:12px;color:#F9A8D4;">12–13 / 28</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:24px;color:#C9C1E2;">skip_next</span>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <sc-for list="{{ mrToolsT }}" as="m" hint-placeholder-count="6">
+                    <div style="display:flex;align-items:center;gap:8px;background:{{ m.bg }};border:1px solid {{ m.bd }};backdrop-filter:blur(12px);border-radius:16px;padding:9px 16px;">
+                      <span style="font-family:'Material Symbols Rounded';font-size:18px;color:{{ m.col }};">{{ m.ic }}</span>
+                      <span style="font-size:12px;font-weight:600;color:{{ m.col }};">{{ m.t }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T4 · MANGA READER — TRẢI ĐÔI TRANG + RAIL THUMBNAIL</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#F3EAD8;color:#2E2A22;display:flex;">
+            <div style="width:268px;flex:none;background:#EADFC7;border-right:1px solid rgba(46,42,34,.12);display:flex;flex-direction:column;padding:18px 16px;gap:12px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-family:'Material Symbols Rounded';font-size:21px;color:#4B443A;">arrow_back</span>
+                <div style="font-family:'Unbounded';font-weight:700;font-size:14px;flex:1;">Gió Qua Phím Đàn</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.6);border:1px solid rgba(46,42,34,.12);border-radius:15px;padding:9px 12px;">
+                <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#8A8171;">search</span>
+                <span style="font-size:12px;color:#8A8171;">Tìm chương…</span>
+              </div>
+              <div style="font-family:'Unbounded';font-size:9.5px;letter-spacing:.16em;color:#0D9488;">48 CHƯƠNG</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;overflow:hidden;">
+                <sc-for list="{{ novelChapsT }}" as="c" hint-placeholder-count="10">
+                  <div style="display:flex;align-items:center;gap:9px;border-radius:13px 13px 13px 4px;padding:9px 11px;background:{{ c.bg }};border:1px solid {{ c.bd }};">
+                    <span style="font-family:'Unbounded';font-size:10px;font-weight:600;color:{{ c.numCol }};width:34px;">{{ c.n }}</span>
+                    <span style="flex:1;min-width:0;font-size:12px;font-weight:{{ c.w }};color:{{ c.col }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.t }}</span>
+                    <span style="font-family:'Material Symbols Rounded';font-size:15px;color:{{ c.icCol }};display:{{ c.icDisp }};">{{ c.ic }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="border-radius:15px;background:rgba(13,148,136,.1);border:1px solid rgba(13,148,136,.3);padding:10px 12px;">
+                <div style="font-size:10px;letter-spacing:.1em;color:#0D9488;font-weight:700;">TIẾN ĐỘ</div>
+                <div style="height:4px;border-radius:2px;background:rgba(46,42,34,.14);margin-top:7px;"><div style="width:24%;height:100%;border-radius:2px;background:linear-gradient(90deg,#14B8A6,#5EEAD4);"></div></div>
+                <div style="font-size:10.5px;color:#6E6558;margin-top:6px;">Ch. 12/48 · còn ~3 giờ đọc</div>
+              </div>
+            </div>
+
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="flex:1;min-height:0;padding:38px 54px 0;display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:22px;">
+                  <div style="font-family:'Unbounded';font-size:11px;letter-spacing:.2em;color:#0D9488;">CHƯƠNG 12</div>
+                  <div style="font-family:'Unbounded';font-weight:700;font-size:22px;">Nốt lặng</div>
+                </div>
+                <div style="flex:1;min-height:0;columns:2;column-gap:52px;column-rule:1px solid rgba(46,42,34,.12);font-family:'Literata',Georgia,serif;font-size:15.5px;line-height:1.95;color:#33302A;overflow:hidden;">
+                  <p style="margin:0 0 16px;"><span style="float:left;font-family:'Unbounded';font-weight:700;font-size:52px;line-height:.88;color:#0D9488;padding:5px 10px 0 0;">M</span>ưa rơi trên mái tôn như ai đó đang gõ một bản nhạc không đầu không cuối. Hạ ngồi bó gối cạnh cây đàn cũ, đếm từng giọt nước luồn qua khe cửa sổ, nơi lớp sơn đã bong thành những mảng hình bản đồ của một xứ sở không tên.</p>
+                  <p style="margin:0 0 16px;">«Nếu cậu không định chơi nữa,» Khuê nói, giọng chìm giữa tiếng mưa, «thì để tớ nghe tiếng mưa cũng được.»</p>
+                  <p style="margin:0 0 16px;">Hạ không trả lời. Ngón tay cô lướt qua phím Si giáng — nốt duy nhất còn giữ đúng cao độ sau ba mùa ẩm — và trong khoảnh khắc ấy, cả căn gác như nín thở cùng cô.</p>
+                  <p style="margin:0 0 16px;">Có những lời hứa không cần nói ra vẫn đủ nặng để giữ người ta ở lại. Có những bản nhạc chỉ cần một nốt cũng đủ kể hết một mùa hè.</p>
+                  <p style="margin:0;">Ngoài kia, mùa mưa thứ ba của tuổi mười bảy vừa bắt đầu, và lần này Hạ quyết định sẽ không bỏ chạy.</p>
+                </div>
+              </div>
+              <div style="padding:16px 54px 22px;display:flex;align-items:center;gap:16px;">
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);border:1px solid rgba(46,42,34,.12);border-radius:16px;padding:9px 15px;"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#0D9488;">chevron_left</span><span style="font-size:12px;font-weight:600;">Ch. 11</span></div>
+                <div style="flex:1;height:4px;border-radius:2px;background:rgba(46,42,34,.13);"><div style="width:43%;height:100%;border-radius:2px;background:linear-gradient(90deg,#14B8A6,#5EEAD4);"></div></div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.55);border:1px solid rgba(46,42,34,.12);border-radius:16px;padding:9px 15px;"><span style="font-size:12px;font-weight:600;">Ch. 13</span><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#0D9488;">chevron_right</span></div>
+              </div>
+            </div>
+
+            <div style="width:216px;flex:none;background:rgba(20,16,28,.97);color:#F3EFFB;padding:18px 16px;display:flex;flex-direction:column;gap:16px;">
+              <div style="font-family:'Unbounded';font-size:9.5px;letter-spacing:.16em;color:#5EEAD4;">HIỂN THỊ</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:12px;font-weight:700;color:#5EEAD4;">A−</span>
+                  <div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.14);position:relative;"><div style="width:55%;height:100%;border-radius:2px;background:linear-gradient(90deg,#14B8A6,#5EEAD4);"></div><div style="position:absolute;left:55%;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);"></div></div>
+                  <span style="font-size:16px;font-weight:700;color:#5EEAD4;">A+</span>
+                </div>
+                <div style="font-size:10.5px;color:#8D84AC;">Cỡ chữ 18px · Literata</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px;">
+                <sc-for list="{{ nvFontsT }}" as="f" hint-placeholder-count="3">
+                  <div style="text-align:center;font-size:12px;font-weight:700;color:{{ f.col }};background:{{ f.bg }};border:1px solid {{ f.bd }};border-radius:14px;padding:9px 0;">{{ f.n }}</div>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:10.5px;color:#8D84AC;">Nền giấy</div>
+                <div style="display:flex;gap:8px;">
+                  <sc-for list="{{ nvThemesT }}" as="th" hint-placeholder-count="4">
+                    <div style="width:30px;height:30px;border-radius:50%;background:{{ th.bg }};border:2px solid {{ th.bd }};"></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:10.5px;color:#8D84AC;">Bố cục</div>
+                <div style="display:flex;gap:7px;">
+                  <div style="flex:1;text-align:center;font-size:11.5px;font-weight:700;color:#0B1512;background:linear-gradient(120deg,#14B8A6,#5EEAD4);border-radius:13px;padding:8px 0;">2 cột</div>
+                  <div style="flex:1;text-align:center;font-size:11.5px;font-weight:600;color:#A79FC0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:8px 0;">1 cột</div>
+                </div>
+              </div>
+              <div style="flex:1;"></div>
+              <div style="display:flex;align-items:center;gap:9px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);padding:10px 12px;">
+                <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#5EEAD4;">bedtime</span>
+                <span style="flex:1;font-size:11.5px;font-weight:600;">Chế độ đêm</span>
+                <div style="width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,.14);position:relative;"><div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#8D84AC;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T5 · NOVEL READER — 2 CỘT + DS CHƯƠNG + BẢNG CHỮ</div>
+      </div>
+    </div>
+
+    <!-- T6 · DUYỆT + T7 · LỊCH MÙA -->
+    <div style="display:flex;gap:30px;">
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#14101F;color:#F3EFFB;display:flex;">
+            <div style="position:absolute;top:-120px;right:200px;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.26),transparent 70%);filter:blur(14px);animation:kAurora 12s ease-in-out infinite;"></div>
+
+            <div style="position:relative;width:92px;flex:none;background:rgba(24,19,38,.62);border-right:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;padding:18px 0 16px;gap:16px;">
+              <div style="width:46px;height:46px;border-radius:17px 17px 17px 5px;background:linear-gradient(130deg,#8B5CF6,#F472B6);display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-weight:800;font-size:21px;color:#fff;box-shadow:0 10px 26px rgba(139,92,246,.5);">K</div>
+              <div style="width:34px;height:1px;background:rgba(255,255,255,.1);"></div>
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+                <sc-for list="{{ railBro }}" as="r" hint-placeholder-count="5">
+                  <div style="width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0;border-radius:20px 20px 20px 7px;background:{{ r.bg }};">
+                    <span style="font-family:'Material Symbols Rounded';font-size:23px;color:{{ r.col }};font-variation-settings:'FILL' {{ r.fill }};">{{ r.ic }}</span>
+                    <span style="font-size:9.5px;font-weight:600;color:{{ r.col }};">{{ r.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1;"></div>
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">settings</span></div>
+            </div>
+
+            <div style="position:relative;width:300px;flex:none;border-right:1px solid rgba(255,255,255,.07);padding:18px 16px;display:flex;flex-direction:column;gap:12px;">
+              <div style="font-family:'Unbounded';font-weight:700;font-size:19px;">Duyệt</div>
+              <div style="display:flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:4px;">
+                <div style="flex:1;text-align:center;padding:8px 0;border-radius:15px 5px 15px 15px;background:linear-gradient(120deg,#8B5CF6,#C084FC);font-size:11.5px;font-weight:700;color:#fff;">Nguồn</div>
+                <div style="flex:1;text-align:center;padding:8px 0;font-size:11.5px;font-weight:600;color:#8D84AC;">Tiện ích</div>
+                <div style="flex:1;text-align:center;padding:8px 0;font-size:11.5px;font-weight:600;color:#8D84AC;">Di dời</div>
+              </div>
+              <div style="font-family:'Unbounded';font-size:9.5px;letter-spacing:.16em;color:#C4B5FD;margin-top:2px;">ĐÃ GHIM</div>
+              <sc-for list="{{ srcT }}" as="s" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:11px;border-radius:16px 16px 16px 5px;padding:9px 10px;background:{{ s.bg }};border:1px solid {{ s.bd }};">
+                  <div style="width:38px;height:38px;border-radius:13px 13px 13px 4px;flex:none;background:linear-gradient(140deg,{{ s.g1 }},{{ s.g2 }});display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-weight:700;font-size:14px;color:#fff;">{{ s.ini }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:12.5px;font-weight:700;">{{ s.n }}</div>
+                    <div style="font-size:10px;color:#8D84AC;margin-top:2px;">{{ s.lang }}</div>
+                  </div>
+                  <span style="font-family:'Material Symbols Rounded';font-size:16px;color:{{ s.pinCol }};font-variation-settings:'FILL' {{ s.pinFill }};">push_pin</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 24px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="flex:1;display:flex;align-items:center;gap:10px;background:linear-gradient(#14101F,#14101F) padding-box,linear-gradient(120deg,#8B5CF6,#F472B6) border-box;border:1.5px solid transparent;border-radius:20px;padding:12px 16px;">
+                  <span style="font-family:'Material Symbols Rounded';font-size:19px;color:#C4B5FD;">travel_explore</span>
+                  <span style="flex:1;font-size:13px;font-weight:600;">kiếm</span>
+                  <span style="font-family:'Material Symbols Rounded';font-size:17px;color:#8D84AC;">close</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <div style="font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(120deg,#8B5CF6,#C084FC);border-radius:15px;padding:9px 15px;">Mọi nguồn</div>
+                  <div style="font-size:11.5px;font-weight:600;color:#A79FC0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:15px;padding:9px 15px;">Đã ghim</div>
+                  <div style="font-size:11.5px;font-weight:600;color:#A79FC0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:15px;padding:9px 15px;">Có trong thư viện</div>
+                </div>
+              </div>
+
+              <div style="flex:1;min-height:0;margin-top:18px;display:flex;flex-direction:column;gap:18px;overflow:hidden;">
+                <sc-for list="{{ gsT }}" as="g" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:11px;">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                      <span style="font-size:13.5px;font-weight:700;">{{ g.n }}</span>
+                      <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:#C4B5FD;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35);border-radius:9px;padding:3px 8px;">{{ g.tag }}</span>
+                      <span style="font-size:11px;color:#6E6590;">{{ g.count }}</span>
+                      <div style="flex:1;"></div>
+                      <span style="font-size:11.5px;font-weight:600;color:#C4B5FD;">Xem hết ›</span>
+                    </div>
+                    <div style="display:flex;gap:12px;">
+                      <sc-for list="{{ g.res }}" as="r" hint-placeholder-count="6">
+                        <div style="width:118px;flex:none;">
+                          <div style="height:164px;border-radius:{{ r.rad }};background:linear-gradient(160deg,{{ r.g1 }},{{ r.g2 }});border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden;">
+                            <div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 80% 0%,rgba(255,255,255,.16),transparent 52%);"></div>
+                            <div style="position:absolute;top:8px;left:8px;font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#fff;background:rgba(20,16,31,.72);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.2);border-radius:9px;padding:3px 7px;display:{{ r.libDisp }};">✓ THƯ VIỆN</div>
+                          </div>
+                          <div style="font-size:11.5px;font-weight:600;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.t }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T6 · DUYỆT &amp; TÌM TOÀN CỤC — BA KHUNG</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+          <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#14101F;color:#F3EFFB;display:flex;">
+            <div style="position:absolute;top:-140px;left:280px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.24),transparent 70%);filter:blur(14px);animation:kAurora 11s ease-in-out infinite;"></div>
+
+            <div style="position:relative;width:92px;flex:none;background:rgba(24,19,38,.62);border-right:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;padding:18px 0 16px;gap:16px;">
+              <div style="width:46px;height:46px;border-radius:17px 17px 17px 5px;background:linear-gradient(130deg,#8B5CF6,#F472B6);display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-weight:800;font-size:21px;color:#fff;box-shadow:0 10px 26px rgba(139,92,246,.5);">K</div>
+              <div style="width:34px;height:1px;background:rgba(255,255,255,.1);"></div>
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
+                <sc-for list="{{ railUpd }}" as="r" hint-placeholder-count="5">
+                  <div style="width:64px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0;border-radius:20px 20px 20px 7px;background:{{ r.bg }};">
+                    <span style="font-family:'Material Symbols Rounded';font-size:23px;color:{{ r.col }};font-variation-settings:'FILL' {{ r.fill }};">{{ r.ic }}</span>
+                    <span style="font-size:9.5px;font-weight:600;color:{{ r.col }};">{{ r.t }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1;"></div>
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:20px;color:#CFC7E8;">settings</span></div>
+            </div>
+
+            <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 24px 22px;">
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div>
+                  <div style="font-family:'Unbounded';font-weight:700;font-size:21px;">Lịch mùa</div>
+                  <div style="font-size:12px;color:#8D84AC;margin-top:3px;">Mùa Hè 2026 · tuần 13–19 tháng 7</div>
+                </div>
+                <div style="flex:1;"></div>
+                <div style="display:flex;align-items:center;gap:7px;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.45);border-radius:15px;padding:9px 14px;"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#C4B5FD;">check</span><span style="font-size:11.5px;font-weight:700;color:#C4B5FD;">Chỉ thư viện</span></div>
+                <div style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:15px;padding:9px 14px;"><span style="font-family:'Material Symbols Rounded';font-size:16px;color:#CFC7E8;">notifications</span><span style="font-size:11.5px;font-weight:600;">Nhắc tất cả</span></div>
+                <div style="display:flex;gap:8px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#CFC7E8;">chevron_left</span></div>
+                  <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:19px;color:#CFC7E8;">chevron_right</span></div>
+                </div>
+              </div>
+
+              <div style="flex:1;min-height:0;margin-top:18px;display:grid;grid-template-columns:repeat(7,1fr);gap:11px;">
+                <sc-for list="{{ weekT }}" as="d" hint-placeholder-count="7">
+                  <div style="display:flex;flex-direction:column;gap:10px;min-width:0;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0;border-radius:16px 16px 16px 5px;background:{{ d.headBg }};border:1px solid {{ d.headBd }};">
+                      <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:{{ d.headCol }};">{{ d.d }}</span>
+                      <span style="font-family:'Unbounded';font-size:16px;font-weight:600;color:{{ d.headCol }};">{{ d.n }}</span>
+                    </div>
+                    <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+                      <sc-for list="{{ d.items }}" as="i" hint-placeholder-count="2">
+                        <div style="border-radius:16px 16px 16px 5px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid {{ i.bd }};backdrop-filter:blur(10px);">
+                          <div style="height:64px;background:linear-gradient(150deg,{{ i.g1 }},{{ i.g2 }});position:relative;">
+                            <div style="position:absolute;top:6px;left:7px;font-size:9px;font-weight:700;color:#fff;background:rgba(11,8,18,.6);backdrop-filter:blur(6px);border-radius:8px;padding:2px 7px;">{{ i.time }}</div>
+                            <span style="position:absolute;top:5px;right:6px;font-family:'Material Symbols Rounded';font-size:15px;color:{{ i.bellCol }};font-variation-settings:'FILL' {{ i.bellFill }};">notifications</span>
+                          </div>
+                          <div style="padding:8px 9px 10px;">
+                            <div style="font-size:11px;font-weight:700;line-height:1.3;">{{ i.t }}</div>
+                            <div style="font-size:9.5px;color:#8D84AC;margin-top:3px;">{{ i.ep }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T7 · LỊCH MÙA — BẢNG TUẦN 7 CỘT</div>
+      </div>
+    </div>
+
+    <!-- T8 · CÀI ĐẶT -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="padding:13px;background:#08060D;border:1px solid rgba(255,255,255,.09);border-radius:30px;box-shadow:0 40px 90px rgba(0,0,0,.55);width:max-content;">
+        <div style="width:1280px;height:800px;border-radius:20px;overflow:hidden;position:relative;background:#14101F;color:#F3EFFB;display:flex;">
+          <div style="position:absolute;bottom:-160px;right:180px;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(244,114,182,.16),transparent 70%);filter:blur(14px);animation:kAurora 13s ease-in-out infinite;"></div>
+
+          <div style="position:relative;width:330px;flex:none;border-right:1px solid rgba(255,255,255,.07);padding:20px 16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:4px;">
+              <span style="font-family:'Material Symbols Rounded';font-size:21px;">arrow_back</span>
+              <div style="font-family:'Unbounded';font-weight:700;font-size:19px;flex:1;">Cài đặt</div>
+              <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:#CFC7E8;">search</span></div>
+            </div>
+            <sc-for list="{{ setT }}" as="s" hint-placeholder-count="10">
+              <div style="display:flex;align-items:center;gap:12px;border-radius:16px 16px 16px 5px;padding:10px 12px;background:{{ s.bg }};border:1px solid {{ s.bd }};">
+                <div style="width:36px;height:36px;border-radius:12px 12px 12px 4px;background:{{ s.tileBg }};border:1px solid {{ s.tileBd }};display:flex;align-items:center;justify-content:center;flex:none;"><span style="font-family:'Material Symbols Rounded';font-size:18px;color:{{ s.icCol }};">{{ s.ic }}</span></div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:12.5px;font-weight:700;color:{{ s.col }};">{{ s.t }}</div>
+                  <div style="font-size:10px;color:#8D84AC;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="position:relative;flex:1;min-width:0;padding:22px 30px;display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <div style="font-family:'Unbounded';font-weight:700;font-size:22px;">Trình phát anime</div>
+              <div style="font-size:12px;color:#8D84AC;margin-top:4px;">Áp dụng cho mọi nguồn anime · ghi đè riêng từng bộ trong menu chi tiết</div>
+            </div>
+
+            <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:14px;overflow:hidden;">
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:13px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">PHÁT LẠI</div>
+                <sc-for list="{{ setToggles }}" as="t" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="flex:1;">
+                      <div style="font-size:12.5px;font-weight:600;">{{ t.t }}</div>
+                      <div style="font-size:10.5px;color:#8D84AC;margin-top:2px;">{{ t.sub }}</div>
+                    </div>
+                    <div style="width:42px;height:23px;border-radius:12px;background:{{ t.trackBg }};position:relative;flex:none;"><div style="position:absolute;top:2.5px;{{ t.knobSide }}:2.5px;width:18px;height:18px;border-radius:50%;background:{{ t.knobBg }};"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:14px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">CHẤT LƯỢNG &amp; TỐC ĐỘ</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-size:12.5px;font-weight:600;">Chất lượng mặc định</div>
+                  <div style="display:flex;gap:7px;">
+                    <sc-for list="{{ qualT }}" as="q" hint-placeholder-count="4">
+                      <div style="flex:1;text-align:center;font-size:11.5px;font-weight:700;color:{{ q.col }};background:{{ q.bg }};border:1px solid {{ q.bd }};border-radius:13px;padding:8px 0;">{{ q.t }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:12.5px;font-weight:600;">Tốc độ mặc định</span><span style="font-size:11px;color:#C4B5FD;font-weight:700;">1.0×</span></div>
+                  <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.13);position:relative;"><div style="width:40%;height:100%;border-radius:3px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div><div style="position:absolute;left:40%;top:50%;width:15px;height:15px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(244,114,182,.8);"></div></div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;color:#6E6590;"><span>0.5×</span><span>2.0×</span></div>
+                </div>
+              </div>
+
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">PHỤ ĐỀ</div>
+                <div style="display:flex;gap:8px;">
+                  <div style="flex:1;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);padding:10px 12px;">
+                    <div style="font-size:9.5px;letter-spacing:.1em;color:#8D84AC;">NGÔN NGỮ</div>
+                    <div style="font-size:12.5px;font-weight:700;margin-top:4px;color:#C4B5FD;">Tiếng Việt ▾</div>
+                  </div>
+                  <div style="flex:1;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);padding:10px 12px;">
+                    <div style="font-size:9.5px;letter-spacing:.1em;color:#8D84AC;">CỠ CHỮ</div>
+                    <div style="font-size:12.5px;font-weight:700;margin-top:4px;">Vừa ▾</div>
+                  </div>
+                </div>
+                <div style="border-radius:14px;background:rgba(11,8,18,.6);border:1px solid rgba(255,255,255,.1);padding:16px 12px;display:flex;align-items:center;justify-content:center;">
+                  <span style="font-size:13px;font-weight:600;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.9);">Xem trước phụ đề — Kiếm Vực</span>
+                </div>
+              </div>
+
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">CỬ CHỈ &amp; TẢI</div>
+                <div style="display:flex;flex-direction:column;gap:9px;">
+                  <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#A79FC0;"><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">touch_app</span>Chạm 2 lần mép: tua ±10s</div>
+                  <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#A79FC0;"><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">swipe_vertical</span>Vuốt dọc: sáng / âm lượng</div>
+                  <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#A79FC0;"><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">wifi</span>Chỉ tải qua Wi-Fi</div>
+                  <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#A79FC0;"><span style="font-family:'Material Symbols Rounded';font-size:17px;color:#C4B5FD;">delete_sweep</span>Xoá tập sau khi xem 7 ngày</div>
+                </div>
+              </div>
+
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">NGUỒN PHÁT</div>
+                <div style="display:flex;flex-direction:column;gap:9px;">
+                  <sc-for list="{{ playerSrc }}" as="p" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:11px;border-radius:15px;background:{{ p.bg }};border:1px solid {{ p.bd }};padding:10px 12px;">
+                      <span style="font-family:'Material Symbols Rounded';font-size:17px;color:{{ p.icCol }};">{{ p.ic }}</span>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:700;">{{ p.t }}</div>
+                        <div style="font-size:10px;color:#8D84AC;margin-top:2px;">{{ p.sub }}</div>
+                      </div>
+                      <span style="font-size:10.5px;font-weight:700;color:{{ p.tagCol }};">{{ p.tag }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="border-radius:22px 22px 22px 7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#C4B5FD;">MỐC INTRO / OUTRO</div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="flex:1;">
+                    <div style="font-size:12.5px;font-weight:600;">Bỏ qua outro &amp; credits</div>
+                    <div style="font-size:10.5px;color:#8D84AC;margin-top:2px;">Nhảy thẳng sang tập kế</div>
+                  </div>
+                  <div style="width:42px;height:23px;border-radius:12px;background:linear-gradient(120deg,#8B5CF6,#C084FC);position:relative;flex:none;"><div style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;"></div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                  <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:12.5px;font-weight:600;">Độ dài bỏ qua</span><span style="font-size:11px;font-weight:700;color:#C4B5FD;">85 giây</span></div>
+                  <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.13);position:relative;"><div style="width:58%;height:100%;border-radius:3px;background:linear-gradient(90deg,#8B5CF6,#F472B6);"></div><div style="position:absolute;left:58%;top:50%;width:15px;height:15px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 12px rgba(244,114,182,.8);"></div></div>
+                  <div style="font-size:10px;color:#6E6590;">Dùng mốc từ nguồn khi có; nếu không, dùng độ dài này.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-family:'Unbounded';font-size:10px;letter-spacing:.16em;color:#6E6590;">T8 · CÀI ĐẶT — HAI KHUNG, NHÓM THẺ BÊN PHẢI</div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const VGRAD = 'linear-gradient(120deg,#8B5CF6,#C084FC)';
+    const mkRail = (a) => ['Thư viện', 'Cập nhật', 'Lịch sử', 'Duyệt', 'Khác'].map((t, i) => ({
+      t,
+      ic: ['collections_bookmark', 'new_releases', 'history', 'explore', 'more_horiz'][i],
+      col: i === a ? '#fff' : '#8D84AC',
+      fill: i === a ? 1 : 0,
+      bg: i === a ? VGRAD : 'transparent',
+    }));
+    const rads = ['24px 24px 24px 8px', '24px 24px 8px 24px', '8px 24px 24px 24px', '24px 8px 24px 24px'];
+    const covers = [
+      ['Kiếm Vực', 'Tập 12', '#7F1D1D', '#FB923C', '2', 'block', 'flex'],
+      ['Dạ Hành Ký', 'Tập 24', '#312E81', '#A5B4FC', '', 'none', 'flex'],
+      ['Sao Băng Cuối Mùa', 'Tập 8', '#0C4A6E', '#67E8F9', '5', 'block', 'none'],
+      ['Oni Săn Đêm', 'Tập 6', '#4C1D95', '#F0ABFC', '1', 'block', 'none'],
+      ['Mùa Hè Vô Tận', 'Tập 13', '#14532D', '#4ADE80', '', 'none', 'none'],
+      ['Cửu Vĩ Truyền', 'Tập 10', '#7C2D12', '#FBBF24', '3', 'block', 'flex'],
+      ['Thành Phố Nổi', 'Tập 4', '#134E4A', '#5EEAD4', '', 'none', 'none'],
+      ['Vũ Điệu Giấy', 'Tập 9', '#701A75', '#F0ABFC', '2', 'block', 'none'],
+      ['Tiếng Vọng Số 9', 'Tập 11', '#78350F', '#FCD34D', '', 'none', 'flex'],
+      ['Hạ Chí Không Tên', 'Tập 7', '#1E3A8A', '#93C5FD', '4', 'block', 'none'],
+      ['Lam Dạ Khúc', 'Tập 2', '#3F1D38', '#E879F9', '', 'none', 'none'],
+      ['Bến Cuối Tháng Tư', 'Tập 16', '#164E63', '#22D3EE', '1', 'block', 'flex'],
+      ['Vọng Âm Tháng Mười', 'Tập 5', '#5B21B6', '#C4B5FD', '', 'none', 'none'],
+      ['Kỵ Sĩ Sương Mù', 'Tập 20', '#0F766E', '#99F6E4', '2', 'block', 'none'],
+      ['Đảo Của Gió', 'Tập 3', '#9D174D', '#FDA4AF', '', 'none', 'flex'],
+      ['Nhật Ký Cáo Nhỏ', 'Tập 18', '#854D0E', '#FDE047', '1', 'block', 'none'],
+      ['Chuyến Tàu 4:20', 'Tập 6', '#1E293B', '#94A3B8', '', 'none', 'none'],
+      ['Hoa Anh Đào Đen', 'Tập 14', '#581C87', '#E9D5FF', '3', 'block', 'flex'],
+    ];
+    return {
+      railLib: mkRail(0),
+      railUpd: mkRail(1),
+      railBro: mkRail(3),
+      catsT: [
+        { t: 'Tất cả', n: 24, bg: VGRAD, bd: 'transparent', col: '#fff' },
+        { t: 'Đang xem', n: 8, bg: 'rgba(255,255,255,.06)', bd: 'rgba(255,255,255,.11)', col: '#A79FC0' },
+        { t: 'Chờ tập', n: 5, bg: 'rgba(255,255,255,.06)', bd: 'rgba(255,255,255,.11)', col: '#A79FC0' },
+        { t: 'Xong', n: 11, bg: 'rgba(255,255,255,.06)', bd: 'rgba(255,255,255,.11)', col: '#A79FC0' },
+        { t: 'Đã tải', n: 6, bg: 'rgba(255,255,255,.06)', bd: 'rgba(255,255,255,.11)', col: '#A79FC0' },
+        { t: 'Yêu thích', n: 3, bg: 'rgba(255,255,255,.06)', bd: 'rgba(255,255,255,.11)', col: '#A79FC0' },
+      ],
+      libT: covers.map((c, i) => ({
+        t: c[0], ep: c[1], g1: c[2], g2: c[3], un: c[4], unDisp: c[5], dlDisp: c[6], rad: rads[i % 4],
+      })),
+      resumeT: [
+        { t: 'Kiếm Vực', sub: 'Tập 7 · còn 14:48', g1: '#7F1D1D', g2: '#FB923C', w: '38%', ic: 'play_arrow' },
+        { t: 'Cửu Vĩ Truyền', sub: 'Ch. 42 · trang 12/28', g1: '#831843', g2: '#FB7185', w: '43%', ic: 'auto_stories' },
+        { t: 'Gió Qua Phím Đàn', sub: 'Ch. 12 · 43%', g1: '#134E4A', g2: '#5EEAD4', w: '43%', ic: 'auto_stories' },
+        { t: 'Oni Săn Đêm', sub: 'Tập 5 · còn 19:48', g1: '#4C1D95', g2: '#F0ABFC', w: '18%', ic: 'play_arrow' },
+      ],
+      airT: [
+        { time: '20:30', t: 'Sao Băng Cuối Mùa · T7', bellFill: 1, bellCol: '#C4B5FD' },
+        { time: '22:00', t: 'Oni Săn Đêm · T6', bellFill: 0, bellCol: '#8D84AC' },
+      ],
+      epsT: [
+        { n: 12, t: 'Vực sâu gọi tên', sub: '24:00 · chưa phát', g1: '#1F2937', g2: '#4B5563', ic: 'lock_clock', icCol: '#6E6590', op: .5, bd: 'rgba(255,255,255,.07)', barDisp: 'none', barW: '0%' },
+        { n: 11, t: 'Trận cuối', sub: '24:00 · chưa xem', g1: '#4C1D95', g2: '#F0ABFC', ic: 'download', icCol: '#8D84AC', op: 1, bd: 'rgba(255,255,255,.09)', barDisp: 'none', barW: '0%' },
+        { n: 10, t: 'Người mù dẫn đường', sub: '24:00 · chưa xem', g1: '#0C4A6E', g2: '#67E8F9', ic: 'download', icCol: '#8D84AC', op: 1, bd: 'rgba(255,255,255,.09)', barDisp: 'none', barW: '0%' },
+        { n: 9, t: 'Mảnh ký ức thứ chín', sub: '24:00 · chưa xem', g1: '#14532D', g2: '#4ADE80', ic: 'download', icCol: '#8D84AC', op: 1, bd: 'rgba(255,255,255,.09)', barDisp: 'none', barW: '0%' },
+        { n: 8, t: 'Lưỡi kiếm gãy', sub: '24:00 · đang tải 45%', g1: '#7F1D1D', g2: '#FB923C', ic: 'downloading', icCol: '#C4B5FD', op: 1, bd: 'rgba(167,139,250,.35)', barDisp: 'block', barW: '45%' },
+        { n: 7, t: 'Dưới trăng đỏ', sub: '24:00 · xem dở 62%', g1: '#312E81', g2: '#A5B4FC', ic: 'play_circle', icCol: '#F472B6', op: 1, bd: 'rgba(244,114,182,.45)', barDisp: 'block', barW: '62%' },
+        { n: 6, t: 'Lời thề cũ', sub: '23:40 · đã xem', g1: '#0C4A6E', g2: '#67E8F9', ic: 'check_circle', icCol: '#6E6590', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 5, t: 'Khe núi câm lặng', sub: '24:00 · đã xem · đã tải', g1: '#4C1D95', g2: '#F0ABFC', ic: 'download_done', icCol: '#5EEAD4', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 4, t: 'Người gác cổng', sub: '24:00 · đã xem', g1: '#78350F', g2: '#FCD34D', ic: 'check_circle', icCol: '#6E6590', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 3, t: 'Vết cắt đầu tiên', sub: '23:55 · đã xem', g1: '#164E63', g2: '#22D3EE', ic: 'check_circle', icCol: '#6E6590', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 2, t: 'Kẻ mù giữa chợ', sub: '24:00 · đã xem · đã tải', g1: '#3F1D38', g2: '#E879F9', ic: 'download_done', icCol: '#5EEAD4', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 1, t: 'Tiếng gọi từ vực', sub: '24:00 · đã xem', g1: '#1E293B', g2: '#94A3B8', ic: 'check_circle', icCol: '#6E6590', op: .55, bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+      ],
+      drawerT: [
+        { n: 6, t: 'Lời thề cũ', sub: 'đã xem', g1: '#0C4A6E', g2: '#67E8F9', ic: 'check_circle', icCol: '#6E6590', op: .6, bg: 'transparent', bd: 'rgba(255,255,255,.08)', barDisp: 'none', barW: '0%' },
+        { n: 7, t: 'Dưới trăng đỏ', sub: 'đang phát · 38%', g1: '#312E81', g2: '#A5B4FC', ic: 'graphic_eq', icCol: '#C4B5FD', op: 1, bg: 'rgba(139,92,246,.18)', bd: 'rgba(167,139,250,.55)', barDisp: 'block', barW: '38%' },
+        { n: 8, t: 'Lưỡi kiếm gãy', sub: 'đang tải 45%', g1: '#7F1D1D', g2: '#FB923C', ic: 'downloading', icCol: '#C4B5FD', op: 1, bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', barDisp: 'block', barW: '45%' },
+        { n: 9, t: 'Mảnh ký ức thứ chín', sub: 'chưa xem', g1: '#14532D', g2: '#4ADE80', ic: 'download', icCol: '#8D84AC', op: 1, bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', barDisp: 'none', barW: '0%' },
+        { n: 10, t: 'Người mù dẫn đường', sub: 'chưa xem', g1: '#0C4A6E', g2: '#67E8F9', ic: 'download', icCol: '#8D84AC', op: 1, bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', barDisp: 'none', barW: '0%' },
+      ],
+      pctlT: [
+        { ic: 'subtitles', t: 'Phụ đề · Việt' },
+        { ic: 'speed', t: '1.0×' },
+        { ic: 'high_quality', t: 'Auto 1080p' },
+        { ic: 'graphic_eq', t: 'Âm thanh 5.1' },
+      ],
+      pagesT: [
+        { n: 10, g1: '#1F2937', g2: '#4B5563', bd: 'transparent', numCol: 'rgba(255,255,255,.7)' },
+        { n: 11, g1: '#312E81', g2: '#818CF8', bd: 'transparent', numCol: 'rgba(255,255,255,.7)' },
+        { n: 12, g1: '#831843', g2: '#FB7185', bd: '#F472B6', numCol: '#fff' },
+        { n: 13, g1: '#7C2D12', g2: '#FDBA74', bd: '#F472B6', numCol: '#fff' },
+        { n: 14, g1: '#134E4A', g2: '#5EEAD4', bd: 'transparent', numCol: 'rgba(255,255,255,.7)' },
+        { n: 15, g1: '#3F1D38', g2: '#E879F9', bd: 'transparent', numCol: 'rgba(255,255,255,.7)' },
+      ],
+      mrToolsT: [
+        { ic: 'auto_stories', t: 'Trải đôi', col: '#0B0910', bg: 'linear-gradient(120deg,#EC4899,#F472B6)', bd: 'transparent' },
+        { ic: 'view_day', t: 'Webtoon', col: '#C9C1E2', bg: 'rgba(255,255,255,.07)', bd: 'rgba(255,255,255,.13)' },
+        { ic: 'swap_horiz', t: 'Phải → trái', col: '#C9C1E2', bg: 'rgba(255,255,255,.07)', bd: 'rgba(255,255,255,.13)' },
+        { ic: 'crop', t: 'Cắt viền', col: '#C9C1E2', bg: 'rgba(255,255,255,.07)', bd: 'rgba(255,255,255,.13)' },
+        { ic: 'brightness_6', t: 'Độ sáng', col: '#C9C1E2', bg: 'rgba(255,255,255,.07)', bd: 'rgba(255,255,255,.13)' },
+        { ic: 'grid_view', t: 'Lưới trang', col: '#C9C1E2', bg: 'rgba(255,255,255,.07)', bd: 'rgba(255,255,255,.13)' },
+      ],
+      novelChapsT: (() => {
+        const src = [
+          [9, 'Căn gác mùa hè', 'read'], [10, 'Người nghe mưa', 'read'], [11, 'Phòng nhạc cũ', 'read'],
+          [12, 'Nốt lặng', 'active'], [13, 'Dây đàn đứt', 'new'], [14, 'Buổi tổng duyệt', 'plain'],
+          [15, 'Ghế trống hàng đầu', 'plain'], [16, 'Tháng chín trở lại', 'plain'],
+          [17, 'Bản nhạc không tên', 'plain'], [18, 'Lời hứa thứ hai', 'plain'],
+        ];
+        const map = {
+          read: { bg: 'transparent', bd: 'transparent', col: '#8A8171', numCol: '#B0A896', w: 500, ic: 'check', icCol: '#0D9488', icDisp: 'inline' },
+          active: { bg: 'rgba(13,148,136,.14)', bd: 'rgba(13,148,136,.45)', col: '#1F3B37', numCol: '#0D9488', w: 700, ic: 'auto_stories', icCol: '#0D9488', icDisp: 'inline' },
+          new: { bg: 'rgba(255,255,255,.55)', bd: 'rgba(46,42,34,.12)', col: '#2E2A22', numCol: '#6E6558', w: 700, ic: 'download', icCol: '#8A8171', icDisp: 'inline' },
+          plain: { bg: 'transparent', bd: 'transparent', col: '#4B443A', numCol: '#B0A896', w: 500, ic: '', icCol: '#8A8171', icDisp: 'none' },
+        };
+        return src.map(([n, t, k]) => Object.assign({ n: 'Ch. ' + n, t }, map[k]));
+      })(),
+      nvFontsT: [
+        { n: 'Literata', bg: 'linear-gradient(120deg,#14B8A6,#5EEAD4)', col: '#0B1512', bd: 'transparent' },
+        { n: 'Noto Serif', bg: 'rgba(255,255,255,.07)', col: '#A79FC0', bd: 'rgba(255,255,255,.12)' },
+        { n: 'Be Vietnam Pro', bg: 'rgba(255,255,255,.07)', col: '#A79FC0', bd: 'rgba(255,255,255,.12)' },
+      ],
+      nvThemesT: [
+        { bg: '#FFFFFF', bd: 'rgba(255,255,255,.25)' },
+        { bg: '#F3EAD8', bd: '#5EEAD4' },
+        { bg: '#1A1723', bd: 'rgba(255,255,255,.25)' },
+        { bg: '#000000', bd: 'rgba(255,255,255,.25)' },
+      ],
+      srcT: [
+        { n: 'AniSrc VN', lang: 'VI · Anime', ini: 'A', g1: '#4C1D95', g2: '#A78BFA', bg: 'rgba(139,92,246,.16)', bd: 'rgba(167,139,250,.5)', pinCol: '#C4B5FD', pinFill: 1 },
+        { n: 'MangaVerse', lang: 'EN · Manga', ini: 'M', g1: '#831843', g2: '#F472B6', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', pinCol: '#C4B5FD', pinFill: 1 },
+        { n: 'TruyenViet', lang: 'VI · Manga', ini: 'T', g1: '#0C4A6E', g2: '#38BDF8', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', pinCol: '#6E6590', pinFill: 0 },
+        { n: 'NovelNhà', lang: 'VI · Novel', ini: 'N', g1: '#134E4A', g2: '#5EEAD4', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', pinCol: '#6E6590', pinFill: 0 },
+        { n: 'OtakuHub', lang: 'EN · Anime', ini: 'O', g1: '#78350F', g2: '#FCD34D', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', pinCol: '#6E6590', pinFill: 0 },
+        { n: 'Nguồn cục bộ', lang: 'Bộ nhớ máy', ini: '◈', g1: '#3F3F46', g2: '#A1A1AA', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.09)', pinCol: '#6E6590', pinFill: 0 },
+      ],
+      gsT: [
+        { n: 'AniSrc VN', tag: 'ANIME · VI', count: '18 kết quả', res: [
+          { t: 'Kiếm Vực', g1: '#7F1D1D', g2: '#FB923C', libDisp: 'block', rad: '18px 18px 18px 6px' },
+          { t: 'Kiếm Sĩ Mù', g1: '#312E81', g2: '#A5B4FC', libDisp: 'none', rad: '18px 18px 6px 18px' },
+          { t: 'Vực Thẳm Kiếm', g1: '#0C4A6E', g2: '#67E8F9', libDisp: 'none', rad: '6px 18px 18px 18px' },
+          { t: 'Kiếm Đạo Lục', g1: '#14532D', g2: '#4ADE80', libDisp: 'none', rad: '18px 6px 18px 18px' },
+          { t: 'Hắc Kiếm', g1: '#4C1D95', g2: '#F0ABFC', libDisp: 'none', rad: '18px 18px 18px 6px' },
+          { t: 'Kiếm Và Mưa', g1: '#78350F', g2: '#FCD34D', libDisp: 'none', rad: '18px 18px 6px 18px' },
+        ] },
+        { n: 'TruyenViet', tag: 'MANGA · VI', count: '11 kết quả', res: [
+          { t: 'Kiếm Vực (Manga)', g1: '#831843', g2: '#FB7185', libDisp: 'block', rad: '18px 18px 18px 6px' },
+          { t: 'Ma Kiếm Ký', g1: '#7C2D12', g2: '#FDBA74', libDisp: 'none', rad: '18px 18px 6px 18px' },
+          { t: 'Kiếm Khách Cuối', g1: '#1E3A8A', g2: '#93C5FD', libDisp: 'none', rad: '6px 18px 18px 18px' },
+          { t: 'Thanh Kiếm Gãy', g1: '#3F1D38', g2: '#E879F9', libDisp: 'none', rad: '18px 6px 18px 18px' },
+          { t: 'Kiếm Tâm', g1: '#164E63', g2: '#22D3EE', libDisp: 'none', rad: '18px 18px 18px 6px' },
+          { t: 'Nữ Kiếm Sĩ', g1: '#701A75', g2: '#F0ABFC', libDisp: 'none', rad: '18px 18px 6px 18px' },
+        ] },
+        { n: 'NovelNhà', tag: 'NOVEL · VI', count: '4 kết quả', res: [
+          { t: 'Kiếm Vực: Tiền Truyện', g1: '#134E4A', g2: '#5EEAD4', libDisp: 'none', rad: '18px 18px 18px 6px' },
+          { t: 'Ký Sự Kiếm Sĩ', g1: '#0F766E', g2: '#99F6E4', libDisp: 'none', rad: '18px 18px 6px 18px' },
+          { t: 'Đêm Trước Trận Kiếm', g1: '#155E75', g2: '#67E8F9', libDisp: 'none', rad: '6px 18px 18px 18px' },
+          { t: 'Kiếm Trong Mưa', g1: '#1E293B', g2: '#94A3B8', libDisp: 'none', rad: '18px 6px 18px 18px' },
+        ] },
+      ],
+      weekT: (() => {
+        const days = [
+          ['T2', 13, [['00:30', 'Dạ Hành Ký · P2', 'Tập 1', '#312E81', '#A5B4FC', 1]]],
+          ['T3', 14, [['21:00', 'Lam Dạ Khúc', 'Tập 3', '#3F1D38', '#E879F9', 0]]],
+          ['T4', 15, [['12:00', 'Kiếm Vực', 'Tập 9', '#7F1D1D', '#FB923C', 1], ['20:30', 'Sao Băng Cuối Mùa', 'Tập 7', '#0C4A6E', '#67E8F9', 1], ['22:00', 'Oni Săn Đêm', 'Tập 6', '#4C1D95', '#F0ABFC', 0]]],
+          ['T5', 16, [['09:00', 'Mùa Hè Vô Tận · Movie', 'Công chiếu', '#14532D', '#4ADE80', 1], ['21:30', 'Thợ Săn Sao Băng', 'Tập 3', '#1E3A8A', '#93C5FD', 0]]],
+          ['T6', 17, [['23:00', 'Tiếng Vọng Số 9', 'Tập 12', '#78350F', '#FCD34D', 0]]],
+          ['T7', 18, [['10:00', 'Cửu Vĩ Truyền', 'Tập 11', '#7C2D12', '#FBBF24', 1], ['19:00', 'Thành Phố Nổi', 'Tập 5', '#134E4A', '#5EEAD4', 0]]],
+          ['CN', 19, [['17:30', 'Bến Cuối Tháng Tư', 'Tập 17', '#164E63', '#22D3EE', 0]]],
+        ];
+        return days.map(([d, n, items], i) => ({
+          d, n,
+          headBg: i === 2 ? 'linear-gradient(120deg,#8B5CF6,#C084FC)' : 'rgba(255,255,255,.05)',
+          headBd: i === 2 ? 'transparent' : 'rgba(255,255,255,.09)',
+          headCol: i === 2 ? '#fff' : '#8D84AC',
+          items: items.map(([time, t, ep, g1, g2, bell]) => ({
+            time, t, ep, g1, g2,
+            bellFill: bell, bellCol: bell ? '#C4B5FD' : 'rgba(255,255,255,.65)',
+            bd: i === 2 ? 'rgba(167,139,250,.35)' : 'rgba(255,255,255,.09)',
+          })),
+        }));
+      })(),
+      setT: (() => {
+        const src = [
+          ['palette', 'Giao diện', 'Chủ đề, màu theo mode, ngôn ngữ'],
+          ['collections_bookmark', 'Thư viện', 'Danh mục, cập nhật tự động'],
+          ['chrome_reader_mode', 'Trình đọc manga', 'Chế độ đọc, cử chỉ, cắt viền'],
+          ['auto_stories', 'Trình đọc novel', 'Font, nền, giãn dòng'],
+          ['play_circle', 'Trình phát anime', 'Phụ đề, tốc độ, PiP, bỏ intro'],
+          ['download', 'Tải xuống', 'Vị trí lưu, tự tải, xoá sau khi xem'],
+          ['sync', 'Theo dõi', 'AniList, MyAnimeList, Kitsu'],
+          ['explore', 'Duyệt', 'Nguồn, tiện ích, kho bên ngoài'],
+          ['security', 'Bảo mật', 'Khoá ứng dụng, chặn chụp màn hình'],
+          ['build', 'Nâng cao', 'Bộ nhớ đệm, DNS, gỡ lỗi'],
+        ];
+        return src.map(([ic, t, sub], i) => (i === 4
+          ? { ic, t, sub, bg: 'rgba(139,92,246,.16)', bd: 'rgba(167,139,250,.5)', tileBg: 'linear-gradient(130deg,#8B5CF6,#C084FC)', tileBd: 'transparent', icCol: '#fff', col: '#fff' }
+          : { ic, t, sub, bg: 'transparent', bd: 'transparent', tileBg: 'rgba(139,92,246,.13)', tileBd: 'rgba(167,139,250,.28)', icCol: '#C4B5FD', col: '#F3EFFB' }));
+      })(),
+      setToggles: [
+        { t: 'Tự phát tập kế', sub: 'Đếm ngược 5 giây sau credits', trackBg: 'linear-gradient(120deg,#8B5CF6,#C084FC)', knobSide: 'right', knobBg: '#fff' },
+        { t: 'Bỏ qua intro tự động', sub: 'Khi nguồn cung cấp mốc intro', trackBg: 'linear-gradient(120deg,#8B5CF6,#C084FC)', knobSide: 'right', knobBg: '#fff' },
+        { t: 'Nhớ vị trí đang xem', sub: 'Hiện lại ở thẻ Tiếp tục', trackBg: 'linear-gradient(120deg,#8B5CF6,#C084FC)', knobSide: 'right', knobBg: '#fff' },
+        { t: 'Picture-in-Picture khi thoát', sub: 'Thu nhỏ video khi rời ứng dụng', trackBg: 'rgba(255,255,255,.14)', knobSide: 'left', knobBg: '#8D84AC' },
+      ],
+      playerSrc: [
+        { t: 'Trình phát nội bộ', sub: 'Media3 · phần cứng giải mã', ic: 'play_circle', icCol: '#C4B5FD', bg: 'rgba(139,92,246,.14)', bd: 'rgba(167,139,250,.45)', tag: 'Mặc định', tagCol: '#C4B5FD' },
+        { t: 'Trình phát ngoài', sub: 'Chọn app khi phát', ic: 'open_in_new', icCol: '#8D84AC', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.1)', tag: 'Tắt', tagCol: '#6E6590' },
+        { t: 'Tự chọn máy chủ nhanh nhất', sub: 'Thử 3 máy chủ trước khi phát', ic: 'bolt', icCol: '#5EEAD4', bg: 'rgba(255,255,255,.05)', bd: 'rgba(255,255,255,.1)', tag: 'Bật', tagCol: '#5EEAD4' },
+      ],
+      qualT: [
+        { t: 'Auto', bg: 'linear-gradient(120deg,#8B5CF6,#C084FC)', col: '#fff', bd: 'transparent' },
+        { t: '1080p', bg: 'rgba(255,255,255,.06)', col: '#A79FC0', bd: 'rgba(255,255,255,.11)' },
+        { t: '720p', bg: 'rgba(255,255,255,.06)', col: '#A79FC0', bd: 'rgba(255,255,255,.11)' },
+        { t: '480p', bg: 'rgba(255,255,255,.06)', col: '#A79FC0', bd: 'rgba(255,255,255,.11)' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
