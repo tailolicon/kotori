@@ -68,6 +68,14 @@ data class BubbleTranslation(
  * view and every prefetch pass costs one doomed request. The manager uses this to stop calling the
  * provider entirely until the quota window has passed.
  */
+/**
+ * The provider refused the credentials outright — revoked key, blocked project, wrong key.
+ *
+ * Distinct from [ProviderRateLimited] because waiting does not help: nothing changes until the user
+ * fixes the key or switches provider. The caller stops calling until the settings change.
+ */
+class ProviderRejected(message: String) : Exception(message)
+
 class ProviderRateLimited(
     message: String,
     /** Server-suggested pause, when the response carried one. */

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.provider.ProviderRateLimited
+import mihon.feature.translation.provider.ProviderRejected
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -149,6 +150,14 @@ class TranslationManager(
                 null
             } catch (e: ProviderRateLimited) {
                 armBackoff(e)
+                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+                null
+            } catch (e: ProviderRejected) {
+                // Nothing improves until the credentials change, and the breaker is keyed on those,
+                // so this pauses until the user edits them and resumes the moment they do.
+                backoffSettings = providerSettings()
+                backoffUntilMillis = System.currentTimeMillis() + REJECTED_PAUSE_SECONDS * 1000
+                logcat { "Provider rejected the credentials; pausing until settings change" }
                 _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
                 null
             } catch (e: Throwable) {
@@ -322,6 +331,9 @@ class TranslationManager(
         const val DAILY_QUOTA_PAUSE_SECONDS = 30L * 60
         /** Pause after a per-minute 429 that carried no server-suggested delay. */
         const val DEFAULT_RATE_PAUSE_SECONDS = 60L
+
+        /** Long pause after rejected credentials; the settings-keyed breaker ends it sooner. */
+        const val REJECTED_PAUSE_SECONDS = 60L * 60
 
         /** Identical failures in a row before translation pauses instead of retrying every page. */
         const val MAX_CONSECUTIVE_FAILURES = 5

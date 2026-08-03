@@ -192,6 +192,16 @@ class GeminiTranslationProvider(
                     }
                     throw ProviderRateLimited(message, retryAfter, daily)
                 }
+                if (response.code == 403 || response.code == 401) {
+                    // The key is not merely throttled — the project is blocked or the key is wrong.
+                    // Retrying cannot fix it, and Google's own wording ("Lightning dunning decision
+                    // is deny for project: projects/189621270308") tells the reader nothing.
+                    throw ProviderRejected(
+                        "Gemini từ chối API key (lỗi ${response.code}). Key có thể đã bị thu hồi, " +
+                            "hoặc tài khoản Google đang vướng thanh toán. Kiểm tra lại key ở " +
+                            "aistudio.google.com, hoặc tạm chuyển sang Google Dịch trong Cài đặt → Dịch.",
+                    )
+                }
                 val message = GeminiResponse.errorMessage(body) ?: "Gemini trả về lỗi ${response.code}"
                 error(message)
             }
