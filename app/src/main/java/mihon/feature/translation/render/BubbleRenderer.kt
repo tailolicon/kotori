@@ -264,7 +264,17 @@ class BubbleRenderer(private val context: Context) {
 
         // Work on a padded crop: the detector's box often clips stroke tips, and the inpainter needs
         // known pixels on all sides of the mask to reconstruct from.
-        val pad = (min(box.width, box.height) * REGION_PAD_RATIO).roundToInt().coerceIn(4, 24)
+        //
+        // Text-block boxes need far more room than bubble boxes. A bubble box is the bubble; an OCR
+        // box is the *lettering*, and the bubble around it can be half as wide again. The crop is
+        // the flood fill's whole world, so cropping tight to the letters clipped the fill to a
+        // rectangle around them — the ends of every line stayed put, and the reader saw the original
+        // sentence framing the translation. The flood stops at the bubble outline on its own, so
+        // being generous here costs a little work and nothing else.
+        val padRatio = if (bubble.box.isTextBlock) TEXT_BLOCK_PAD_RATIO else REGION_PAD_RATIO
+        val padCeiling = if (bubble.box.isTextBlock) TEXT_BLOCK_PAD_MAX else REGION_PAD_MAX
+        val padBase = if (bubble.box.isTextBlock) max(box.width, box.height) else min(box.width, box.height)
+        val pad = (padBase * padRatio).roundToInt().coerceIn(4, padCeiling)
         val regionLeft = (box.left - pad).coerceAtLeast(0)
         val regionTop = (box.top - pad).coerceAtLeast(0)
         val regionRight = (box.right + pad).coerceAtMost(bitmap.width)
@@ -618,12 +628,21 @@ class BubbleRenderer(private val context: Context) {
         boxWidth: Int,
         boxHeight: Int,
     ): Rect {
-        val insetX = (boxWidth * BOX_INSET_RATIO).roundToInt()
-        val insetY = (boxHeight * BOX_INSET_RATIO).roundToInt()
-        val left = (bubble.box.left - regionLeft + insetX).coerceIn(0, width - 1)
-        val top = (bubble.box.top - regionTop + insetY).coerceIn(0, height - 1)
-        val right = (bubble.box.right - regionLeft - insetX).coerceIn(left + 1, width)
-        val bottom = (bubble.box.bottom - regionTop - insetY).coerceIn(top + 1, height)
+        // A bubble box gets inset — its outer few percent is outline, not lettering. A text-block box
+        // gets the opposite treatment: it came from OCR and stops at the letters, so the bubble it
+        // sits in extends well past it. The fill is deliberately confined to this rectangle (see
+        // BubbleFill), so an inset one leaves the ends of every line unerased and the reader gets the
+        // original sentence framing the translation. Outsetting it lets the fill reach the bubble's
+        // real edge; if that overreaches onto artwork the flatness checks inside BubbleFill reject
+        // the result and the glyph mask handles the box instead.
+        val marginX = (boxWidth * if (bubble.box.isTextBlock) -TEXT_BLOCK_OUTSET_RATIO else BOX_INSET_RATIO)
+            .roundToInt()
+        val marginY = (boxHeight * if (bubble.box.isTextBlock) -TEXT_BLOCK_OUTSET_RATIO else BOX_INSET_RATIO)
+            .roundToInt()
+        val left = (bubble.box.left - regionLeft + marginX).coerceIn(0, width - 1)
+        val top = (bubble.box.top - regionTop + marginY).coerceIn(0, height - 1)
+        val right = (bubble.box.right - regionLeft - marginX).coerceIn(left + 1, width)
+        val bottom = (bubble.box.bottom - regionTop - marginY).coerceIn(top + 1, height)
         return Rect(left, top, right, bottom)
     }
 
@@ -943,8 +962,14 @@ class BubbleRenderer(private val context: Context) {
         const val MIN_WORDS_FOR_PAGE_DEDUPE = 4
 
         const val REGION_PAD_RATIO = 0.12f
+        const val REGION_PAD_MAX = 24
+        /** OCR boxes hug the letters, so the bubble around them needs much more room than this. */
+        const val TEXT_BLOCK_PAD_RATIO = 0.35f
+        const val TEXT_BLOCK_PAD_MAX = 220
         const val MIN_REGION_SIDE = 10
         const val BOX_INSET_RATIO = 0.06f
+        /** How far past an OCR box the bubble around it is assumed to reach. */
+        const val TEXT_BLOCK_OUTSET_RATIO = 0.22f
         const val MIN_INK_SAMPLES = 12
         const val INK_PERCENTILE = 0.40f
         /** Lettering is a minority of a text strip, so a narrower tail than a glyph mask needs. */
