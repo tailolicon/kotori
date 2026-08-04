@@ -1,0 +1,11 @@
+Tencent HY is licensed under the Tencent HY Community License Agreement,
+Copyright © 2025 Tencent. All Rights Reserved.
+The trademark rights of "Tencent HY" are owned by Tencent or its affiliate.
+
+Offline translation in Kotori is provided by Kotori (app.mihon.dev).
+Tencent is not affiliated with, associated with, sponsoring, or endorsing Kotori
+or this offline translation feature.
+
+Full license text: assets/licenses/TENCENT_HY_COMMUNITY_LICENSE.txt
+Model weights: user-downloaded from Hugging Face tencent/HY-MT1.5-1.8B-GGUF
+(HY-MT1.5-1.8B-Q4_K_M.gguf). Not bundled in the APK.

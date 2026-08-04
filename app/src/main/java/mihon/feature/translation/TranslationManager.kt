@@ -96,7 +96,33 @@ class TranslationManager(
         preferences.novelEnabledForManga(mangaId).set(enabled)
     }
 
-    fun hasCredentials(): Boolean = preferences.hasCredentialsFor(preferences.provider.get())
+    fun hasCredentials(): Boolean {
+        val type = preferences.provider.get()
+        if (type == TranslationProviderType.OFFLINE) {
+            // Authoritative: re-verify the file and keep the preference flag honest.
+            val ready = offlineModelStore.hasValidModel()
+            if (preferences.offlineModelReady.get() != ready) {
+                preferences.offlineModelReady.set(ready)
+            }
+            return ready
+        }
+        return preferences.hasCredentialsFor(type)
+    }
+
+    val offlineModelStore: mihon.feature.translation.offline.OfflineModelStore by lazy {
+        uy.kohesive.injekt.Injekt.get()
+    }
+
+    /**
+     * Cancel offline inference, release the **cached** native provider, then delete the GGUF.
+     * Must not construct a fresh provider (that would miss the loaded engine state).
+     */
+    suspend fun deleteOfflineModel() {
+        offlineModelStore.cancelDownload()
+        mihon.feature.translation.provider.TranslationProviders.releaseOffline()
+        offlineModelStore.delete()
+        preferences.offlineModelReady.set(false)
+    }
 
     fun providerName(): String = translator.currentProvider().displayName
 

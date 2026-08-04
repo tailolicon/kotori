@@ -211,6 +211,19 @@ class AppModule(val app: Application) : InjektModule {
         // session and the translated-page cache, both of which are expensive to recreate.
         addSingletonFactory { mihon.feature.translation.TranslationManager(app, get()) }
         addSingletonFactory { mihon.feature.translation.novel.NovelTranslator(app, get()) }
+        // Offline GGUF store (download/verify/delete). Keeps TranslationPreferences.offlineModelReady
+        // in sync so hasCredentialsFor(OFFLINE) is authoritative across callers.
+        addSingletonFactory {
+            val prefs = get<mihon.feature.translation.TranslationPreferences>()
+            mihon.feature.translation.offline.OfflineModelStore(
+                context = app,
+                initialReady = prefs.offlineModelReady.get(),
+                onReadyChanged = { ready -> prefs.offlineModelReady.set(ready) },
+            ).also { store ->
+                // Reconcile preference with on-disk state at startup.
+                prefs.offlineModelReady.set(store.hasValidModel())
+            }
+        }
 
         // Asynchronously init expensive components off the main thread for a faster cold start.
         // (These are IO-bound singletons — sources, SQLite drivers, download caches — that

@@ -919,4 +919,31 @@
     <string name="extensionStoresScreen.deleteStore.title">Xóa cửa hàng phần mở rộng</string>
     <string name="extensionStoresScreen.deleteStore.body">Bạn có muốn xóa cửa hàng phần mở rộng \"%1$s\" (%2$s) không?</string>
     <string name="pref_webtoon_vertical_navigator_on_left">Đặt thanh điều hướng dọc ở phía bên trái</string>
+
+    <!-- Offline on-device translation (HY-MT) -->
+    <string name="translation_provider_offline">Offline</string>
+    <string name="translation_offline_intro">Dịch hoàn toàn trên máy bằng HY-MT1.5-1.8B (Q4_K_M). Không cần API key và không gửi text ra ngoài thiết bị. Model khoảng %1$s — chỉ tải khi bạn chọn, không nhúng trong APK. Một trang có thể mất vài phút tùy thiết bị.</string>
+    <string name="translation_offline_provider_legal">Tính năng dịch offline do %1$s cung cấp. Tencent không liên kết, không liên quan, không tài trợ và không chứng nhận ứng dụng hay tính năng này.</string>
+    <string name="translation_offline_territory">Giấy phép Tencent HY Community không áp dụng tại Liên minh Châu Âu, Vương quốc Anh và Hàn Quốc. Không tải hoặc dùng model nếu bạn ở các lãnh thổ đó.</string>
+    <string name="translation_offline_license_confirm">Tôi xác nhận không ở EU, UK hay Hàn Quốc, đã đọc Tencent HY Community License và chấp nhận điều khoản. Tôi hiểu Tencent không tài trợ hay chứng nhận Kotori.</string>
+    <string name="translation_offline_view_license">Xem toàn bộ giấy phép</string>
+    <string name="translation_offline_accept_and_download">Đồng ý giấy phép &amp; tải</string>
+    <string name="translation_offline_download">Tải model</string>
+    <string name="translation_offline_resume">Tiếp tục tải</string>
+    <string name="translation_offline_retry">Thử lại</string>
+    <string name="translation_offline_cancel">Huỷ tải</string>
+    <string name="translation_offline_delete">Xoá model</string>
+    <string name="translation_offline_delete_partial">Xoá bản dở dang</string>
+    <string name="translation_offline_status_missing">Model: chưa tải</string>
+    <string name="translation_offline_status_partial">Model: dở dang %1$s / %2$s — bấm tiếp tục để tải nốt</string>
+    <string name="translation_offline_status_downloading">Đang tải %1$s / %2$s</string>
+    <string name="translation_offline_status_verifying">Đang xác minh size và SHA-256 (%1$s)…</string>
+    <string name="translation_offline_status_ready">Model sẵn sàng (%1$s, đã kiểm tra size + SHA-256)</string>
+    <string name="translation_offline_status_failed_verify">Xác minh model thất bại%1$s. Hãy thử lại.</string>
+    <string name="translation_offline_status_failed_install">Không thể cài model sau khi tải. Hãy thử lại.</string>
+    <string name="translation_offline_status_failed_download">Tải model thất bại%1$s. Kiểm tra mạng và thử lại.</string>
+    <string name="translation_offline_need_model">Cần tải model offline (~%1$s) trước khi dịch. Đồng ý giấy phép và bấm tải bên dưới.</string>
+    <string name="translation_offline_threads">Số luồng CPU (offline)</string>
+    <string name="translation_offline_threads_hint">Ít luồng hơn = tốn nhiệt/RAM ít hơn; nhiều luồng hơn có thể nhanh hơn trên máy mạnh. Mặc định %1$d.</string>
+    <string name="translation_offline_license_title">Tencent HY Community License</string>
 </resources>

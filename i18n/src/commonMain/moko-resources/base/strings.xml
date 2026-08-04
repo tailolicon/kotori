@@ -1086,4 +1086,31 @@ Do you still wish to continue?</string>
     <string name="action_migrate_duplicate">Migrate existing entry</string>
     <string name="add_repo_confirmation">Do you wish to add the repo \"%s\"?</string>
     <string name="information_empty_repos">You have no repos set.</string>
+
+    <!-- Offline on-device translation (HY-MT) -->
+    <string name="translation_provider_offline">Offline</string>
+    <string name="translation_offline_intro">Fully on-device translation with HY-MT1.5-1.8B (Q4_K_M). No API key and no text leaves the device. The model is about %1$s and is downloaded only when you choose to — it is not bundled in the APK. A page can take several minutes depending on the device.</string>
+    <string name="translation_offline_provider_legal">Offline translation is provided by %1$s. Tencent is not affiliated with, associated with, sponsoring, or endorsing this app or feature.</string>
+    <string name="translation_offline_territory">The Tencent HY Community License does not apply in the European Union, the United Kingdom, or South Korea. Do not download or use this model if you are in those territories.</string>
+    <string name="translation_offline_license_confirm">I confirm I am not in the EU, UK, or South Korea, I have read the Tencent HY Community License, and I accept its terms. I understand Tencent does not sponsor or endorse Kotori.</string>
+    <string name="translation_offline_view_license">View full license</string>
+    <string name="translation_offline_accept_and_download">Accept license &amp; download</string>
+    <string name="translation_offline_download">Download model</string>
+    <string name="translation_offline_resume">Resume download</string>
+    <string name="translation_offline_retry">Retry</string>
+    <string name="translation_offline_cancel">Cancel download</string>
+    <string name="translation_offline_delete">Delete model</string>
+    <string name="translation_offline_delete_partial">Delete partial</string>
+    <string name="translation_offline_status_missing">Model: not downloaded</string>
+    <string name="translation_offline_status_partial">Model: partial %1$s / %2$s — resume to continue</string>
+    <string name="translation_offline_status_downloading">Downloading %1$s / %2$s</string>
+    <string name="translation_offline_status_verifying">Verifying size and SHA-256 (%1$s)…</string>
+    <string name="translation_offline_status_ready">Model ready (%1$s, size + SHA-256 verified)</string>
+    <string name="translation_offline_status_failed_verify">Model verification failed%1$s. Try again.</string>
+    <string name="translation_offline_status_failed_install">Could not install the model after download. Try again.</string>
+    <string name="translation_offline_status_failed_download">Download failed%1$s. Check the network and try again.</string>
+    <string name="translation_offline_need_model">Download the offline model (~%1$s) before translating. Accept the license and tap download below.</string>
+    <string name="translation_offline_threads">CPU threads (offline)</string>
+    <string name="translation_offline_threads_hint">Fewer threads use less heat and RAM; more threads may be faster on strong devices. Default %1$d.</string>
+    <string name="translation_offline_license_title">Tencent HY Community License</string>
 </resources>

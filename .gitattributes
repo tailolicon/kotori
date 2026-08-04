@@ -45,3 +45,9 @@
 *.webm binary
 *.pyc binary
 *.swp binary
+# Offline LLM weights must never go through the text filter (same class of bug as the ONNX case).
+# The GGUF itself is user-downloaded and must not be committed; the attribute is belt-and-braces.
+*.gguf binary
+# Preserve the pinned upstream source verbatim; its own whitespace style is not Kotori lint input.
+third_party/llama.cpp/** whitespace=-trailing-space
+app/src/main/assets/licenses/TENCENT_HY_COMMUNITY_LICENSE.txt whitespace=-trailing-space

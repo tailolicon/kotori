@@ -38,7 +38,7 @@ android {
         // semantic version, while debug/update/preview append `-${commitCount}` through their
         // versionNameSuffix — so a milestone reads as a milestone, and every other build still
         // says exactly which commit it came from.
-        versionName = "1.0.3"
+        versionName = "1.0.4"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -47,6 +47,19 @@ android {
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Offline llama.cpp JNI: phone (arm64) + MuMu (x86_64).
+        // Source is vendored at third_party/llama.cpp (pin b10240); see app/src/main/cpp/CMakeLists.txt.
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DANDROID_STL=c++_shared")
+                abiFilters += listOf("arm64-v8a", "x86_64")
+            }
+        }
+        ndk {
+            // Rest of the app still ships all four ABIs; offline .so is simply absent elsewhere.
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     if (System.getenv("MIHON_GITHUB_RELEASE").toBoolean()) {
@@ -150,6 +163,15 @@ android {
         // The bundled bubble-detector weights are already compressed; letting aapt deflate them
         // again would break ONNX Runtime's memory-mapped load path.
         noCompress += listOf("onnx")
+    }
+
+    // Offline translation (llama.cpp). Built for phone (arm64) and MuMu emulator (x86_64).
+    // Source is vendored/pinned via app/src/main/cpp/CMakeLists.txt — GGUF weights are NOT bundled.
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version = "3.31.6"
+        }
     }
 
     splits {

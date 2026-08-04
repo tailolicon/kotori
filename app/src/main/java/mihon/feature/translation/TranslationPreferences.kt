@@ -8,13 +8,15 @@ import tachiyomi.core.common.preference.getEnum
  * Which backend produces the translated strings.
  *
  * [GEMINI] additionally does the OCR itself (single vision call per page), which is both faster and
- * markedly more accurate than OCR-then-translate because the model sees the artwork. The other two
- * providers translate text that on-device ML Kit OCR extracted first.
+ * markedly more accurate than OCR-then-translate because the model sees the artwork. [GROQ] and
+ * [GOOGLE] translate text that on-device ML Kit OCR extracted first. [OFFLINE] runs HY-MT via
+ * llama.cpp on the device — no API key, user-downloaded GGUF required.
  */
 enum class TranslationProviderType {
     GEMINI,
     GROQ,
     GOOGLE,
+    OFFLINE,
 }
 
 /**
@@ -49,6 +51,50 @@ class TranslationPreferences(
         "pref_translation_groq_model",
         "llama-3.3-70b-versatile",
     )
+
+    /**
+     * Identity string of the on-device GGUF (feeds [outputStamp]). Defaults to the only model we
+     * currently ship a download for; kept as a preference so a future second quant does not reuse
+     * rendered pages from the previous one.
+     */
+    val offlineModelId: Preference<String> = preferenceStore.getString(
+        "pref_translation_offline_model_id",
+        mihon.feature.translation.offline.OfflineModelSpec.IDENTITY,
+    )
+
+    /** llama.cpp thread count for offline inference. */
+    val offlineThreadCount: Preference<Int> = preferenceStore.getInt(
+        "pref_translation_offline_threads",
+        mihon.feature.translation.offline.OfflineModelSpec.DEFAULT_THREADS,
+    )
+
+    /**
+     * Authoritative "GGUF verified and installed" flag, maintained by OfflineModelStore.
+     * Prefer this over a bare `false` so every [hasCredentialsFor] caller agrees.
+     */
+    val offlineModelReady: Preference<Boolean> = preferenceStore.getBoolean(
+        "pref_translation_offline_model_ready",
+        false,
+    )
+
+    /**
+     * User explicitly confirmed: not in EU/UK/South Korea, read the Tencent HY Community License,
+     * and accepts that Tencent is not affiliated with Kotori. Value is the acceptance version.
+     */
+    val offlineLicenseAcceptedVersion: Preference<Int> = preferenceStore.getInt(
+        "pref_translation_offline_license_accepted_v",
+        0,
+    )
+
+    fun offlineLicenseAccepted(): Boolean =
+        offlineLicenseAcceptedVersion.get() >=
+            mihon.feature.translation.offline.OfflineModelSpec.LICENSE_ACCEPTANCE_VERSION
+
+    fun acceptOfflineLicense() {
+        offlineLicenseAcceptedVersion.set(
+            mihon.feature.translation.offline.OfflineModelSpec.LICENSE_ACCEPTANCE_VERSION,
+        )
+    }
 
     val sourceLanguage: Preference<String> = preferenceStore.getString("pref_translation_source_lang", "ja")
 
@@ -98,6 +144,7 @@ class TranslationPreferences(
             TranslationProviderType.GEMINI -> geminiModel.get()
             TranslationProviderType.GROQ -> groqModel.get()
             TranslationProviderType.GOOGLE -> "gt"
+            TranslationProviderType.OFFLINE -> offlineModelId.get()
         },
         font.get(),
         styleHint.get(),
@@ -114,9 +161,18 @@ class TranslationPreferences(
         const val RENDERER_VERSION = "r19"
     }
 
+    /**
+     * Whether the selected backend can run right now.
+     *
+     * Offline needs no API key: readiness is the verified GGUF flag kept in sync by
+     * [mihon.feature.translation.offline.OfflineModelStore] (and re-checked against the file when
+     * the store is available). License acceptance is required before download, not as a credential
+     * for translation once the model is already on disk.
+     */
     fun hasCredentialsFor(type: TranslationProviderType): Boolean = when (type) {
         TranslationProviderType.GEMINI -> geminiApiKey.get().isNotBlank()
         TranslationProviderType.GROQ -> groqApiKey.get().isNotBlank()
         TranslationProviderType.GOOGLE -> true
+        TranslationProviderType.OFFLINE -> offlineModelReady.get()
     }
 }
