@@ -29,6 +29,11 @@
 # fails at runtime with no build-time warning at all.
 -keep class ai.moonshine.voice.** { *; }
 
+# libonnxruntime.so constructs OrtSession/OnnxValue result objects and resolves their constructors
+# from JNI. The Android artifact's consumer rules do not protect every class reached by this path;
+# R8 otherwise removes a constructor and release builds abort in NewObject(mid == null).
+-keep class ai.onnxruntime.** { *; }
+
 # NewPipe's protobuf-javalite models resolve their generated fields by name.
 # Preserve those fields so YouTube playlist metadata survives R8 shrinking.
 -keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
