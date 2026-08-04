@@ -55,16 +55,27 @@ private val providerLabels = listOf(
 )
 
 /**
- * Gemini models worth offering for this workload, cheapest first.
+ * Gemini models worth offering for this workload, ordered by how much reading they allow per day.
  *
- * Flash-Lite is the fastest and cheapest but drops and misplaces Vietnamese diacritics often enough
- * to be noticeable — "khả năng" comes back as "kh năng". The heavier Flash models cost more per page
- * and are the ones to reach for when accent errors matter more than throughput.
+ * The daily request allowance is what actually decides whether a chapter finishes, and on the free
+ * tier the spread is enormous: the headline Flash models permit 20 requests a day — one chapter
+ * exhausts that — while 3.1 Flash-Lite allows 500. The label carries the number because it is the
+ * only figure that predicts whether translation stops halfway.
+ *
+ * Gemma is deliberately absent despite advertising 14,400 requests a day. Asked for this pipeline's
+ * JSON contract it answers with a *restatement of the instructions* — "Role: Manga translator.
+ * Input format: ..." — rather than the translation, on both 26B and 31B. An allowance that large is
+ * worth nothing when nothing parses.
+ *
+ * Flash-Lite is fastest and cheapest but drops and misplaces Vietnamese diacritics often enough to
+ * be noticeable — "khả năng" comes back as "kh năng". The heavier Flash models are the ones to reach
+ * for when accent errors matter more than throughput.
  */
 private val geminiModels = listOf(
+    "3.1 Flash-Lite · 500/ngày" to "gemini-3.1-flash-lite",
     "3.5 Flash-Lite · rẻ" to "gemini-3.5-flash-lite",
-    "3.6 Flash · chuẩn" to "gemini-3.6-flash",
-    "3.5 Flash Cyber" to "gemini-3.5-flash-cyber",
+    "3.5 Flash · 20/ngày" to "gemini-3.5-flash",
+    "3.6 Flash · 20/ngày" to "gemini-3.6-flash",
     "2.5 Flash · cũ" to "gemini-2.5-flash",
 )
 

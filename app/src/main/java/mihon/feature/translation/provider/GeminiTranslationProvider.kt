@@ -30,7 +30,15 @@ class GeminiTranslationProvider(
 
     override val displayName = "Gemini"
 
-    override val supportsVisionOcr = true
+    /**
+     * Gemma is served through this same endpoint but reads no images, so asking it to would fail the
+     * request outright. Falling back to the text path costs a little accuracy on stylised lettering —
+     * on-device OCR reads the page instead of the model — and buys an enormous amount of headroom:
+     * Gemma allows 14,400 requests a day against Flash's 20, and sending text rather than a JPEG of
+     * a webtoon strip is what keeps a chapter inside the token-per-minute limit as well.
+     */
+    override val supportsVisionOcr: Boolean
+        get() = !model().startsWith("gemma", ignoreCase = true)
 
     private val http by lazy {
         OkHttpClient.Builder()
