@@ -190,10 +190,12 @@ android {
             // translation detector needs for the Java API that moonshine does not expose.
             //
             // Only one can ship, and which one wins is not worth relying on — so the onnxruntime
-            // version in the catalogue is pinned to the version moonshine bundles (1.23.2). Keep them
-            // in step: a JNI library built against a different runtime version fails with
-            // UnsatisfiedLinkError the first time a session is created, which surfaces as translation
-            // silently falling back to the untranslated page.
+            // version in the catalogue is pinned to the version moonshine bundles (1.23.0). Keep them
+            // in step: ONNX Runtime versions its exported symbols, so a JNI library built against a
+            // different runtime asks for OrtGetApiBase@VERS_<its own version> and dlopen refuses to
+            // resolve it. That shipped once — the pin said 1.23.2 while moonshine carried 1.23.0 —
+            // and every page failed with UnsatisfiedLinkError before the detector could even start.
+            // Verify with the ELF `.gnu.version_d` of both AARs, not with either project's docs.
             pickFirsts += "**/libonnxruntime.so"
 
             keepDebugSymbols += listOf(

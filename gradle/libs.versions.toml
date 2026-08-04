@@ -57,7 +57,12 @@ logcat = "0.4"
 mlkit-text = "16.0.1"
 # Must match the libonnxruntime.so that moonshine-voice bundles: only one native runtime can ship,
 # and a JNI library built against a different version fails to link at load time.
-onnxruntime = "1.23.2"
+#
+# moonshine-voice 0.0.73 bundles 1.23.0 — verified by reading the ELF version definitions, not by
+# reading its docs. Pinning 1.23.2 here shipped a JNI shim that requires VERS_1.23.2 alongside a
+# runtime defining only VERS_1.23.0, so dlopen could not resolve OrtGetApiBase and every page failed
+# with UnsatisfiedLinkError. Re-check with `.gnu.version_d` before changing this.
+onnxruntime = "1.23.0"
 markdown = "0.43.0"
 material = "1.12.0"
 media = "1.7.0"

@@ -34,6 +34,19 @@
 # R8 otherwise removes a constructor and release builds abort in NewObject(mid == null).
 -keep class ai.onnxruntime.** { *; }
 
+# ML Kit text recognition wires its recognisers together through a generated component registry that
+# it looks up reflectively, so nothing in the bytecode references those classes directly and R8 is
+# free to strip them. Release builds then failed inside TextRecognition.getClient() with a null
+# field on com.google.mlkit.vision.text.internal.zzo — OCR dead, and with it every provider that
+# reads the page on-device. Debug builds never showed it because they are not minified.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
+-keep class com.google.android.gms.common.annotation.** { *; }
+-keepclassmembers class * {
+    @com.google.android.gms.common.annotation.KeepForSdk *;
+}
+-dontwarn com.google.mlkit.**
+
 # NewPipe's protobuf-javalite models resolve their generated fields by name.
 # Preserve those fields so YouTube playlist metadata survives R8 shrinking.
 -keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite {
