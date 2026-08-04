@@ -2,6 +2,8 @@ package mihon.feature.translation
 
 import android.content.Context
 import android.graphics.Bitmap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.detect.BubbleDetector
 import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.model.BubbleBox
@@ -32,8 +34,74 @@ class PageTranslator(
     private val recognizer by lazy { BubbleTextRecognizer() }
     private val renderer by lazy { BubbleRenderer(context) }
 
+    /**
+     * Guards the on-device stages only: the ONNX detector session and the ML Kit recogniser
+     * are each single-lane, and running two pages through them at once corrupts or blocks.
+     * The provider call sits outside it on purpose — see [translate].
+     */
+    private val localWork = Mutex()
+
     /** Thrown when the page simply has no dialogue to translate — not an error worth surfacing. */
     class NothingToTranslate : Exception("No speech bubbles found")
+
+    /**
+     * Translates several consecutive pages as one tall image, then cuts the result back apart.
+     *
+     * Manhwa sources deliver a chapter as a hundred short images rather than one strip, and the
+     * provider charges by the *image*, not by its size: measured on this endpoint, one 1280x12755
+     * page costs 1050 tokens while the same content cut into 40 slices costs 42880 — forty times as
+     * much for identical pixels. Sending the slices re-joined is simply how the page was meant to be
+     * read, and it collapses both the token cost and the request count by the same factor.
+     *
+     * Two smaller benefits fall out of it. A bubble split across the seam between two slices is
+     * whole again, where separately it would be two clipped fragments that [isEdgeSliver] discards.
+     * And the model sees a continuous passage, so pronouns and register stay consistent in a way
+     * page-at-a-time translation cannot manage.
+     *
+     * @return one bitmap per input, in order; entries are new bitmaps and none of [sources] is
+     *   recycled here
+     * @throws NothingToTranslate when the joined strip yielded no dialogue at all
+     */
+    suspend fun translateStrip(sources: List<Bitmap>): List<Bitmap> {
+        require(sources.isNotEmpty()) { "translateStrip needs at least one page" }
+        if (sources.size == 1) return listOf(translate(sources[0]))
+
+        val width = sources.maxOf { it.width }
+        // Heights after scaling every page to the common width, so the seams land where expected.
+        val heights = sources.map { (it.height.toLong() * width / it.width).toInt().coerceAtLeast(1) }
+        val strip = Bitmap.createBitmap(width, heights.sum(), Bitmap.Config.ARGB_8888)
+        try {
+            val canvas = android.graphics.Canvas(strip)
+            var y = 0
+            sources.forEachIndexed { index, page ->
+                val destination = android.graphics.Rect(0, y, width, y + heights[index])
+                canvas.drawBitmap(page, null, destination, null)
+                y += heights[index]
+            }
+            logcat { "Stitched ${sources.size} pages into ${width}x${strip.height} strip" }
+
+            val translated = translate(strip)
+            return try {
+                var top = 0
+                sources.mapIndexed { index, page ->
+                    val slice = Bitmap.createBitmap(translated, 0, top, width, heights[index])
+                    top += heights[index]
+                    // Give each page back at its own resolution so the reader's cache entries match
+                    // the artwork it would otherwise have shown.
+                    if (slice.width == page.width && slice.height == page.height) {
+                        slice
+                    } else {
+                        Bitmap.createScaledBitmap(slice, page.width, page.height, true)
+                            .also { if (it !== slice) slice.recycle() }
+                    }
+                }
+            } finally {
+                if (translated !== strip) translated.recycle()
+            }
+        } finally {
+            strip.recycle()
+        }
+    }
 
     /**
      * @return a new bitmap with translated dialogue; [source] is never recycled here
@@ -46,29 +114,38 @@ class PageTranslator(
             styleHint = preferences.styleHint.get(),
         )
 
-        val detected = detector.detect(source)
-        // The bubble model only knows speech bubbles. Status windows, captions and narration boxes
-        // are lettering too, and readers care about them just as much — a chapter whose skill panels
-        // stay in English is not a translated chapter.
-        val extras = runCatching { textBlocks.detect(source, detected, translationContext.sourceLanguage) }
-            .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
-            .getOrDefault(emptyList())
+        // Detection and OCR hold the lock; the provider call deliberately does not.
+        //
+        // The ONNX session and the ML Kit recogniser are single-lane, so those stages must not
+        // overlap. Waiting on the network is a different matter: holding the same lock across it
+        // meant a page could not even begin reading while the page before it sat waiting on an HTTP
+        // response, which is most of a page's wall-clock time. Releasing it here lets one page be
+        // read while another is in flight.
+        val (boxes, recognized) = localWork.withLock {
+            val detected = detector.detect(source)
+            // The bubble model only knows speech bubbles. Status windows, captions and narration
+            // boxes are lettering too, and readers care about them just as much — a chapter whose
+            // skill panels stay in English is not a translated chapter.
+            val extras = runCatching { textBlocks.detect(source, detected, translationContext.sourceLanguage) }
+                .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
+                .getOrDefault(emptyList())
 
-        val boxes = (detected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
-        if (boxes.size < detected.size + extras.size) {
-            logcat { "Dropped ${detected.size + extras.size - boxes.size} edge-sliver box(es)" }
-        }
-        if (boxes.isEmpty()) throw NothingToTranslate()
-        logcat {
-            "Detected ${boxes.size} regions (${detected.size} bubbles + ${extras.size} text blocks) " +
-                "on ${source.width}x${source.height} page"
+            val ordered = (detected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
+            if (ordered.size < detected.size + extras.size) {
+                logcat { "Dropped ${detected.size + extras.size - ordered.size} edge-sliver box(es)" }
+            }
+            if (ordered.isEmpty()) throw NothingToTranslate()
+            logcat {
+                "Detected ${ordered.size} regions (${detected.size} bubbles + ${extras.size} text " +
+                    "blocks) on ${source.width}x${source.height} page"
+            }
+
+            // Glyph geometry is collected regardless of who does the reading, because the renderer
+            // needs it to mask strokes rather than whole bubbles. It is cheap and fully local.
+            ordered to recognizer.recognize(source, ordered, translationContext.sourceLanguage)
         }
 
         val provider = currentProvider()
-
-        // Glyph geometry is collected regardless of who does the reading, because the renderer needs it
-        // to mask strokes rather than whole bubbles. It is cheap and fully local.
-        val recognized = recognizer.recognize(source, boxes, translationContext.sourceLanguage)
 
         val answered = if (provider.supportsVisionOcr) {
             provider.ocrAndTranslate(source, boxes, translationContext)

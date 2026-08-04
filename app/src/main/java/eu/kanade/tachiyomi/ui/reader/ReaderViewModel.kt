@@ -26,6 +26,7 @@ import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.reader.loader.ChapterLoader
+import eu.kanade.tachiyomi.ui.reader.loader.TranslatedReaderPage
 import eu.kanade.tachiyomi.ui.reader.loader.DownloadPageLoader
 import eu.kanade.tachiyomi.ui.reader.model.InsertPage
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
@@ -382,6 +383,10 @@ class ReaderViewModel @JvmOverloads constructor(
                 val pages = readerChapter.pages.orEmpty()
                 total += pages.size
 
+                // Pages are fetched one at a time but translated in runs: the provider charges per
+                // image sent, so a manhwa chapter split into dozens of short images costs dozens of
+                // times what the same content costs joined. Collect a run, hand it over whole.
+                val run = mutableListOf<Pair<Int, () -> java.io.InputStream>>()
                 for (page in pages) {
                     // A rate-limited provider fails every page from here on; marching through the
                     // rest of the window would just spend the recovering quota on more failures.
@@ -389,9 +394,15 @@ class ReaderViewModel @JvmOverloads constructor(
                     translationManager.updateStatus(
                         TranslationStatus.Working(completed, total, readerChapter.chapter.name),
                     )
-                    warmPage(readerChapter, page)
+                    fetchPage(readerChapter, page)
+                    (page as? TranslatedReaderPage)?.originalStream()?.let { run += page.index to it }
                     completed++
+                    if (run.size >= TRANSLATION_RUN_PAGES) {
+                        translateRun(readerChapter, run.toList())
+                        run.clear()
+                    }
                 }
+                if (run.isNotEmpty()) translateRun(readerChapter, run.toList())
             }
             // The quota message stays visible; "Idle" would overwrite the one line that tells the
             // user why their pages stopped being translated.
@@ -401,29 +412,31 @@ class ReaderViewModel @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Forces one page through the translating pipeline so the result lands in the cache.
-     *
-     * Reading the stream is the trigger: a translating page performs the work inside its stream
-     * provider, so opening and immediately closing it is exactly the prefetch. The page must be
-     * fetched first, hence the wait on its status.
-     */
-    private suspend fun warmPage(chapter: ReaderChapter, page: ReaderPage) {
-        if (page.status != Page.State.Ready) {
-            val loaderJob = viewModelScope.launchIO {
-                runCatching { chapter.pageLoader?.loadPage(page) }
-            }
-            runCatching {
-                withTimeout(PAGE_FETCH_TIMEOUT_MS) {
-                    page.statusFlow.first { it == Page.State.Ready || it is Page.State.Error }
-                }
-            }
-            loaderJob.cancel()
+    /** Downloads a page so its bytes are on disk, without translating it yet. */
+    private suspend fun fetchPage(chapter: ReaderChapter, page: ReaderPage) {
+        if (page.status == Page.State.Ready) return
+        val loaderJob = viewModelScope.launchIO {
+            runCatching { chapter.pageLoader?.loadPage(page) }
         }
-        if (page.status != Page.State.Ready) return
+        runCatching {
+            withTimeout(PAGE_FETCH_TIMEOUT_MS) {
+                page.statusFlow.first { it == Page.State.Ready || it is Page.State.Error }
+            }
+        }
+        loaderJob.cancel()
+    }
 
-        runCatching { page.stream?.invoke()?.close() }
-            .onFailure { logcat(LogPriority.WARN, it) { "Translation prefetch failed for page ${page.index}" } }
+    /** Hands a run of fetched pages to the translator to be stitched and translated together. */
+    private suspend fun translateRun(
+        chapter: ReaderChapter,
+        run: List<Pair<Int, () -> java.io.InputStream>>,
+    ) {
+        val mangaId = manga?.id ?: return
+        runCatching {
+            translationManager.translatePageRun(mangaId, chapter.chapter.id!!, run)
+        }.onFailure {
+            logcat(LogPriority.WARN, it) { "Translation prefetch failed for ${chapter.chapter.name}" }
+        }
     }
 
     /**
@@ -1123,6 +1136,15 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private companion object {
+        /**
+         * Pages gathered before handing a run to the translator.
+         *
+         * Large enough that a manhwa chapter of short images collapses into a few requests,
+         * small enough that the reader sees translated pages early instead of waiting for a
+         * whole chapter. The translator splits the run again by pixel budget.
+         */
+        const val TRANSLATION_RUN_PAGES = 8
+
         /** How long to wait for a page to arrive before skipping it during translation prefetch. */
         const val PAGE_FETCH_TIMEOUT_MS = 45_000L
     }

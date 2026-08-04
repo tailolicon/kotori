@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import mihon.feature.translation.provider.ProviderRateLimited
 import mihon.feature.translation.provider.ProviderRejected
 import tachiyomi.core.common.util.system.logcat
@@ -38,8 +40,29 @@ class TranslationManager(
     private val cache = TranslationCache(context, preferences)
     private val translator = PageTranslator(context, preferences)
 
-    /** Serialises page translation: the detector session and provider quotas are both single-lane. */
-    private val pageLock = Mutex()
+    /**
+     * How many pages may be in flight at once.
+     *
+     * This used to be a plain mutex, which made the whole feature strictly sequential: a page could
+     * not start while the page before it waited on an HTTP response, and waiting is most of a page's
+     * wall-clock time. [PageTranslator] now guards the single-lane on-device stages itself, so the
+     * only thing left to bound here is memory — each page in flight holds a full-size bitmap, and a
+     * webtoon strip is tens of megabytes.
+     */
+    private val pageSlots = Semaphore(MAX_PAGES_IN_FLIGHT)
+
+    /**
+     * One mutex per page being worked on, so two callers cannot translate the same page twice.
+     *
+     * Without it, the reader arriving at a page the prefetch is already translating would pay for it
+     * a second time — the same request, the same quota, discarded.
+     */
+    private val inFlight = mutableMapOf<String, Mutex>()
+    private val inFlightGuard = Mutex()
+
+    private suspend fun mutexFor(key: String): Mutex = inFlightGuard.withLock {
+        inFlight.getOrPut(key) { Mutex() }
+    }
 
     private val _status = MutableStateFlow<TranslationStatus>(TranslationStatus.Idle)
     val status: StateFlow<TranslationStatus> = _status.asStateFlow()
@@ -134,6 +157,112 @@ class TranslationManager(
      * Returns null when the page has no dialogue or translation failed — callers fall back to the
      * original artwork, which is always better than an error placeholder mid-chapter.
      */
+    /**
+     * Translates a run of consecutive pages together, joined into one tall image.
+     *
+     * This is the prefetch path. Manhwa sources deliver a chapter as dozens of short images, and the
+     * provider charges per image regardless of its size — forty slices of one page cost forty times
+     * what the whole page does. Joining them before sending is what keeps a daily allowance of 500
+     * requests worth hundreds of chapters instead of five.
+     *
+     * Pages already cached are skipped; the rest are grouped up to [MAX_STRIP_PIXELS] and handed to
+     * [PageTranslator.translateStrip]. Each result is written to its own cache entry, so everything
+     * downstream — the reader, the cache, eviction — is unchanged.
+     *
+     * A group that fails is not retried page by page: the failure is almost always the provider, and
+     * retrying would spend the same quota to reach the same place.
+     */
+    suspend fun translatePageRun(
+        mangaId: Long,
+        chapterId: Long,
+        pages: List<Pair<Int, () -> InputStream>>,
+    ) {
+        if (pages.isEmpty() || isRateLimited()) return
+        val stamp = preferences.outputStamp()
+
+        val pending = pages.filterNot { (index, _) ->
+            val target = cache.pageFile(mangaId, chapterId, index, stamp)
+            cache.isCached(target) || noneMarker(target).exists()
+        }
+        if (pending.isEmpty()) return
+
+        var group = mutableListOf<Pair<Int, Bitmap>>()
+        var groupPixels = 0L
+
+        suspend fun flush() {
+            if (group.isEmpty()) return
+            val batch = group
+            group = mutableListOf()
+            groupPixels = 0
+            translateGroup(mangaId, chapterId, stamp, batch)
+        }
+
+        try {
+            for ((index, open) in pending) {
+                if (isRateLimited()) break
+                val bitmap = decode(open) ?: continue
+                val pixels = bitmap.width.toLong() * bitmap.height
+                // A page that fills the budget by itself simply travels alone, exactly as before.
+                if (groupPixels > 0 && groupPixels + pixels > MAX_STRIP_PIXELS) flush()
+                group += index to bitmap
+                groupPixels += pixels
+                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= MAX_STRIP_PAGES) flush()
+            }
+            flush()
+        } finally {
+            group.forEach { (_, bitmap) -> bitmap.recycle() }
+        }
+    }
+
+    private suspend fun translateGroup(
+        mangaId: Long,
+        chapterId: Long,
+        stamp: String,
+        group: List<Pair<Int, Bitmap>>,
+    ) {
+        pageSlots.withPermit {
+            try {
+                val translated = translator.translateStrip(group.map { it.second })
+                translated.forEachIndexed { position, bitmap ->
+                    val index = group[position].first
+                    val target = cache.pageFile(mangaId, chapterId, index, stamp)
+                    try {
+                        write(bitmap, target)
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+                cache.trimToSize()
+                consecutiveFailures = 0
+                logcat { "Translated ${group.size} page(s) as one strip for chapter $chapterId" }
+            } catch (e: PageTranslator.NothingToTranslate) {
+                // The whole run had no dialogue: record that for each page so it is never retried.
+                group.forEach { (index, _) ->
+                    runCatching { noneMarker(cache.pageFile(mangaId, chapterId, index, stamp)).createNewFile() }
+                }
+                consecutiveFailures = 0
+            } catch (e: ProviderRateLimited) {
+                armBackoff(e)
+                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+            } catch (e: ProviderRejected) {
+                backoffSettings = providerSettings()
+                backoffUntilMillis = System.currentTimeMillis() + REJECTED_PAUSE_SECONDS * 1000
+                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+            } catch (e: Throwable) {
+                logcat { "Strip translation failed for chapter $chapterId: ${e.message}" }
+                _status.value = TranslationStatus.Failed(friendlyMessage(e))
+                consecutiveFailures++
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    backoffSettings = providerSettings()
+                    backoffUntilMillis = System.currentTimeMillis() + FAILURE_PAUSE_SECONDS * 1000
+                    logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
+                }
+            } finally {
+                group.forEach { (_, bitmap) -> bitmap.recycle() }
+            }
+        }
+    }
+
     suspend fun translatedPage(
         mangaId: Long,
         chapterId: Long,
@@ -152,57 +281,60 @@ class TranslationManager(
         if (noneMarker.exists()) return null
         if (isRateLimited()) return null
 
-        return pageLock.withLock {
-            // Re-check: a prefetch pass may have produced it while we waited for the lock.
-            if (cache.isCached(target)) return@withLock target
-            if (isRateLimited()) return@withLock null
+        val pageKey = "$mangaId/$chapterId/$pageIndex/$stamp"
+        return pageSlots.withPermit {
+            mutexFor(pageKey).withLock {
+                // Re-check: a prefetch pass may have produced it while we waited.
+                if (cache.isCached(target)) return@withLock target
+                if (isRateLimited()) return@withLock null
 
-            val source = decode(openSource) ?: return@withLock null
-            try {
-                val translated = translator.translate(source)
-                val written = try {
-                    write(translated, target)
-                } finally {
-                    if (translated !== source) translated.recycle()
-                }
-                if (!written) return@withLock null
-                cache.trimToSize()
-                consecutiveFailures = 0
-                target
-            } catch (e: PageTranslator.NothingToTranslate) {
-                logcat { "Page $pageIndex of chapter $chapterId has no dialogue" }
-                runCatching { noneMarker.createNewFile() }
-                consecutiveFailures = 0
-                null
-            } catch (e: ProviderRateLimited) {
-                armBackoff(e)
-                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
-                null
-            } catch (e: ProviderRejected) {
-                // Nothing improves until the credentials change, and the breaker is keyed on those,
-                // so this pauses until the user edits them and resumes the moment they do.
-                backoffSettings = providerSettings()
-                backoffUntilMillis = System.currentTimeMillis() + REJECTED_PAUSE_SECONDS * 1000
-                logcat { "Provider rejected the credentials; pausing until settings change" }
-                _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
-                null
-            } catch (e: Throwable) {
-                logcat { "Translation failed for page $pageIndex: ${e.message}" }
-                _status.value = TranslationStatus.Failed(friendlyMessage(e))
-                // A fault that is not about this page — a model that will not load, no network —
-                // fails every page identically, and the reader retries each one on every view. The
-                // observed result was three pages failing in a loop several times a second, forever.
-                // Pausing after a run of identical failures costs nothing when the fault is real and
-                // recovers on its own when it is not.
-                consecutiveFailures++
-                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                val source = decode(openSource) ?: return@withLock null
+                try {
+                    val translated = translator.translate(source)
+                    val written = try {
+                        write(translated, target)
+                    } finally {
+                        if (translated !== source) translated.recycle()
+                    }
+                    if (!written) return@withLock null
+                    cache.trimToSize()
+                    consecutiveFailures = 0
+                    target
+                } catch (e: PageTranslator.NothingToTranslate) {
+                    logcat { "Page $pageIndex of chapter $chapterId has no dialogue" }
+                    runCatching { noneMarker.createNewFile() }
+                    consecutiveFailures = 0
+                    null
+                } catch (e: ProviderRateLimited) {
+                    armBackoff(e)
+                    _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+                    null
+                } catch (e: ProviderRejected) {
+                    // Nothing improves until the credentials change, and the breaker is keyed on those,
+                    // so this pauses until the user edits them and resumes the moment they do.
                     backoffSettings = providerSettings()
-                    backoffUntilMillis = System.currentTimeMillis() + FAILURE_PAUSE_SECONDS * 1000
-                    logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
+                    backoffUntilMillis = System.currentTimeMillis() + REJECTED_PAUSE_SECONDS * 1000
+                    logcat { "Provider rejected the credentials; pausing until settings change" }
+                    _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
+                    null
+                } catch (e: Throwable) {
+                    logcat { "Translation failed for page $pageIndex: ${e.message}" }
+                    _status.value = TranslationStatus.Failed(friendlyMessage(e))
+                    // A fault that is not about this page — a model that will not load, no network —
+                    // fails every page identically, and the reader retries each one on every view. The
+                    // observed result was three pages failing in a loop several times a second, forever.
+                    // Pausing after a run of identical failures costs nothing when the fault is real and
+                    // recovers on its own when it is not.
+                    consecutiveFailures++
+                    if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                        backoffSettings = providerSettings()
+                        backoffUntilMillis = System.currentTimeMillis() + FAILURE_PAUSE_SECONDS * 1000
+                        logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
+                    }
+                    null
+                } finally {
+                    source.recycle()
                 }
-                null
-            } finally {
-                source.recycle()
             }
         }
     }
@@ -355,6 +487,24 @@ class TranslationManager(
          * at any moment (new key, paid tier, different model), and a re-arm costs one request.
          */
         const val DAILY_QUOTA_PAUSE_SECONDS = 30L * 60
+        /**
+         * Pages translated at once. Two is enough to keep one page reading while another
+         * waits on the network, and low enough that their bitmaps — tens of megabytes each
+         * for a webtoon strip — cannot exhaust the heap.
+         */
+        const val MAX_PAGES_IN_FLIGHT = 2
+
+        /**
+         * Pixel budget for one stitched strip, and a page-count guard beside it.
+         *
+         * The ceiling is memory, not the API: a strip is held as ARGB_8888 while it is drawn and
+         * again while it is sliced, so 12 MP is about 50 MB per copy. Going wider buys nothing
+         * anyway — the provider prices images by count, so the saving is already banked once the
+         * pages are joined at all.
+         */
+        const val MAX_STRIP_PIXELS = 12_000_000L
+        const val MAX_STRIP_PAGES = 20
+
         /** Pause after a per-minute 429 that carried no server-suggested delay. */
         const val DEFAULT_RATE_PAUSE_SECONDS = 60L
 

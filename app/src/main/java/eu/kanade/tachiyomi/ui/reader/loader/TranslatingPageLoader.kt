@@ -60,6 +60,12 @@ internal class TranslatedReaderPage(
         status = source.status
     }
 
+    /**
+     * The untranslated bytes, for callers that want to translate a run of pages together rather than
+     * one at a time. Reading [stream] would translate this page on its own and defeat the point.
+     */
+    fun originalStream(): (() -> InputStream)? = original
+
     override var stream: (() -> InputStream)?
         get() {
             val source = original ?: return null
