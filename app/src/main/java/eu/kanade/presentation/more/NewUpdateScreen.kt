@@ -27,7 +27,7 @@ import tachiyomi.presentation.core.screens.InfoScreen
 fun NewUpdateScreen(
     versionName: String,
     changelogInfo: String,
-    onOpenInBrowser: () -> Unit,
+    onOpenInBrowser: (() -> Unit)?,
     onRejectUpdate: () -> Unit,
     onAcceptUpdate: () -> Unit,
 ) {
@@ -50,13 +50,15 @@ fun NewUpdateScreen(
                 flavour = GFMFlavourDescriptor(),
             )
 
-            TextButton(
-                onClick = onOpenInBrowser,
-                modifier = Modifier.padding(top = MaterialTheme.padding.small),
-            ) {
-                Text(text = stringResource(MR.strings.update_check_open))
-                Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
-                Icon(imageVector = Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+            onOpenInBrowser?.let {
+                TextButton(
+                    onClick = it,
+                    modifier = Modifier.padding(top = MaterialTheme.padding.small),
+                ) {
+                    Text(text = stringResource(MR.strings.update_check_open))
+                    Spacer(modifier = Modifier.width(MaterialTheme.padding.extraSmall))
+                    Icon(imageVector = Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null)
+                }
             }
         }
     }

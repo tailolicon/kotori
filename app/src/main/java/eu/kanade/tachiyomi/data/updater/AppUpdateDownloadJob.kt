@@ -39,6 +39,8 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
     override suspend fun doWork(): Result {
         val url = inputData.getString(EXTRA_DOWNLOAD_URL)
         val title = inputData.getString(EXTRA_DOWNLOAD_TITLE) ?: context.stringResource(MR.strings.app_name)
+        val expectedSha256 = inputData.getString(EXTRA_DOWNLOAD_SHA256)
+        val expectedSize = inputData.getLong(EXTRA_DOWNLOAD_SIZE, UNKNOWN_SIZE).takeIf { it >= 0 }
 
         if (url.isNullOrEmpty()) {
             return Result.failure()
@@ -47,7 +49,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
         setForegroundSafely()
 
         withIOContext {
-            downloadApk(title, url)
+            downloadApk(title, url, expectedSha256, expectedSize)
         }
 
         return Result.success()
@@ -70,7 +72,12 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
      *
      * @param url url location of file
      */
-    private suspend fun downloadApk(title: String, url: String) {
+    private suspend fun downloadApk(
+        title: String,
+        url: String,
+        expectedSha256: String?,
+        expectedSize: Long?,
+    ) {
         // Show notification download starting.
         notifier.onDownloadStarted(title)
 
@@ -106,6 +113,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 response.close()
                 throw Exception("Unsuccessful response")
             }
+            AppUpdateVerifier.verify(apkFile, expectedSha256, expectedSize)
             notifier.cancel()
             notifier.promptInstall(apkFile.getUriCompat(context))
         } catch (e: Exception) {
@@ -114,7 +122,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
             if (shouldCancel) {
                 notifier.cancel()
             } else {
-                notifier.onDownloadError(url)
+                notifier.onDownloadError(url, title, expectedSha256, expectedSize)
             }
         }
     }
@@ -124,8 +132,17 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
 
         const val EXTRA_DOWNLOAD_URL = "DOWNLOAD_URL"
         const val EXTRA_DOWNLOAD_TITLE = "DOWNLOAD_TITLE"
+        const val EXTRA_DOWNLOAD_SHA256 = "DOWNLOAD_SHA256"
+        const val EXTRA_DOWNLOAD_SIZE = "DOWNLOAD_SIZE"
+        private const val UNKNOWN_SIZE = -1L
 
-        fun start(context: Context, url: String, title: String? = null) {
+        fun start(
+            context: Context,
+            url: String,
+            title: String? = null,
+            sha256: String? = null,
+            size: Long? = null,
+        ) {
             val constraints = Constraints(
                 requiredNetworkType = NetworkType.CONNECTED,
             )
@@ -137,6 +154,8 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     workDataOf(
                         EXTRA_DOWNLOAD_URL to url,
                         EXTRA_DOWNLOAD_TITLE to title,
+                        EXTRA_DOWNLOAD_SHA256 to sha256,
+                        EXTRA_DOWNLOAD_SIZE to (size ?: UNKNOWN_SIZE),
                     ),
                 )
                 .build()

@@ -33,8 +33,9 @@ class GetApplicationRelease(
         val isNewVersion = isNewVersion(
             arguments.isPreview,
             arguments.commitCount,
+            arguments.versionCode,
             arguments.versionName,
-            release.version,
+            release,
         )
         return when {
             isNewVersion -> Result.NewUpdate(release)
@@ -45,11 +46,14 @@ class GetApplicationRelease(
     private fun isNewVersion(
         isPreview: Boolean,
         commitCount: Int,
+        versionCode: Long,
         versionName: String,
-        versionTag: String,
+        release: Release,
     ): Boolean {
+        release.versionCode?.let { return it > versionCode }
+
         // Removes prefixes like "r" or "v"
-        val newVersion = versionTag.replace("[^\\d.]".toRegex(), "")
+        val newVersion = release.version.replace("[^\\d.]".toRegex(), "")
         return if (isPreview) {
             // Preview builds: based on releases in "mihonapp/mihon-preview" repo
             // tagged as something like "r1234"
@@ -59,17 +63,19 @@ class GetApplicationRelease(
             // tagged as something like "v0.1.2"
             val oldVersion = versionName.replace("[^\\d.]".toRegex(), "")
 
-            val newSemVer = newVersion.split(".").map { it.toInt() }
-            val oldSemVer = oldVersion.split(".").map { it.toInt() }
-
-            oldSemVer.mapIndexed { index, i ->
-                if (newSemVer[index] > i) {
-                    return true
-                }
-            }
-
-            false
+            compareVersionParts(newVersion, oldVersion) > 0
         }
+    }
+
+    private fun compareVersionParts(newVersion: String, oldVersion: String): Int {
+        val newParts = newVersion.split('.').mapNotNull(String::toIntOrNull)
+        val oldParts = oldVersion.split('.').mapNotNull(String::toIntOrNull)
+        val count = maxOf(newParts.size, oldParts.size)
+        repeat(count) { index ->
+            val comparison = (newParts.getOrElse(index) { 0 }).compareTo(oldParts.getOrElse(index) { 0 })
+            if (comparison != 0) return comparison
+        }
+        return 0
     }
 
     data class Arguments(
@@ -79,6 +85,9 @@ class GetApplicationRelease(
         val versionName: String,
         val repository: String,
         val forceCheck: Boolean = false,
+        val versionCode: Long = 0,
+        /** A Kotori update manifest. Blank keeps the legacy GitHub release source available. */
+        val updateManifestUrl: String = "",
     )
 
     sealed interface Result {

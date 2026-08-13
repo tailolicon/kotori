@@ -40,16 +40,20 @@ internal class AppUpdateNotifier(private val context: Context) {
             context,
             release.downloadLink,
             release.version,
+            release.sha256,
+            release.size,
         )
 
-        val releaseIntent = Intent(Intent.ACTION_VIEW, release.releaseLink.toUri()).run {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            PendingIntent.getActivity(
-                context,
-                release.hashCode(),
-                this,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+        val releaseIntent = release.releaseLink.takeIf(String::isNotBlank)?.let { link ->
+            Intent(Intent.ACTION_VIEW, link.toUri()).run {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                PendingIntent.getActivity(
+                    context,
+                    release.hashCode(),
+                    this,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            }
         }
 
         with(notificationBuilder) {
@@ -64,11 +68,13 @@ internal class AppUpdateNotifier(private val context: Context) {
                 context.stringResource(MR.strings.action_download),
                 updateIntent,
             )
-            addAction(
-                R.drawable.ic_info_24dp,
-                context.stringResource(MR.strings.whats_new),
-                releaseIntent,
-            )
+            releaseIntent?.let {
+                addAction(
+                    R.drawable.ic_info_24dp,
+                    context.stringResource(MR.strings.whats_new),
+                    it,
+                )
+            }
         }
         notificationBuilder.show()
     }
@@ -144,7 +150,7 @@ internal class AppUpdateNotifier(private val context: Context) {
      *
      * @param url web location of apk to download.
      */
-    fun onDownloadError(url: String) {
+    fun onDownloadError(url: String, title: String?, sha256: String?, size: Long?) {
         with(notificationBuilder) {
             setContentText(context.stringResource(MR.strings.update_check_notification_download_error))
             setSmallIcon(R.drawable.ic_warning_white_24dp)
@@ -155,7 +161,7 @@ internal class AppUpdateNotifier(private val context: Context) {
             addAction(
                 R.drawable.ic_refresh_24dp,
                 context.stringResource(MR.strings.action_retry),
-                NotificationReceiver.downloadAppUpdatePendingBroadcast(context, url),
+                NotificationReceiver.downloadAppUpdatePendingBroadcast(context, url, title, sha256, size),
             )
             addAction(
                 R.drawable.ic_close_24dp,

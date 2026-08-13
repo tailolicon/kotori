@@ -27,6 +27,8 @@ class AppUpdateChecker {
                     BuildConfig.VERSION_NAME,
                     GITHUB_REPO,
                     forceCheck,
+                    BuildConfig.VERSION_CODE.toLong(),
+                    BuildConfig.KOTORI_UPDATE_URL,
                 ),
             )
 

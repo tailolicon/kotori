@@ -25,6 +25,15 @@ if (Config.includeTelemetry) {
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
+val kotoriUpdateUrl = providers.gradleProperty("kotori-update-url")
+    .orElse(providers.environmentVariable("KOTORI_UPDATE_URL"))
+    .orElse("https://github.com/tailolicon/kotori/releases/latest/download/update.json")
+    .get()
+val kotoriVersionCode = providers.gradleProperty("kotori-version-code")
+    .orElse(providers.environmentVariable("KOTORI_VERSION_CODE"))
+    .orNull
+    ?.toIntOrNull()
+    ?: (1_100_000_000 + getLatestCommitCount().toInt())
 
 android {
     namespace = "eu.kanade.tachiyomi"
@@ -32,19 +41,29 @@ android {
     defaultConfig {
         applicationId = "app.mihon"
 
-        versionCode = getLatestCommitCount().toInt()
+        // Kotori uses a high, commit-monotonic range so official releases remain newer than legacy
+        // and local test builds. tools/publish-kotori-update.ps1 may override this with an even newer
+        // value when publishing multiple builds from the same commit.
+        versionCode = kotoriVersionCode
 
         // The release name is written down; the commit count is not. Release builds carry a plain
         // semantic version, while debug/update/preview append `-${commitCount}` through their
         // versionNameSuffix — so a milestone reads as a milestone, and every other build still
         // says exactly which commit it came from.
-        versionName = "1.0.5"
+        versionName = "1.0.6"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
         buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
         buildConfigField("boolean", "TELEMETRY_INCLUDED", "${Config.includeTelemetry}")
-        buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
+        // Kotori owns its update feed, so updater support is part of every normal build. The Gradle
+        // flag remains accepted for compatibility with the upstream workflows.
+        buildConfigField("boolean", "UPDATER_ENABLED", "true")
+        buildConfigField(
+            "String",
+            "KOTORI_UPDATE_URL",
+            "\"${kotoriUpdateUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -92,7 +111,7 @@ android {
     buildTypes {
         val debug = getByName("debug") {
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-${getLatestCommitCount()}"
+            versionNameSuffix = "-$kotoriVersionCode"
             isPseudoLocalesEnabled = true
         }
         val release = getByName("release") {
@@ -190,11 +209,13 @@ android {
             // translation detector needs for the Java API that moonshine does not expose.
             //
             // Only one can ship, and which one wins is not worth relying on — so the onnxruntime
-            // version in the catalogue is pinned to the version moonshine bundles (1.23.0). Keep them
+            // version in the catalogue is pinned to the version moonshine bundles (1.23.2). Keep them
             // in step: ONNX Runtime versions its exported symbols, so a JNI library built against a
             // different runtime asks for OrtGetApiBase@VERS_<its own version> and dlopen refuses to
-            // resolve it. That shipped once — the pin said 1.23.2 while moonshine carried 1.23.0 —
-            // and every page failed with UnsatisfiedLinkError before the detector could even start.
+            // resolve it. That has now shipped twice, in both directions, most recently with the pin
+            // at 1.23.0 against moonshine's 1.23.2 — and each time every page failed with
+            // UnsatisfiedLinkError before the detector could even start, which reads to the user as
+            // "translation does nothing" rather than as a build problem.
             // Verify with the ELF `.gnu.version_d` of both AARs, not with either project's docs.
             pickFirsts += "**/libonnxruntime.so"
 

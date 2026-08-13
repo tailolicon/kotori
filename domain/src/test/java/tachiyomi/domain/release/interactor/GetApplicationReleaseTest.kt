@@ -116,6 +116,65 @@ class GetApplicationReleaseTest {
     }
 
     @Test
+    fun `Kotori feed compares Android version code instead of display version`() = runTest {
+        every { preference.get() } returns 0
+        every { preference.set(any()) }.answers { }
+
+        val release = Release(
+            version = "1.0.5-local",
+            info = "info",
+            releaseLink = "",
+            downloadLink = "http://127.0.0.1/update.apk",
+            versionCode = 101,
+            sha256 = "00".repeat(32),
+        )
+        coEvery { releaseService.latest(any()) } returns release
+
+        val result = getApplicationRelease.await(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isPreview = false,
+                commitCount = 0,
+                versionName = "9.9.9",
+                repository = "",
+                versionCode = 100,
+                updateManifestUrl = "http://127.0.0.1/update.json",
+            ),
+        )
+
+        result shouldBe GetApplicationRelease.Result.NewUpdate(release)
+    }
+
+    @Test
+    fun `Kotori feed rejects equal Android version code`() = runTest {
+        every { preference.get() } returns 0
+        every { preference.set(any()) }.answers { }
+
+        val release = Release(
+            version = "different label",
+            info = "info",
+            releaseLink = "",
+            downloadLink = "http://127.0.0.1/update.apk",
+            versionCode = 100,
+        )
+        coEvery { releaseService.latest(any()) } returns release
+
+        val result = getApplicationRelease.await(
+            GetApplicationRelease.Arguments(
+                isFoss = false,
+                isPreview = false,
+                commitCount = 0,
+                versionName = "1.0.5",
+                repository = "",
+                versionCode = 100,
+                updateManifestUrl = "http://127.0.0.1/update.json",
+            ),
+        )
+
+        result shouldBe GetApplicationRelease.Result.NoNewUpdate
+    }
+
+    @Test
     fun `When now is before three days expect no new update`() = runTest {
         every { preference.get() } returns Instant.now().toEpochMilli()
         every { preference.set(any()) }.answers { }

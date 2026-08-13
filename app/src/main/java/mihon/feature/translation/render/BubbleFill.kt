@@ -366,7 +366,10 @@ internal object BubbleFill {
                 val boxHeight = maxY - minY + 1
                 if (component.size.toFloat() / max(1, boxWidth * boxHeight) > MAX_STRUCTURE_FILL) continue
 
-                // OCR says this is lettering. Nothing about its shape can outvote that.
+                // OCR is stronger evidence than shape here. If a component reaches a recognised
+                // text line, leave it to the glyph pass instead of classifying it as structural ink.
+                // This deliberately protects a bubble outline/tail that touches the OCR rectangle:
+                // once admitted into fillHoles, one long connected stroke can be painted away.
                 val bounds = Rect(minX, minY, maxX + 1, maxY + 1)
                 if (textLines.any { Rect.intersects(it, bounds) }) continue
 

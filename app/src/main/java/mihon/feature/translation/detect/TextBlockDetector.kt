@@ -40,7 +40,7 @@ class TextBlockDetector {
         // ML Kit's input cap is well below a webtoon strip's height, so the page is read in bands.
         // Bands overlap so a panel split across a boundary is still found whole in one of them.
         val recognizer = recognizerFor(sourceLanguage)
-        val found = ArrayList<Rect>()
+        val found = ArrayList<TextCandidate>()
         try {
             var top = 0
             while (top < bitmap.height) {
@@ -65,6 +65,8 @@ class TextBlockDetector {
 
         val merged = mergeNearby(found)
         val extras = merged
+            .filter { it.characters >= MIN_BLOCK_CHARS }
+            .map { it.rect }
             .filter { rect -> existing.none { overlaps(rect, it) } }
             .filter { it.width() >= MIN_BLOCK_SIDE && it.height() >= MIN_BLOCK_SIDE }
             .map { rect ->
@@ -88,18 +90,23 @@ class TextBlockDetector {
         return extras
     }
 
-    private fun readBlocks(recognizer: TextRecognizer, band: Bitmap, offsetY: Int): List<Rect> {
+    private fun readBlocks(recognizer: TextRecognizer, band: Bitmap, offsetY: Int): List<TextCandidate> {
         val latch = CountDownLatch(1)
-        val blocks = ArrayList<Rect>()
+        val blocks = ArrayList<TextCandidate>()
 
         recognizer.process(InputImage.fromBitmap(band, 0))
             .addOnSuccessListener { visionText ->
                 for (block in visionText.textBlocks) {
                     // Require real words: a single stray glyph recognised off artwork is noise, and
                     // turning it into a box means erasing a piece of the drawing for nothing.
-                    if (block.text.count { it.isLetterOrDigit() } < MIN_BLOCK_CHARS) continue
+                    val characters = block.text.count { it.isLetterOrDigit() }
+                    // Keep short fragments provisionally. Manga typesetting often puts a short word
+                    // ("AND", "NO", "SO") in its own ML Kit block above a longer paragraph. It is
+                    // accepted only if mergeNearby attaches it to enough real lettering; isolated
+                    // artwork noise still fails MIN_BLOCK_CHARS after merging.
+                    if (characters < MIN_FRAGMENT_CHARS) continue
                     val box = block.boundingBox ?: continue
-                    blocks += Rect(box).apply { offset(0, offsetY) }
+                    blocks += TextCandidate(Rect(box).apply { offset(0, offsetY) }, characters)
                 }
                 latch.countDown()
             }
@@ -121,36 +128,41 @@ class TextBlockDetector {
      * loses the fact that they are one panel — each would be erased and re-lettered on its own,
      * at its own font size. Blocks close together vertically and overlapping horizontally are one.
      */
-    private fun mergeNearby(blocks: List<Rect>): List<Rect> {
+    private fun mergeNearby(blocks: List<TextCandidate>): List<TextCandidate> {
         if (blocks.size < 2) return blocks
-        val remaining = blocks.sortedWith(compareBy({ it.top }, { it.left })).toMutableList()
-        val merged = ArrayList<Rect>()
+        val remaining = blocks.sortedWith(compareBy({ it.rect.top }, { it.rect.left })).toMutableList()
+        val merged = ArrayList<TextCandidate>()
 
         while (remaining.isNotEmpty()) {
-            val current = Rect(remaining.removeAt(0))
+            val first = remaining.removeAt(0)
+            val current = Rect(first.rect)
+            var characters = first.characters
             var grew = true
             while (grew) {
                 grew = false
                 val iterator = remaining.iterator()
                 while (iterator.hasNext()) {
                     val other = iterator.next()
-                    val gap = other.top - current.bottom
-                    val horizontal = kotlin.math.min(current.right, other.right) -
-                        kotlin.math.max(current.left, other.left)
-                    val narrower = kotlin.math.min(current.width(), other.width())
+                    val gap = other.rect.top - current.bottom
+                    val horizontal = kotlin.math.min(current.right, other.rect.right) -
+                        kotlin.math.max(current.left, other.rect.left)
+                    val narrower = kotlin.math.min(current.width(), other.rect.width())
                     val closeEnough = gap <= current.height() * MERGE_GAP_RATIO &&
                         gap >= -current.height()
                     if (closeEnough && horizontal > narrower * MERGE_OVERLAP_RATIO) {
-                        current.union(other)
+                        current.union(other.rect)
+                        characters += other.characters
                         iterator.remove()
                         grew = true
                     }
                 }
             }
-            merged += current
+            merged += TextCandidate(current, characters)
         }
         return merged
     }
+
+    private data class TextCandidate(val rect: Rect, val characters: Int)
 
     /** True when [rect] is substantially covered by [box] — the bubble detector already has it. */
     private fun overlaps(rect: Rect, box: BubbleBox): Boolean {
@@ -179,6 +191,7 @@ class TextBlockDetector {
 
         /** Letters or digits a block needs before it counts as lettering rather than noise. */
         const val MIN_BLOCK_CHARS = 8
+        const val MIN_FRAGMENT_CHARS = 2
         const val MIN_BLOCK_SIDE = 40
         const val BLOCK_PAD_RATIO = 0.04f
 

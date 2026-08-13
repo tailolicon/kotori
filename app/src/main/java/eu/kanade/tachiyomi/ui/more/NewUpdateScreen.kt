@@ -15,6 +15,8 @@ class NewUpdateScreen(
     private val changelogInfo: String,
     private val releaseLink: String,
     private val downloadLink: String,
+    private val sha256: String? = null,
+    private val size: Long? = null,
 ) : Screen() {
 
     @Composable
@@ -28,13 +30,17 @@ class NewUpdateScreen(
         NewUpdateScreen(
             versionName = versionName,
             changelogInfo = changelogInfoNoChecksum,
-            onOpenInBrowser = { context.openInBrowser(releaseLink) },
+            onOpenInBrowser = releaseLink.takeIf(String::isNotBlank)?.let { link ->
+                { context.openInBrowser(link) }
+            },
             onRejectUpdate = navigator::pop,
             onAcceptUpdate = {
                 AppUpdateDownloadJob.start(
                     context = context,
                     url = downloadLink,
                     title = versionName,
+                    sha256 = sha256,
+                    size = size,
                 )
                 navigator.pop()
             },

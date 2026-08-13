@@ -6,6 +6,7 @@ import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.network.parseAs
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import tachiyomi.domain.release.interactor.GetApplicationRelease
 import tachiyomi.domain.release.model.Release
 import tachiyomi.domain.release.service.ReleaseService
@@ -16,6 +17,10 @@ class ReleaseServiceImpl(
 ) : ReleaseService {
 
     override suspend fun latest(arguments: GetApplicationRelease.Arguments): Release? {
+        if (arguments.updateManifestUrl.isNotBlank()) {
+            return latestFromKotoriFeed(arguments.updateManifestUrl)
+        }
+
         val release = with(json) {
             networkService.client
                 .newCall(GET("https://api.github.com/repos/${arguments.repository}/releases/latest"))
@@ -35,6 +40,32 @@ class ReleaseServiceImpl(
         )
     }
 
+    private suspend fun latestFromKotoriFeed(manifestUrl: String): Release? {
+        val manifest = with(json) {
+            networkService.client
+                .newCall(GET(manifestUrl))
+                .awaitSuccess()
+                .parseAs<KotoriReleaseManifest>()
+        }
+        if (manifest.schema != KOTORI_MANIFEST_SCHEMA || manifest.assets.isEmpty()) return null
+
+        val asset = manifest.selectAsset(Build.SUPPORTED_ABIS.toList()) ?: return null
+
+        val base = manifestUrl.toHttpUrl()
+        val downloadUrl = base.resolve(asset.url)?.toString() ?: return null
+        val releaseUrl = manifest.releaseUrl.takeIf(String::isNotBlank)?.let(base::resolve)?.toString().orEmpty()
+
+        return Release(
+            version = manifest.versionName,
+            info = manifest.changelog,
+            releaseLink = releaseUrl,
+            downloadLink = downloadUrl,
+            versionCode = manifest.versionCode,
+            sha256 = asset.sha256.lowercase(),
+            size = asset.size,
+        )
+    }
+
     private fun getDownloadLink(release: GithubRelease, isFoss: Boolean): String? {
         val map = release.assets.associate { asset ->
             BUILD_TYPES.find { "-$it" in asset.name } to asset.downloadLink
@@ -49,6 +80,7 @@ class ReleaseServiceImpl(
 
     companion object {
         private const val FOSS = "foss"
+        private const val KOTORI_MANIFEST_SCHEMA = 1
         private val BUILD_TYPES = listOf(FOSS, "arm64-v8a", "armeabi-v7a", "x86_64", "x86")
 
         /**

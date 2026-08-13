@@ -347,6 +347,8 @@ class MainActivity : BaseActivity() {
                             changelogInfo = result.release.info,
                             releaseLink = result.release.releaseLink,
                             downloadLink = result.release.downloadLink,
+                            sha256 = result.release.sha256,
+                            size = result.release.size,
                         )
                         navigator.push(updateScreen)
                     }

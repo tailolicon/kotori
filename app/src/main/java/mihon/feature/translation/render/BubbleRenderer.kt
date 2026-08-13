@@ -54,33 +54,43 @@ class BubbleRenderer(private val context: Context) {
         // page that exposed this, a two-line caption came out with its whole second line scrubbed away
         // — the letters had been drawn, then painted over by a neighbour a few milliseconds later.
         val plans = ArrayList<Plan>(bubbles.size)
-        for (bubble in bubbles) {
+        // Work from the broadest detection inward. A detector can report both the whole bubble and
+        // a smaller crop around one line. Processing the crop first changes the pixels the full
+        // detection subsequently inspects and creates two unrelated text slots in one bubble.
+        // Starting with the full region also lets us reject the smaller duplicate before it erases
+        // anything, instead of discovering the collision only after both copies modified the page.
+        val eraseOrder = bubbles.sortedByDescending { it.box.width.toLong() * it.box.height }
+        for (bubble in eraseOrder) {
             if (bubble.translated.isBlank()) continue
+            val box = bubble.box.toRect()
+            val duplicateRegion = plans.any { plan ->
+                (bubble.box.isTextBlock == plan.isTextBlock &&
+                    plan.slot.contains(box.centerX(), box.centerY())) ||
+                    intersectionFraction(box, plan.sourceBox) >= SAME_BUBBLE_BOX_FRACTION
+            }
+            val absorbedCaptionFragment = !bubble.box.isTextBlock && plans.any { plan ->
+                plan.isTextBlock && sameHorizontalCaptionBand(box, plan.sourceBox) &&
+                    horizontalCaptionGap(box, plan.sourceBox) <=
+                    minOf(box.height(), plan.sourceBox.height()) * CAPTION_FRAGMENT_MAX_GAP_HEIGHTS
+            }
+            if (duplicateRegion || absorbedCaptionFragment) {
+                logcat { "Skipping ${bubble.box}: its bubble was already prepared for lettering" }
+                continue
+            }
             runCatching { eraseBubble(output, bubble)?.let { plans += it } }
                 .onFailure { logcat { "Failed to erase bubble ${bubble.box}: ${it.message}" } }
         }
 
-        // One line of dialogue belongs in one place on the page. When a bubble is detected twice and
-        // the two boxes do not overlap — one on the bubble, one on the artwork beside it — both get
-        // lettered, and the reader sees the sentence again in miniature over the picture. Overlap
-        // cannot catch that, so the same text anywhere on the page is resolved here, before drawing,
-        // by keeping whichever candidate has the most room. Short lines are exempt: "Hả?!" really
-        // can appear twice on a page.
+        // Prefer the roomiest slots first. Duplicate detector boxes were already rejected on geometry
+        // before they could erase anything. Do not dedupe two non-overlapping regions merely because
+        // their translations look alike: providers sometimes return the same wording for two halves
+        // of a connected speech balloon, and dropping the second plan after erasure leaves a pristine
+        // but completely blank half-bubble.
         val ordered = plans.sortedByDescending { it.slot.width().toLong() * it.slot.height() }
-        val kept = ArrayList<Plan>(ordered.size)
-        for (plan in ordered) {
-            val repeat = wordCount(plan.text) >= MIN_WORDS_FOR_PAGE_DEDUPE &&
-                kept.any { looksLikeSameLine(it.text, plan.text) }
-            if (repeat) {
-                logcat { "Skipping ${plan.slot}: this line is already lettered elsewhere on the page" }
-                continue
-            }
-            kept += plan
-        }
 
         val painted = mutableListOf<Rect>()
         val written = mutableListOf<Pair<Rect, String>>()
-        for (plan in kept) {
+        for (plan in ordered) {
             // The detector sometimes returns two boxes for one bubble that overlap too little for
             // non-maximum suppression to merge them. Both are read, both come back with the same line,
             // and both get lettered — the bubble ends up with its translation printed twice, the second
@@ -122,10 +132,11 @@ class BubbleRenderer(private val context: Context) {
                 logcat { "Skipping ${plan.slot}: ${free.width()}px is too narrow to letter" }
                 continue
             }
+            var lettered = false
             runCatching {
                 canvas.save()
                 canvas.clipRect(free.left, free.top, free.right, free.bottom)
-                val lettered = drawText(
+                lettered = drawText(
                     canvas = canvas,
                     text = plan.text,
                     left = free.left,
@@ -140,8 +151,14 @@ class BubbleRenderer(private val context: Context) {
                 if (!lettered) logcat { "Skipping ${plan.slot}: text cannot fit even at minimum size" }
                 canvas.restore()
             }.onFailure { logcat { "Failed to letter ${plan.slot}: ${it.message}" } }
-            painted += free
-            written += plan.slot to plan.text
+            // A plan may have erased its source before fitting fails. Do not reserve that empty
+            // rectangle: a later overlapping plan may have a larger slot and can still letter the
+            // dialogue successfully. Marking failed slots occupied was the reason some manga boxes
+            // stayed blank while their translated line appeared clipped in a neighbouring crop.
+            if (lettered) {
+                painted += free
+                written += plan.slot to plan.text
+            }
         }
         return output
     }
@@ -162,9 +179,6 @@ class BubbleRenderer(private val context: Context) {
         return shared.toFloat() / minOf(left.size, right.size) >= SAME_LINE_OVERLAP
     }
 
-    private fun wordCount(text: String): Int =
-        text.split(WORD_SPLIT).count { it.length > 1 }
-
     /** Fraction of [inner]'s area that lies inside [outer], in 0..1. */
     private fun containment(inner: Rect, outer: Rect): Float {
         val area = inner.width().toLong() * inner.height()
@@ -174,6 +188,27 @@ class BubbleRenderer(private val context: Context) {
         return (overlap.width().toLong() * overlap.height()).toFloat() / area
     }
 
+    private fun sameHorizontalCaptionBand(a: Rect, b: Rect): Boolean {
+        val vertical = minOf(a.bottom, b.bottom) - maxOf(a.top, b.top)
+        return vertical.coerceAtLeast(0).toFloat() /
+            minOf(a.height(), b.height()).coerceAtLeast(1) >= CAPTION_FRAGMENT_ROW_OVERLAP
+    }
+
+    private fun horizontalCaptionGap(a: Rect, b: Rect): Int = when {
+        a.right < b.left -> b.left - a.right
+        b.right < a.left -> a.left - b.right
+        else -> 0
+    }
+
+    /** Share of the smaller rectangle occupied by the intersection. */
+    private fun intersectionFraction(a: Rect, b: Rect): Float {
+        val smaller = minOf(a.width().toLong() * a.height(), b.width().toLong() * b.height())
+        if (smaller <= 0) return 0f
+        val overlap = Rect(a)
+        if (!overlap.intersect(b)) return 0f
+        return (overlap.width().toLong() * overlap.height()).toFloat() / smaller
+    }
+
     /** One bubble that has been cleared, and the text still to be written into it. */
     private class Plan(
         /** Where the text may go, in page coordinates. */
@@ -181,8 +216,11 @@ class BubbleRenderer(private val context: Context) {
         val text: String,
         val inkColor: Int,
         val paperColor: Int,
+        /** Detector geometry used to reject a second detection of the same physical bubble. */
+        val sourceBox: Rect,
         /** The original was set flush left — a status window or caption, not a speech bubble. */
         val alignLeft: Boolean = false,
+        val isTextBlock: Boolean = false,
     )
 
     /**
@@ -273,7 +311,13 @@ class BubbleRenderer(private val context: Context) {
         // being generous here costs a little work and nothing else.
         val padRatio = if (bubble.box.isTextBlock) TEXT_BLOCK_PAD_RATIO else REGION_PAD_RATIO
         val padCeiling = if (bubble.box.isTextBlock) TEXT_BLOCK_PAD_MAX else REGION_PAD_MAX
-        val padBase = if (bubble.box.isTextBlock) max(box.width, box.height) else min(box.width, box.height)
+        // A speech-bubble detector may lock onto only the lower half of the lettering rather than the
+        // bubble outline. Padding from the shorter side (and capping it at 24 px) then makes the upper
+        // lines literally unavailable to the flat-fill pass: the translated paragraph is clean, but
+        // two original lines remain above it. Use the longer side for both detector kinds and give a
+        // speech bubble enough crop to discover its complete, outline-bounded interior. The fill still
+        // cannot cross that outline, and the non-flat fallback remains restricted to searchArea below.
+        val padBase = max(box.width, box.height)
         val pad = (padBase * padRatio).roundToInt().coerceIn(4, padCeiling)
         val regionLeft = (box.left - pad).coerceAtLeast(0)
         val regionTop = (box.top - pad).coerceAtLeast(0)
@@ -285,14 +329,34 @@ class BubbleRenderer(private val context: Context) {
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, regionLeft, regionTop, width, height)
+        val originalPixels = pixels.copyOf()
 
-        val searchArea = glyphSearchArea(bubble, regionLeft, regionTop, width, height, box.width, box.height)
+        // Keep a conservative area for glyph inpainting/text placement, but let the flat-fill probe
+        // look vertically for the complete bubble. OCR and bubble detectors can both return only the
+        // lower lines; using one rectangle for both jobs either left those lines behind or allowed a
+        // no-bubble fallback to wander into artwork.
+        val searchArea = glyphSearchArea(
+            bubble, regionLeft, regionTop, width, height, box.width, box.height, expandForFill = false,
+        )
+        val fillSearchArea = glyphSearchArea(
+            bubble, regionLeft, regionTop, width, height, box.width, box.height, expandForFill = true,
+        )
         // Preferred path: repaint a flat bubble interior wholesale. It erases the lettering with no
         // residue, leaves no fringe where a glyph mask stopped, and hands back the bubble's real shape
         // so the replacement text is fitted to the bubble rather than to a guess.
         // OCR geometry, moved into region coordinates so the fill can tell lettering from outline.
         val textLines = bubble.lines.map { line ->
             Rect(line.rect).apply { offset(-regionLeft, -regionTop) }
+        }
+
+        // Subtitle-style manga narration is commonly white outlined text on an almost solid black
+        // strip. Repaint that strip directly: the background is intentionally uniform, so a solid
+        // fill removes both the white core and dark outline without the glyph classifier confusing
+        // one outline for another copy of the source sentence.
+        if (bubble.box.isTextBlock && textLines.isNotEmpty()) {
+            eraseUniformCaptionStrip(
+                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop,
+            )?.let { return it }
         }
 
         // Measured from the original lettering, before any of it is erased.
@@ -307,9 +371,46 @@ class BubbleRenderer(private val context: Context) {
         // strictly the fallback, for the panels that have no floodable interior at all.
         val isTextBlock = bubble.box.isTextBlock && textLines.isNotEmpty()
 
+        // Erase only the conservative component. An expanded flood can escape through an open tail
+        // into the white page and repaint parts of the outline. The expanded result is still useful
+        // for finding a centred layout slot; leftover lettering outside the conservative component is
+        // removed below with GlyphMask, whose structural guard explicitly protects outlines/tails.
         val flat = BubbleFill.detect(pixels, width, height, searchArea, textLines)
+        val layoutFlat = if (fillSearchArea != searchArea) {
+            BubbleFill.detect(pixels, width, height, fillSearchArea, textLines)
+        } else {
+            null
+        }
         if (flat != null) {
             for (i in pixels.indices) if (flat.region[i]) pixels[i] = flat.fillColor
+            val clearedDarkCaption = bubble.box.isTextBlock &&
+                luminanceOf(flat.fillColor) <= DARK_CAPTION_MAX_LUMA
+            if (clearedDarkCaption) {
+                // BubbleFill correctly identifies the black caption field but deliberately excludes
+                // its light glyphs from the flood. On outlined subtitles those excluded islands are
+                // precisely the source text, so cover their OCR-bounded strip with the proven fill.
+                val caption = Rect(textLines.first())
+                textLines.drop(1).forEach { caption.union(it) }
+                val growX = max(6, (caption.height() * DARK_CAPTION_PAD_X).roundToInt())
+                val growY = max(3, (caption.height() * DARK_CAPTION_PAD_Y).roundToInt())
+                caption.inset(-growX, -growY)
+                caption.left = caption.left.coerceIn(0, width - 1)
+                caption.top = caption.top.coerceIn(0, height - 1)
+                caption.right = caption.right.coerceIn(caption.left + 1, width)
+                caption.bottom = caption.bottom.coerceIn(caption.top + 1, height)
+                for (y in caption.top until caption.bottom) {
+                    val base = y * width
+                    for (x in caption.left until caption.right) pixels[base + x] = flat.fillColor
+                }
+                logcat { "text-block=${bubble.box} cleared outlined dark-caption strip=$caption" }
+            }
+            // OCR text-block boxes hug lettering rather than the enclosing balloon. On manga's
+            // white paper an expanded flood can escape through a tail or a panel gap and treat the
+            // entire gutter as writable space. That both moves the translation out of its bubble
+            // and lets the leftover sweep erase nearby drawing. The conservative flood is already
+            // outset around OCR geometry; keep synthetic text blocks inside it. Real detector boxes
+            // can still use the expanded component needed by clipped manhwa balloons.
+            val layout = if (bubble.box.isTextBlock) flat else layoutFlat ?: flat
 
             // Sweep the whole filled bubble for leftover lettering, not just the detector's box.
             //
@@ -319,7 +420,7 @@ class BubbleRenderer(private val context: Context) {
             // Vietnamese sentence with "THING ELSE, SIR?" still sitting underneath it. The fill
             // region is the bubble's true shape, so that is what has to be swept.
             val sweepArea = Rect(flat.bounds).apply {
-                union(searchArea)
+                union(fillSearchArea)
                 left = left.coerceAtLeast(0)
                 top = top.coerceAtLeast(0)
                 right = right.coerceAtMost(width)
@@ -327,24 +428,68 @@ class BubbleRenderer(private val context: Context) {
             }
             val leftover = GlyphMask.detect(pixels, width, height, sweepArea)
             if (leftover.covered > 0) {
+                // The detector box can cover most of a manga panel while the actual balloon is a
+                // small white component inside it. A whole-box glyph sweep then sees hair, armour,
+                // panel hatching and screentone as thousands of letters and inpaints the drawing.
+                // OCR element boxes are the positive evidence for lettering outside the flood; only
+                // their padded envelopes may participate in this cleanup.
+                val leftoverAllowed = textLineEnvelope(textLines, width, height)
                 var outside = 0
                 for (i in leftover.mask.indices) {
-                    if (leftover.mask[i] && !flat.region[i]) outside++ else if (leftover.mask[i]) leftover.mask[i] = false
+                    if (!leftover.mask[i]) continue
+                    // A dark outline lives immediately outside the floodable interior. GlyphMask can
+                    // mistake a short curved section for a letter when the detector crop cuts the
+                    // connected outline in two. Never inpaint such boundary pixels. Real leftover
+                    // lettering is inside the expanded interior and remains eligible for removal.
+                    val protectOutline = !layout.region[i] && touchesRegion(i, layout.region, width, height)
+                    if (!leftoverAllowed[i] || flat.region[i] || protectOutline) {
+                        leftover.mask[i] = false
+                    } else {
+                        outside++
+                    }
                 }
                 if (outside > MIN_LEFTOVER_GLYPHS) {
                     Inpainter.fill(pixels, width, height, leftover.mask)
                     logcat { "Erased $outside leftover glyph px outside the flat fill of ${bubble.box}" }
                 }
             }
+            // Flooding and glyph inpainting are intentionally aggressive inside the balloon. Restore
+            // only long, connected dark structures that straddle a flood boundary. A balloon outline
+            // is one large component; individual source letters are small disconnected components.
+            // This repairs a clipped arc/tail without reviving a missed English line near that arc.
+            if (!clearedDarkCaption) {
+                restoreBoundaryStructures(
+                    pixels = pixels,
+                    original = originalPixels,
+                    fillColor = flat.fillColor,
+                    regions = listOf(flat.region, layout.region),
+                    width = width,
+                    height = height,
+                )
+            }
             bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
 
-            val slot = TextArea.largestInscribedRect(flat.region, width, flat.bounds) ?: flat.bounds
+            var slot = TextArea.largestInscribedRect(layout.region, width, layout.bounds) ?: layout.bounds
+            if (bubble.box.isTextBlock) {
+                textBlockPlacementBounds(bubble, regionLeft, regionTop, width, height)?.let { allowed ->
+                    val constrained = Rect(slot)
+                    if (constrained.intersect(allowed) &&
+                        constrained.width() >= MIN_SLOT_SIDE && constrained.height() >= MIN_SLOT_SIDE
+                    ) {
+                        slot = constrained
+                    }
+                }
+            }
             val page = Rect(slot).apply { offset(regionLeft, regionTop) }
             logcat {
-                "bubble=${bubble.box} flat-fill bounds=${flat.bounds} slot=$slot page=$page " +
+                "bubble=${bubble.box} flat-fill bounds=${flat.bounds} layout=${layout.bounds} " +
+                    "slot=$slot page=$page " +
                     "fill=${Integer.toHexString(flat.fillColor)} ink=${Integer.toHexString(flat.textColor)}"
             }
-            return Plan(page, bubble.translated, flat.textColor, flat.fillColor, leftAligned)
+            return Plan(
+                page, bubble.translated, flat.textColor, flat.fillColor, box.toRect(), leftAligned,
+                bubble.box.isTextBlock,
+            )
         }
 
         // No floodable interior. A status panel lands here — translucent gradient, no flat region to
@@ -353,6 +498,16 @@ class BubbleRenderer(private val context: Context) {
             eraseTextBlock(
                 bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
             )?.let { return it }
+
+            // A synthetic text block over detailed manga artwork must never fall through to the
+            // broad detector-box glyph pass below. The box can contain half a panel, so classifying
+            // every ink component in it turns faces, clothes and screentone into "letters" and
+            // inpaints the drawing into a large blur. OCR element rectangles are positive evidence
+            // of lettering; limit the fallback to those rectangles and leave every other pixel of
+            // the panel untouched.
+            return eraseTextBlockGlyphs(
+                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
+            )
         }
 
         val mask = GlyphMask.detect(pixels, width, height, searchArea)
@@ -403,7 +558,10 @@ class BubbleRenderer(private val context: Context) {
             pixels = pixels,
             width = width,
             height = height,
-            bounds = Rect(0, 0, width, height),
+            // The padded crop exists so inpainting has samples on every side; it is not permission
+            // to place text anywhere in that crop. Restricting the flood to the detected/text area
+            // prevents a flat patch of nearby artwork from becoming a larger, out-of-bubble slot.
+            bounds = searchArea,
             seed = coreBounds.centerX() to coreBounds.centerY(),
             blocked = mask.blocked,
             fallback = glyphFallback,
@@ -423,7 +581,118 @@ class BubbleRenderer(private val context: Context) {
         }
 
         val page = Rect(textArea).apply { offset(regionLeft, regionTop) }
-        return Plan(page, bubble.translated, inkColor, paperColor, leftAligned)
+        return Plan(
+            page, bubble.translated, inkColor, paperColor, box.toRect(), leftAligned,
+            bubble.box.isTextBlock,
+        )
+    }
+
+    private fun touchesRegion(index: Int, region: BooleanArray, width: Int, height: Int): Boolean {
+        val x = index % width
+        val y = index / width
+        for (dy in -OUTLINE_GUARD_RADIUS..OUTLINE_GUARD_RADIUS) {
+            val py = y + dy
+            if (py !in 0 until height) continue
+            for (dx in -OUTLINE_GUARD_RADIUS..OUTLINE_GUARD_RADIUS) {
+                val px = x + dx
+                if (px in 0 until width && region[py * width + px]) return true
+            }
+        }
+        return false
+    }
+
+    private fun touchesOutsideRegion(index: Int, region: BooleanArray, width: Int, height: Int): Boolean {
+        val x = index % width
+        val y = index / width
+        for (dy in -OUTLINE_GUARD_RADIUS..OUTLINE_GUARD_RADIUS) {
+            val py = y + dy
+            if (py !in 0 until height) continue
+            for (dx in -OUTLINE_GUARD_RADIUS..OUTLINE_GUARD_RADIUS) {
+                val px = x + dx
+                if (px in 0 until width && !region[py * width + px]) return true
+            }
+        }
+        return false
+    }
+
+    private fun restoreBoundaryStructures(
+        pixels: IntArray,
+        original: IntArray,
+        fillColor: Int,
+        regions: List<BooleanArray>,
+        width: Int,
+        height: Int,
+    ) {
+        val dark = BooleanArray(original.size) {
+            colorDistance(original[it], fillColor) >= OUTLINE_COLOR_DISTANCE_SQ
+        }
+        val seen = BooleanArray(original.size)
+        val queue = IntArray(original.size)
+        val component = IntArray(original.size)
+        val minimumStructurePixels = ((width + height) * OUTLINE_COMPONENT_SCALE).roundToInt()
+            .coerceAtLeast(MIN_OUTLINE_COMPONENT_PIXELS)
+
+        for (seed in original.indices) {
+            if (!dark[seed] || seen[seed]) continue
+            var head = 0
+            var tail = 0
+            var count = 0
+            var minX = width
+            var minY = height
+            var maxX = 0
+            var maxY = 0
+            queue[tail++] = seed
+            seen[seed] = true
+            while (head < tail) {
+                val index = queue[head++]
+                component[count++] = index
+                val x = index % width
+                val y = index / width
+                minX = min(minX, x)
+                minY = min(minY, y)
+                maxX = max(maxX, x)
+                maxY = max(maxY, y)
+                for (dy in -1..1) {
+                    val py = y + dy
+                    if (py !in 0 until height) continue
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val px = x + dx
+                        if (px !in 0 until width) continue
+                        val neighbor = py * width + px
+                        if (dark[neighbor] && !seen[neighbor]) {
+                            seen[neighbor] = true
+                            queue[tail++] = neighbor
+                        }
+                    }
+                }
+            }
+            if (count < minimumStructurePixels) continue
+            val spansOutline = (maxX - minX) >= width * MIN_OUTLINE_WIDTH_FRACTION &&
+                (maxY - minY) >= height * MIN_OUTLINE_HEIGHT_FRACTION
+            if (!spansOutline) continue
+            var intersectsBoundary = false
+            for (position in 0 until count) {
+                val index = component[position]
+                val nearBoundary = regions.any { region ->
+                    if (region[index]) {
+                        touchesOutsideRegion(index, region, width, height)
+                    } else {
+                        touchesRegion(index, region, width, height)
+                    }
+                }
+                if (nearBoundary) {
+                    intersectsBoundary = true
+                    break
+                }
+            }
+            if (intersectsBoundary) {
+                for (position in 0 until count) {
+                    val index = component[position]
+                    pixels[index] = original[index]
+                }
+            }
+        }
     }
 
     /**
@@ -506,7 +775,234 @@ class BubbleRenderer(private val context: Context) {
             "text-block=${bubble.box} strips=${strips.size} bounds=$bounds page=$page " +
                 "left=$leftAligned ink=${Integer.toHexString(inkColor)}"
         }
-        return Plan(page, bubble.translated, inkColor, paperColor, leftAligned)
+        return Plan(
+            page, bubble.translated, inkColor, paperColor, bubble.box.toRect(), leftAligned,
+            bubble.box.isTextBlock,
+        )
+    }
+
+    private fun eraseUniformCaptionStrip(
+        bitmap: Bitmap,
+        bubble: TranslatedBubble,
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        textLines: List<Rect>,
+        regionLeft: Int,
+        regionTop: Int,
+    ): Plan? {
+        val bounds = Rect(textLines.first())
+        textLines.drop(1).forEach { bounds.union(it) }
+        val aspect = bounds.width().toFloat() / bounds.height().coerceAtLeast(1)
+        if (aspect < UNIFORM_CAPTION_MIN_ASPECT &&
+            (aspect < UNIFORM_CAPTION_ART_MIN_ASPECT || bounds.width() < UNIFORM_CAPTION_ART_MIN_WIDTH)
+        ) {
+            return null
+        }
+        val padX = max(6, (bounds.height() * DARK_CAPTION_PAD_X).roundToInt())
+        val padY = max(3, (bounds.height() * DARK_CAPTION_PAD_Y).roundToInt())
+        bounds.inset(-padX, -padY)
+        bounds.left = bounds.left.coerceIn(0, width - 1)
+        bounds.top = bounds.top.coerceIn(0, height - 1)
+        bounds.right = bounds.right.coerceIn(bounds.left + 1, width)
+        bounds.bottom = bounds.bottom.coerceIn(bounds.top + 1, height)
+
+        val samples = ArrayList<Int>()
+        val border = max(2, bounds.height() / 10)
+        for (y in bounds.top until bounds.bottom) {
+            val base = y * width
+            for (x in bounds.left until bounds.right) {
+                if (x < bounds.left + border || x >= bounds.right - border ||
+                    y < bounds.top + border || y >= bounds.bottom - border
+                ) {
+                    samples += pixels[base + x]
+                }
+            }
+        }
+        if (samples.size < MIN_INK_SAMPLES) return null
+        val lumas = samples.map { luminanceOf(it) }.sorted()
+        val median = lumas[lumas.size / 2]
+        val dark = median <= DARK_CAPTION_MAX_LUMA
+        val brightShare = lumas.count { it >= LIGHT_CAPTION_MIN_LUMA }.toFloat() / lumas.size
+        val light = median >= LIGHT_CAPTION_MIN_LUMA ||
+            (aspect >= UNIFORM_CAPTION_ART_MIN_ASPECT && brightShare >= LIGHT_CAPTION_MIN_SHARE)
+        if (!dark && !light) return null
+
+        if (light) {
+            // A long white narration strip is often split just before its final word. Expand only
+            // along the already-proven uniform row so that detached word is erased with the rest.
+            val extra = (bounds.height() * LIGHT_CAPTION_EXTRA_X).roundToInt()
+            bounds.left = (bounds.left - extra).coerceAtLeast(0)
+            bounds.right = (bounds.right + extra).coerceAtMost(width)
+        }
+
+        val sorted = samples.sortedBy { luminanceOf(it) }
+        val fill = if (dark) sorted.take(samples.size / 2) else sorted.takeLast(samples.size / 2)
+        val fillColor = Color.rgb(
+            fill.sumOf { (it shr 16) and 0xFF } / fill.size,
+            fill.sumOf { (it shr 8) and 0xFF } / fill.size,
+            fill.sumOf { it and 0xFF } / fill.size,
+        )
+        for (y in bounds.top until bounds.bottom) {
+            val base = y * width
+            for (x in bounds.left until bounds.right) pixels[base + x] = fillColor
+        }
+        bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
+        val page = Rect(bounds).apply { offset(regionLeft, regionTop) }
+        logcat { "text-block=${bubble.box} solid uniform-caption strip=$page" }
+        return Plan(
+            page, bubble.translated, if (dark) Color.WHITE else Color.rgb(40, 40, 40), fillColor,
+            bubble.box.toRect(), true,
+            bubble.box.isTextBlock,
+        )
+    }
+
+    /** Pixels close enough to OCR element geometry to plausibly be leftover source lettering. */
+    private fun textLineEnvelope(lines: List<Rect>, width: Int, height: Int): BooleanArray {
+        val allowed = BooleanArray(width * height)
+        for (line in lines) {
+            val growX = max(6, (line.height() * LEFTOVER_LINE_PAD_X).roundToInt())
+            val growY = max(2, (line.height() * LEFTOVER_LINE_PAD_Y).roundToInt())
+            val area = Rect(line).apply {
+                inset(-growX, -growY)
+                left = left.coerceIn(0, width)
+                top = top.coerceIn(0, height)
+                right = right.coerceIn(0, width)
+                bottom = bottom.coerceIn(0, height)
+            }
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) allowed[base + x] = true
+            }
+        }
+        return allowed
+    }
+
+    /**
+     * Removes unenclosed lettering over detailed artwork, restricted to OCR element geometry.
+     *
+     * [TextLineBox] entries are element boxes (normally one word each), not loose paragraph boxes.
+     * Running the glyph classifier independently in each padded element gives it enough background
+     * to reconstruct antialiased/outlined letters without ever granting it access to the rest of the
+     * manga panel. This is the safe path for captions, signs and title lettering over screentone.
+     */
+    private fun eraseTextBlockGlyphs(
+        bitmap: Bitmap,
+        bubble: TranslatedBubble,
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        textLines: List<Rect>,
+        regionLeft: Int,
+        regionTop: Int,
+        leftAligned: Boolean,
+    ): Plan? {
+        if (textLines.isEmpty()) return null
+
+        val combinedMask = BooleanArray(pixels.size)
+        val combinedCore = BooleanArray(pixels.size)
+        var lightVotes = 0
+        var darkVotes = 0
+        var bounds: Rect? = null
+
+        for (textLine in textLines) {
+            val padX = (textLine.height() * TEXT_BLOCK_GLYPH_PAD_X).roundToInt()
+                .coerceIn(TEXT_BLOCK_GLYPH_PAD_MIN, TEXT_BLOCK_GLYPH_PAD_MAX)
+            val padY = (textLine.height() * TEXT_BLOCK_GLYPH_PAD_Y).roundToInt()
+                .coerceIn(TEXT_BLOCK_GLYPH_PAD_MIN, TEXT_BLOCK_GLYPH_PAD_MAX)
+            val area = Rect(textLine).apply {
+                inset(-padX, -padY)
+                left = left.coerceIn(0, width - 1)
+                top = top.coerceIn(0, height - 1)
+                right = right.coerceIn(left + 1, width)
+                bottom = bottom.coerceIn(top + 1, height)
+            }
+            if (area.width() < MIN_REGION_SIDE || area.height() < MIN_REGION_SIDE) continue
+
+            val local = GlyphMask.detect(pixels, width, height, area)
+            if (local.covered == 0) continue
+            var localCore = 0
+            for (index in pixels.indices) {
+                if (local.mask[index]) combinedMask[index] = true
+                if (local.core[index]) {
+                    combinedCore[index] = true
+                    localCore++
+                }
+            }
+            if (local.lightOnDark) lightVotes += localCore else darkVotes += localCore
+            if (bounds == null) bounds = Rect(textLine) else bounds.union(textLine)
+        }
+
+        val covered = countTrue(combinedMask)
+        val textBounds = bounds ?: return null
+        if (covered < MIN_TEXT_BLOCK_GLYPH_PIXELS) {
+            logcat { "text-block ${bubble.box}: no reliable OCR-bounded glyphs; leaving artwork untouched" }
+            return null
+        }
+
+        val lightOnDark = lightVotes > darkVotes
+        val inkColor = coreInkColor(pixels, combinedCore, lightOnDark) ?: fallbackInk(lightOnDark)
+        if (!lightOnDark && textBounds.width() >= MIN_WIDE_ART_CAPTION_WIDTH &&
+            textBounds.width() >= textBounds.height() * WIDE_ART_CAPTION_MIN_ASPECT
+        ) {
+            val edge = Rect(
+                textBounds.left - (textBounds.height() * WIDE_ART_CAPTION_LEADING_PAD).roundToInt(),
+                textBounds.top,
+                textBounds.left + max(2, (textBounds.height() * WIDE_ART_CAPTION_INSIDE_PAD).roundToInt()),
+                textBounds.bottom,
+            )
+            edge.left = edge.left.coerceIn(0, width - 1)
+            edge.top = edge.top.coerceIn(0, height - 1)
+            edge.right = edge.right.coerceIn(edge.left + 1, width)
+            edge.bottom = edge.bottom.coerceIn(edge.top + 1, height)
+            for (y in edge.top until edge.bottom) {
+                val base = y * width
+                for (x in edge.left until edge.right) combinedMask[base + x] = true
+            }
+        }
+        Inpainter.fill(pixels, width, height, combinedMask)
+        bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
+
+        val slot = Rect(textBounds).apply {
+            val growX = max(3, (height() * TEXT_BLOCK_SLOT_PAD_X).roundToInt())
+            val growY = max(2, (height() * TEXT_BLOCK_SLOT_PAD_Y).roundToInt())
+            inset(-growX, -growY)
+            left = left.coerceIn(0, width - 1)
+            top = top.coerceIn(0, height - 1)
+            right = right.coerceIn(left + 1, width)
+            bottom = bottom.coerceIn(top + 1, height)
+        }
+        val paperColor = averageColorIn(pixels, width, slot)
+        val page = Rect(slot).apply { offset(regionLeft, regionTop) }
+        logcat {
+            "text-block=${bubble.box} OCR-bounded mask=$covered slot=$slot page=$page " +
+                "ink=${Integer.toHexString(inkColor)}"
+        }
+        return Plan(
+            page, bubble.translated, inkColor, paperColor, bubble.box.toRect(), leftAligned,
+            bubble.box.isTextBlock,
+        )
+    }
+
+    /** Writable bounds around a synthetic OCR block, in crop coordinates. */
+    private fun textBlockPlacementBounds(
+        bubble: TranslatedBubble,
+        regionLeft: Int,
+        regionTop: Int,
+        width: Int,
+        height: Int,
+    ): Rect? {
+        val local = bubble.box.toRect().apply { offset(-regionLeft, -regionTop) }
+        val padX = (local.width() * TEXT_BLOCK_PLACEMENT_PAD_RATIO).roundToInt()
+            .coerceIn(TEXT_BLOCK_PLACEMENT_PAD_MIN, TEXT_BLOCK_PLACEMENT_PAD_MAX)
+        val padY = (local.height() * TEXT_BLOCK_PLACEMENT_PAD_RATIO).roundToInt()
+            .coerceIn(TEXT_BLOCK_PLACEMENT_PAD_MIN, TEXT_BLOCK_PLACEMENT_PAD_MAX)
+        local.inset(-padX, -padY)
+        local.left = local.left.coerceIn(0, width - 1)
+        local.top = local.top.coerceIn(0, height - 1)
+        local.right = local.right.coerceIn(local.left + 1, width)
+        local.bottom = local.bottom.coerceIn(local.top + 1, height)
+        return if (local.width() >= MIN_SLOT_SIDE && local.height() >= MIN_SLOT_SIDE) local else null
     }
 
     /**
@@ -627,6 +1123,7 @@ class BubbleRenderer(private val context: Context) {
         height: Int,
         boxWidth: Int,
         boxHeight: Int,
+        expandForFill: Boolean,
     ): Rect {
         // A bubble box gets inset — its outer few percent is outline, not lettering. A text-block box
         // gets the opposite treatment: it came from OCR and stops at the letters, so the bubble it
@@ -637,13 +1134,43 @@ class BubbleRenderer(private val context: Context) {
         // the result and the glyph mask handles the box instead.
         val marginX = (boxWidth * if (bubble.box.isTextBlock) -TEXT_BLOCK_OUTSET_RATIO else BOX_INSET_RATIO)
             .roundToInt()
-        val marginY = (boxHeight * if (bubble.box.isTextBlock) -TEXT_BLOCK_OUTSET_RATIO else BOX_INSET_RATIO)
-            .roundToInt()
+        val marginY = if (expandForFill) {
+            // Both detector kinds sometimes return only the lower lines of a tall bubble. Expanding
+            // by the width (rather than the clipped height) lets BubbleFill reach the real outline.
+            // This area is never used by the artwork fallback or as its text-placement permission.
+            -max(
+                boxHeight * TEXT_BLOCK_OUTSET_RATIO,
+                boxWidth * FILL_VERTICAL_OUTSET_RATIO,
+            ).roundToInt()
+        } else if (bubble.box.isTextBlock) {
+            (-boxHeight * TEXT_BLOCK_OUTSET_RATIO).roundToInt()
+        } else {
+            (boxHeight * BOX_INSET_RATIO).roundToInt()
+        }
         val left = (bubble.box.left - regionLeft + marginX).coerceIn(0, width - 1)
         val top = (bubble.box.top - regionTop + marginY).coerceIn(0, height - 1)
         val right = (bubble.box.right - regionLeft - marginX).coerceIn(left + 1, width)
         val bottom = (bubble.box.bottom - regionTop - marginY).coerceIn(top + 1, height)
-        return Rect(left, top, right, bottom)
+        val area = Rect(left, top, right, bottom)
+
+        // Detector boxes sometimes stop inside the first/last glyph. OCR element boxes are stronger
+        // evidence of where lettering actually exists, so the erase search must include every one,
+        // with enough fringe for antialiasing and punctuation. This expansion is still bounded by
+        // the padded crop and later structural-ink checks continue protecting the bubble outline.
+        for (line in bubble.lines) {
+            val local = Rect(line.rect).apply { offset(-regionLeft, -regionTop) }
+            val grow = max(
+                OCR_SEARCH_PAD_MIN,
+                (line.rect.height() * OCR_SEARCH_PAD_RATIO).roundToInt(),
+            ).coerceAtMost(OCR_SEARCH_PAD_MAX)
+            local.inset(-grow, -grow)
+            local.left = local.left.coerceIn(0, width - 1)
+            local.top = local.top.coerceIn(0, height - 1)
+            local.right = local.right.coerceIn(local.left + 1, width)
+            local.bottom = local.bottom.coerceIn(local.top + 1, height)
+            area.union(local)
+        }
+        return area
     }
 
     /**
@@ -958,16 +1485,27 @@ class BubbleRenderer(private val context: Context) {
         const val SAME_LINE_OVERLAP = 0.6f
         /** Slot area inside an already-lettered slot above which it is the same bubble again. */
         const val NESTED_SLOT_FRACTION = 0.7f
-        /** Shorter lines than this may legitimately repeat on one page, so they are not deduped. */
-        const val MIN_WORDS_FOR_PAGE_DEDUPE = 4
-
-        const val REGION_PAD_RATIO = 0.12f
-        const val REGION_PAD_MAX = 24
+        /** Overlap of detector boxes that is too large to represent two independent bubbles. */
+        const val SAME_BUBBLE_BOX_FRACTION = 0.72f
+        const val CAPTION_FRAGMENT_ROW_OVERLAP = 0.45f
+        const val CAPTION_FRAGMENT_MAX_GAP_HEIGHTS = 2
+        const val REGION_PAD_RATIO = 0.50f
+        const val REGION_PAD_MAX = 240
         /** OCR boxes hug the letters, so the bubble around them needs much more room than this. */
         const val TEXT_BLOCK_PAD_RATIO = 0.35f
         const val TEXT_BLOCK_PAD_MAX = 220
         const val MIN_REGION_SIDE = 10
         const val BOX_INSET_RATIO = 0.06f
+        const val OCR_SEARCH_PAD_RATIO = 0.22f
+        const val OCR_SEARCH_PAD_MIN = 2
+        const val OCR_SEARCH_PAD_MAX = 12
+        const val FILL_VERTICAL_OUTSET_RATIO = 0.45f
+        const val OUTLINE_GUARD_RADIUS = 4
+        const val OUTLINE_COLOR_DISTANCE_SQ = 70 * 70
+        const val OUTLINE_COMPONENT_SCALE = 0.12f
+        const val MIN_OUTLINE_COMPONENT_PIXELS = 80
+        const val MIN_OUTLINE_WIDTH_FRACTION = 0.42f
+        const val MIN_OUTLINE_HEIGHT_FRACTION = 0.20f
         /** How far past an OCR box the bubble around it is assumed to reach. */
         const val TEXT_BLOCK_OUTSET_RATIO = 0.22f
         const val MIN_INK_SAMPLES = 12
@@ -978,6 +1516,33 @@ class BubbleRenderer(private val context: Context) {
         const val LINE_STRIP_PAD_X = 0.45f
         /** Vertical padding: kept tight so a strip does not reach into the line above or below. */
         const val LINE_STRIP_PAD_Y = 0.18f
+        const val LEFTOVER_LINE_PAD_X = 0.75f
+        const val LEFTOVER_LINE_PAD_Y = 0.30f
+        /** Tight safety fringe around OCR element boxes on detailed manga artwork. */
+        const val TEXT_BLOCK_GLYPH_PAD_X = 1.0f
+        const val TEXT_BLOCK_GLYPH_PAD_Y = 0.20f
+        const val TEXT_BLOCK_GLYPH_PAD_MIN = 2
+        const val TEXT_BLOCK_GLYPH_PAD_MAX = 64
+        const val MIN_TEXT_BLOCK_GLYPH_PIXELS = 20
+        const val MIN_WIDE_ART_CAPTION_WIDTH = 400
+        const val WIDE_ART_CAPTION_MIN_ASPECT = 7
+        const val WIDE_ART_CAPTION_LEADING_PAD = 0.25f
+        const val WIDE_ART_CAPTION_INSIDE_PAD = 0.04f
+        const val TEXT_BLOCK_SLOT_PAD_X = 0.12f
+        const val TEXT_BLOCK_SLOT_PAD_Y = 0.08f
+        const val DARK_CAPTION_PAD_X = 0.45f
+        const val DARK_CAPTION_PAD_Y = 0.18f
+        const val DARK_CAPTION_MAX_LUMA = 42f
+        const val LIGHT_CAPTION_MIN_LUMA = 220f
+        const val LIGHT_CAPTION_MIN_SHARE = 0.40f
+        const val LIGHT_CAPTION_EXTRA_X = 3.0f
+        const val UNIFORM_CAPTION_MIN_ASPECT = 4
+        const val UNIFORM_CAPTION_ART_MIN_ASPECT = 7f
+        const val UNIFORM_CAPTION_ART_MIN_WIDTH = 400
+        /** Synthetic OCR regions may use nearby bubble interior, but never a whole white gutter. */
+        const val TEXT_BLOCK_PLACEMENT_PAD_RATIO = 0.28f
+        const val TEXT_BLOCK_PLACEMENT_PAD_MIN = 8
+        const val TEXT_BLOCK_PLACEMENT_PAD_MAX = 80
         /**
          * Summed absolute RGB step between neighbouring pixels counted as a drawn edge. Matches the
          * threshold the measurement was tuned at against real pages.

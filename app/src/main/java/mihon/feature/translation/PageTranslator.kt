@@ -2,12 +2,14 @@ package mihon.feature.translation
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.detect.BubbleDetector
 import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
+import mihon.feature.translation.model.TextLineBox
 import mihon.feature.translation.model.TranslatedBubble
 import mihon.feature.translation.ocr.BubbleTextRecognizer
 import mihon.feature.translation.provider.BubbleTranslation
@@ -142,7 +144,15 @@ class PageTranslator(
 
             // Glyph geometry is collected regardless of who does the reading, because the renderer
             // needs it to mask strokes rather than whole bubbles. It is cheap and fully local.
-            ordered to recognizer.recognize(source, ordered, translationContext.sourceLanguage)
+            val read = recognizer.recognize(source, ordered, translationContext.sourceLanguage)
+            val (coalescedBoxes, coalescedRead) = coalesceTextRegions(ordered, read)
+            val kept = coalescedBoxes.indices.filterNot { index ->
+                isDecorativeDisplayText(coalescedBoxes[index], coalescedRead[index], source.width)
+            }
+            if (kept.size < coalescedBoxes.size) {
+                logcat { "Dropped ${coalescedBoxes.size - kept.size} decorative title/SFX region(s)" }
+            }
+            kept.map { coalescedBoxes[it] } to kept.map { coalescedRead[it] }
         }
 
         val provider = currentProvider()
@@ -185,6 +195,118 @@ class PageTranslator(
         logcat { "Rendering ${bubbles.size}/${boxes.size} translated bubbles" }
 
         renderer.render(source, bubbles, preferences.font.get())
+    }
+
+    /**
+     * Folds small detector fragments back into the whole-page OCR block that owns the same line.
+     *
+     * On manga captions ML Kit may stop a wide block just before its final word while the bubble
+     * model independently detects that word. Sending both regions to translation produces a clipped
+     * sentence plus a second translation stamped over it. Combining their line geometry here gives
+     * the provider one complete sentence and gives the renderer one complete erasure region.
+     */
+    private fun coalesceTextRegions(
+        boxes: List<BubbleBox>,
+        recognized: List<BubbleText>,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        val merged = recognized.toMutableList()
+        val consumed = BooleanArray(boxes.size)
+
+        boxes.indices.filter { boxes[it].isTextBlock }.forEach { blockIndex ->
+            val block = boxes[blockIndex]
+            val lines = merged[blockIndex].lines.toMutableList()
+            boxes.indices.filter { !boxes[it].isTextBlock && recognized[it].text.isNotBlank() }
+                .forEach { candidateIndex ->
+                    val candidateLines = recognized[candidateIndex].lines
+                    if (candidateLines.isEmpty() ||
+                        candidateLines.any { !isSameCaptionLane(it.rect, block.toRect()) }
+                    ) {
+                        return@forEach
+                    }
+                    lines += candidateLines
+                    consumed[candidateIndex] = true
+                }
+            if (lines.size != merged[blockIndex].lines.size) {
+                val canonical = canonicalCaptionLines(lines)
+                merged[blockIndex] = BubbleText(
+                    text = canonical.joinToString("\n") { it.text },
+                    lines = canonical,
+                )
+            }
+        }
+
+        if (consumed.any { it }) {
+            logcat { "Merged ${consumed.count { it }} detector fragment(s) into complete caption blocks" }
+        }
+        val keep = boxes.indices.filterNot { consumed[it] }
+        return keep.map { boxes[it] } to keep.map { merged[it] }
+    }
+
+    private fun isSameCaptionLane(line: Rect, block: Rect): Boolean {
+        val vertical = minOf(line.bottom, block.bottom) - maxOf(line.top, block.top)
+        val shorter = minOf(line.height(), block.height()).coerceAtLeast(1)
+        if (vertical.coerceAtLeast(0).toFloat() / shorter < CAPTION_ROW_OVERLAP) return false
+        val horizontalGap = when {
+            line.right < block.left -> block.left - line.right
+            line.left > block.right -> line.left - block.right
+            else -> 0
+        }
+        return horizontalGap <= line.height() * CAPTION_MAX_GAP_HEIGHTS
+    }
+
+    private fun canonicalCaptionLines(lines: List<TextLineBox>): List<TextLineBox> {
+        val rows = mutableListOf<MutableList<TextLineBox>>()
+        lines.sortedBy { it.rect.centerY() }.forEach { line ->
+            val row = rows.firstOrNull { existing ->
+                val anchor = existing.first().rect
+                val overlap = minOf(anchor.bottom, line.rect.bottom) - maxOf(anchor.top, line.rect.top)
+                overlap.coerceAtLeast(0).toFloat() /
+                    minOf(anchor.height(), line.rect.height()).coerceAtLeast(1) >= CAPTION_ROW_OVERLAP
+            }
+            if (row == null) rows += mutableListOf(line) else row += line
+        }
+        return rows.map { row ->
+            val useful = row.sortedBy { it.rect.left }.filterIndexed { index, line ->
+                row.sortedBy { it.rect.left }.take(index).none { prior ->
+                    val overlap = Rect(line.rect)
+                    overlap.intersect(prior.rect) &&
+                        overlap.width().toFloat() / line.rect.width().coerceAtLeast(1) >= CAPTION_CONTAINMENT
+                }
+            }
+            val text = useful.fold("") { acc, segment -> joinCaptionSegments(acc, segment.text.trim()) }
+            val bounds = Rect(useful.first().rect)
+            useful.drop(1).forEach { bounds.union(it.rect) }
+            TextLineBox(bounds, text)
+        }
+    }
+
+    private fun joinCaptionSegments(left: String, right: String): String {
+        if (left.isBlank()) return right
+        if (right.isBlank()) return left
+        val last = left.substringAfterLast(' ')
+        val cleaned = if (last.length == 1 && right.startsWith(last, ignoreCase = true)) {
+            left.dropLast(1).trimEnd()
+        } else {
+            left
+        }
+        return "$cleaned $right"
+    }
+
+    /**
+     * Large unenclosed display typography is artwork (chapter titles, logos and oversized SFX), not
+     * dialogue. Synthetic text blocks are the only candidates: real speech-balloon detections keep
+     * their large shouts. Element height separates a title set at poster scale from ordinary manga
+     * captions while the area condition avoids dropping a single short exclamation.
+     */
+    private fun isDecorativeDisplayText(box: BubbleBox, text: BubbleText, pageWidth: Int): Boolean {
+        if (!box.isTextBlock || text.lines.isEmpty() || pageWidth <= 0) return false
+        val heights = text.lines.map { it.rect.height() }.filter { it > 0 }.sorted()
+        if (heights.isEmpty()) return false
+        val medianHeight = heights[heights.size / 2]
+        val largeType = medianHeight >= maxOf(MIN_DISPLAY_TEXT_HEIGHT, (pageWidth * DISPLAY_TEXT_HEIGHT_RATIO).toInt())
+        val area = box.width.toLong() * box.height
+        val substantial = area >= pageWidth.toLong() * pageWidth * DISPLAY_TEXT_AREA_RATIO
+        return largeType && substantial
     }
 
     /**
@@ -415,6 +537,13 @@ class PageTranslator(
     }
 
     private companion object {
+        const val MIN_DISPLAY_TEXT_HEIGHT = 42
+        const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f
+        const val DISPLAY_TEXT_AREA_RATIO = 0.08f
+        const val CAPTION_ROW_OVERLAP = 0.45f
+        const val CAPTION_MAX_GAP_HEIGHTS = 2
+        const val CAPTION_CONTAINMENT = 0.65f
+
         /** Floor for the row-banding height, so a page of tiny boxes still bands sensibly. */
         const val MIN_READING_BAND = 24
 
