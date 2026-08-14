@@ -1,0 +1,6 @@
+D/TextBlockDetector: Text-block pass added 1 region(s) and kept 0 speech fallback(s)
+D/PageTranslator: Merged 43 detector fragment(s) into complete caption blocks
+D/BubbleRenderer: text-block BubbleBox(left=8, top=839, right=800, bottom=6202, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
+D/BubbleRenderer: text-block=BubbleBox(left=8, top=839, right=800, bottom=6202, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=482292 slot=Rect(0, 0 - 800, 5731) page=Rect(0, 619 - 800, 6350) ink=ff030303
+D/BubbleRenderer: Skipping BubbleBox(left=519, top=2748, right=578, bottom=2797, confidence=0.16507554, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
+D/BubbleRenderer: Skipping BubbleBox(left=342, top=5086, right=402, bottom=5116, confidence=0.33047563, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering

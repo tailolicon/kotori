@@ -196,10 +196,121 @@
     "h": 16000,
     "kb": 1235
    }
+  ],
+  "kd53": [
+   {
+    "file": "kd53-8de6e58c.jpg",
+    "w": 800,
+    "h": 13001,
+    "kb": 835,
+    "guards": "flat fill painted over glowing narration boxes; patch wider than the caption spills onto black"
+   },
+   {
+    "file": "kd53-33ea889c.jpg",
+    "w": 800,
+    "h": 13001,
+    "kb": 953,
+    "guards": "outlined lettering neither erased nor replaced; stamped translation collides with the intact original"
+   },
+   {
+    "file": "kd53-ada33a8e.jpg",
+    "w": 800,
+    "h": 11498,
+    "kb": 715,
+    "guards": "stray word stamped on grass; free-floating caption half-erased; skill-panel lines left untranslated"
+   },
+   {
+    "file": "kd53-b6815aef.jpg",
+    "w": 800,
+    "h": 10788,
+    "kb": 842,
+    "guards": "flat black rectangle painted over artwork; patch edge cuts a bubble rim; partial erase leaves doubled text"
+   },
+   {
+    "file": "kd53-5d2f2ea7.jpg",
+    "w": 800,
+    "h": 14634,
+    "kb": 1194,
+    "guards": "original survives the erase under the stamp on grey bubbles; stray stamp on artwork; two-tone ink flattened"
+   },
+   {
+    "file": "kd53-645e31aa.jpg",
+    "w": 800,
+    "h": 12048,
+    "kb": 749,
+    "guards": "flat fill over a black-to-purple gradient bubble; untranslated bubbles beside doubled ones"
+   },
+   {
+    "file": "kd53-a5544ef9.jpg",
+    "w": 800,
+    "h": 11879,
+    "kb": 732,
+    "guards": "rectangular patch stamped over oval bubbles destroys their neon rim; white-with-glow ink flattened to dull rose; translucent bubble texture flattened"
+   },
+   {
+    "file": "kd53-99bc44fb.jpg",
+    "w": 800,
+    "h": 13459,
+    "kb": 863,
+    "guards": "erase cuts a hole through the bubble outline and the text starts outside the bubble"
+   },
+   {
+    "file": "kd53-783d728c.jpg",
+    "w": 800,
+    "h": 14475,
+    "kb": 970,
+    "guards": "red and yellow lettering re-rendered plain white; a separate right-aligned signature block absorbed into the paragraph above it"
+   }
+  ],
+  "asg123": [
+   {
+    "file": "asg123-0659af12.jpg",
+    "w": 800,
+    "h": 6505,
+    "kb": 506,
+    "guards": "credit banner replaced by a zero-variance flat rectangle; white body text re-rendered salmon; a red line loses its colour entirely"
+   },
+   {
+    "file": "asg123-38fd0b1e.jpg",
+    "w": 800,
+    "h": 6350,
+    "kb": 573,
+    "guards": "whole page's text rendered as one column over faces and gutters ignoring bubble geometry; an intact glyph survives the erase; HUD text smeared instead of removed"
+   },
+   {
+    "file": "asg123-9170b52e.jpg",
+    "w": 800,
+    "h": 6655,
+    "kb": 540,
+    "guards": "both bubbles emptied and their text stamped in the gutter across the rims; one bubble left byte-identical English"
+   },
+   {
+    "file": "asg123-16e3da8b.jpg",
+    "w": 800,
+    "h": 6735,
+    "kb": 565,
+    "guards": "erase rectangle reaches 130 px past the bubble it belongs to and whitens the background and a light beam"
+   },
+   {
+    "file": "asg123-2f92c14a.jpg",
+    "w": 800,
+    "h": 6930,
+    "kb": 466,
+    "guards": "half a line left un-erased with the translation stamped over it; text overflows one bubble into the next; erase rectangle sits where no text was drawn"
+   },
+   {
+    "file": "asg123-7a73972b.jpg",
+    "w": 800,
+    "h": 5901,
+    "kb": 405,
+    "guards": "88% of a band replaced by one zero-variance black fill, erasing character art and UI; replacement lettering drawn in a muddy tint"
+   }
   ]
  },
  "sets_doc": {
   "asg8": "Apocalypse Sword God ch.8 (KaiScans, 1280w webtoon strips). Guards: ghost lettering framing translations (fixed r17-r19), blue skill panels erase-by-strip + left alignment, jagged shout bubbles, TL/N captions, credit page dense panels, edge slivers, near-black ink #0c1924 vs the title-art saturation gate.",
-  "ch35": "Chapter 35 set (900w WEBP, mixes a 16000px strip with short slices). Material the r20+ renderer revisions were tuned against; locks their current behaviour."
+  "ch35": "Chapter 35 set (900w WEBP, mixes a 16000px strip with short slices). Material the r20+ renderer revisions were tuned against; locks their current behaviour.",
+  "asg123": "Apocalypse Sword God ch.123 (Raven Scans, 800w colour manhua). Added 2026-08-15 from the same audit as kd53: 39 of 98 changed bands were defective. Where kd53 covers colour manhwa, this set covers the manhua failure modes — flat zero-variance fills swallowing whole panels, text placed in the gutter between two bubbles instead of inside either, and erase rectangles decoupled from where the translation actually lands.",
+  "kd53": "Kidnapped Dragons ch.53 (Raven Scans, 800w colour manhwa). Added 2026-08-15 after a full-chapter audit found rendering defects on 46 of 129 changed bands. Colour webtoon art is what the earlier sets lack: glowing narration boxes, oval bubbles with neon rims, gradient bubble interiors and outlined lettering on grey — every one of which defeats a guard that greyscale strips never exercised."
  }
 }

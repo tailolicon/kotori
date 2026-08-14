@@ -39,6 +39,16 @@ phút, ngay trên bàn làm việc.
    `git diff --stat regression/golden`, commit corpus + golden **cùng commit** với bản sửa.
 5. Bump `RENDERER_VERSION` như thường lệ khi hành vi render đổi.
 
+## Suite xanh **không** có nghĩa là render tốt
+
+Bộ này chỉ chứng minh **không có gì thay đổi**. Nó không chấm chất lượng. Ngày 2026-08-15, suite
+ALL CLEAR trong khi audit hai chương thật cho thấy **85/227 dải có lỗi render** — vì corpus lúc đó
+chỉ có truyện đen trắng, còn webtoon màu (hộp thoại phát sáng, bubble oval viền neon, nền chuyển
+sắc, chữ viền trên nền xám) đánh bại những guard mà ảnh đen trắng không bao giờ chạm tới.
+
+Muốn biết render **tốt hay không**, vẫn phải dịch một chương thật rồi soi từng dải. Bộ `kd53`
+(manhwa màu) và `asg123` (manhua màu) sinh ra từ lượt audit đó.
+
 ## Giới hạn đã biết
 
 - Chạy trên MuMu (`--serial 127.0.0.1:7555` mặc định). Golden gắn với thiết bị+model ML Kit; đổi
