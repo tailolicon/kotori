@@ -162,13 +162,24 @@ def compare_page(name):
     return "FAIL", f"diff {frac:.4%} rows {lo}..{hi} — see report/{name}.golden-vs-now.png"
 
 
+# Lines the device emits once per process rather than once per page, so they land in whichever
+# fixture happened to trigger them. Dropped on both sides — goldens blessed before the receiver
+# started filtering them still compare equal.
+TRACE_NOISE = ("Bubble detector ready",)
+
+
+def read_trace(path):
+    lines = open(path, encoding="utf8", errors="replace").read().splitlines()
+    return [l for l in lines if not any(n in l for n in TRACE_NOISE)]
+
+
 def compare_trace(name):
     golden_t = os.path.join(GOLDEN, name + ".trace.txt")
     out_t = os.path.join(DEVICE_OUT, name + ".trace.txt")
     if not (os.path.exists(golden_t) and os.path.exists(out_t)):
         return None
-    a = open(golden_t, encoding="utf8", errors="replace").read().splitlines()
-    b = open(out_t, encoding="utf8", errors="replace").read().splitlines()
+    a = read_trace(golden_t)
+    b = read_trace(out_t)
     if a == b:
         return None
     os.makedirs(REPORT, exist_ok=True)

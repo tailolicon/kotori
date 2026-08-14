@@ -122,6 +122,11 @@ class RegressionReceiver : BroadcastReceiver() {
             "DispatchedCoroutine", "BubbleRenderer", "BubbleDetector", "TextBlockDetector",
             "PageTranslator", "TranslationManager", "RegressionReceiver",
         )
-        val NOISE = listOf("GC freed", "Davey", "Choreographer", "Regression run complete")
+        // "Bubble detector ready" is logged once per process when the ONNX session opens, so it
+        // lands in whichever fixture happened to trigger the load. That is not a decision about the
+        // page, and letting it through made two runs of identical code report a trace change.
+        val NOISE = listOf(
+            "GC freed", "Davey", "Choreographer", "Regression run complete", "Bubble detector ready",
+        )
     }
 }
