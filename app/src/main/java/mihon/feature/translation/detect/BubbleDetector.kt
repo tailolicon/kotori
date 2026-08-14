@@ -94,13 +94,52 @@ class BubbleDetector(private val context: Context) {
      * Detects speech bubbles. Webtoon-style strips are processed as overlapping chunks because a
      * single 640x640 letterbox of a 1:20 image leaves bubbles only a few pixels tall.
      */
-    fun detect(bitmap: Bitmap): List<BubbleBox> {
+    fun detect(bitmap: Bitmap, horizontalSeams: IntArray = intArrayOf()): List<BubbleBox> {
         val aspect = bitmap.height.toFloat() / bitmap.width
-        val boxes = if (aspect > MAX_ASPECT_RATIO) detectStrip(bitmap) else detectPage(bitmap)
+        val boxes = when {
+            horizontalSeams.isNotEmpty() -> detectSeamedStrip(bitmap, horizontalSeams)
+            aspect > MAX_ASPECT_RATIO -> detectStrip(bitmap)
+            else -> detectPage(bitmap)
+        }
         return boxes
             .map { it.clampTo(bitmap.width, bitmap.height) }
             .filter { it.isUsable() }
     }
+
+    /**
+     * Detects each original source page in its own frame, then adds only unsupported boxes that a
+     * continuous pass found crossing a seam. Page-local manga geometry is therefore identical in
+     * direct and prefetch translation, while a manhwa balloon genuinely split between source slices
+     * can still be reconstructed by the joined pass.
+     */
+    private fun detectSeamedStrip(bitmap: Bitmap, horizontalSeams: IntArray): List<BubbleBox> {
+        val seams = horizontalSeams.filter { it in 1 until bitmap.height }.distinct().sorted()
+        if (seams.isEmpty()) return detectStrip(bitmap)
+
+        val boundaries = listOf(0) + seams + bitmap.height
+        val pageAligned = boundaries.zipWithNext().flatMap { (top, bottom) ->
+            val page = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, bottom - top)
+            try {
+                detectPage(page).map { box -> box.copy(top = box.top + top, bottom = box.bottom + top) }
+            } finally {
+                if (page !== bitmap) page.recycle()
+            }
+        }
+
+        val continuous = detectStrip(bitmap)
+        val supplementalIndices = SeamedDetectionGuard.supplementalIndices(
+            continuous = continuous.map { it.toGuardBounds() },
+            pageAligned = pageAligned.map { it.toGuardBounds() },
+            seams = seams.toIntArray(),
+        )
+        if (supplementalIndices.isNotEmpty()) {
+            logcat { "Kept ${supplementalIndices.size} unsupported bubble(s) from strip detection" }
+        }
+        return pageAligned + supplementalIndices.map(continuous::get)
+    }
+
+    private fun BubbleBox.toGuardBounds() =
+        SeamedDetectionGuard.Bounds(left = left, top = top, right = right, bottom = bottom)
 
     private fun detectPage(bitmap: Bitmap): List<BubbleBox> {
         val imageWidth = bitmap.width
@@ -153,38 +192,68 @@ class BubbleDetector(private val context: Context) {
                     val right = ((cx + w / 2 - padX) / scale).coerceIn(0f, imageWidth.toFloat())
                     val bottom = ((cy + h / 2 - padY) / scale).coerceIn(0f, imageHeight.toFloat())
 
-                    if (right - left > MIN_BOX_SIDE && bottom - top > MIN_BOX_SIDE) {
+                    val proposalWidth = right - left
+                    val proposalHeight = bottom - top
+                    if (
+                        proposalWidth > MIN_BOX_SIDE &&
+                        proposalHeight > MIN_BOX_SIDE &&
+                        DetectorProposalPolicy.shouldKeep(confidence, proposalWidth, proposalHeight)
+                    ) {
                         candidates += floatArrayOf(left, top, right, bottom, confidence)
                     }
                 }
             }
         }
 
-        return nonMaxSuppression(candidates).toBoxes()
+        val suppressed = nonMaxSuppression(candidates)
+        val selected = DetectorProposalSelector.keepIndices(
+            suppressed.map {
+                DetectorProposalSelector.Proposal(it[0], it[1], it[2], it[3], it[4])
+            },
+            imageWidth,
+            imageHeight,
+        )
+        return selected.map(suppressed::get).toBoxes()
     }
 
     private fun detectStrip(bitmap: Bitmap): List<BubbleBox> {
         val collected = mutableListOf<FloatArray>()
-        var y = 0
-        while (y < bitmap.height) {
+        for (y in StripWindowPlanner.starts(bitmap.height, CHUNK_HEIGHT, CHUNK_OVERLAP)) {
             val chunkHeight = minOf(CHUNK_HEIGHT, bitmap.height - y)
             if (chunkHeight < MIN_CHUNK_HEIGHT) break
 
-            val chunk = Bitmap.createBitmap(bitmap, 0, y, bitmap.width, chunkHeight)
+            // A balloon may legitimately be clipped by the top/bottom of a webtoon source slice.
+            // Giving only the outer strip edges some neutral context prevents the detector from
+            // treating that lettering as image-edge noise. Interior windows already get equivalent
+            // context from the deliberately large overlap below.
+            val padTop = if (y == 0) STRIP_EDGE_CONTEXT else 0
+            val padBottom = if (y + chunkHeight == bitmap.height) STRIP_EDGE_CONTEXT else 0
+            val chunk = if (padTop + padBottom == 0) {
+                Bitmap.createBitmap(bitmap, 0, y, bitmap.width, chunkHeight)
+            } else {
+                Bitmap.createBitmap(
+                    bitmap.width,
+                    chunkHeight + padTop + padBottom,
+                    Bitmap.Config.ARGB_8888,
+                ).also { padded ->
+                    Canvas(padded).apply {
+                        drawColor(Color.WHITE)
+                        drawBitmap(bitmap, 0f, (padTop - y).toFloat(), null)
+                    }
+                }
+            }
             val detections = detectPage(chunk)
             chunk.recycle()
 
             for (box in detections) {
                 collected += floatArrayOf(
                     box.left.toFloat(),
-                    (box.top + y).toFloat(),
+                    (box.top + y - padTop).coerceIn(0, bitmap.height).toFloat(),
                     box.right.toFloat(),
-                    (box.bottom + y).toFloat(),
+                    (box.bottom + y - padTop).coerceIn(0, bitmap.height).toFloat(),
                     box.confidence,
                 )
             }
-
-            y += CHUNK_HEIGHT - CHUNK_OVERLAP
         }
         return nonMaxSuppression(collected).toBoxes()
     }
@@ -199,31 +268,13 @@ class BubbleDetector(private val context: Context) {
         while (remaining.isNotEmpty()) {
             val best = remaining.removeAt(0)
             kept += best
-            remaining.removeAll {
-                intersectionOverUnion(best, it) >= IOU_THRESHOLD || isMostlyInside(it, best)
-            }
+            // A small word can legitimately sit inside a coarse panel-sized proposal. Suppressing
+            // by containment used to delete WAIT/YOU before OCR could prove they were separate
+            // dialogue. IoU removes near-identical proposals here; content-aware nested dedupe runs
+            // after OCR in SpeechDuplicateResolver.
+            remaining.removeAll { intersectionOverUnion(best, it) >= IOU_THRESHOLD }
         }
         return kept
-    }
-
-    /**
-     * True when [candidate] sits almost entirely within [keeper].
-     *
-     * Intersection-over-union alone does not suppress a nested detection: a small box inside a large
-     * one shares little of their combined area, so both survive. Both then get filled and lettered
-     * independently, and the bubble ends up with two translations stacked on top of each other at
-     * different sizes. What matters for a duplicate is how much of the *smaller* box is covered.
-     */
-    private fun isMostlyInside(candidate: FloatArray, keeper: FloatArray): Boolean {
-        val left = maxOf(candidate[0], keeper[0])
-        val top = maxOf(candidate[1], keeper[1])
-        val right = minOf(candidate[2], keeper[2])
-        val bottom = minOf(candidate[3], keeper[3])
-        if (right <= left || bottom <= top) return false
-        val intersection = (right - left) * (bottom - top)
-        val candidateArea = (candidate[2] - candidate[0]) * (candidate[3] - candidate[1])
-        if (candidateArea <= 0f) return true
-        return intersection / candidateArea >= CONTAINMENT_THRESHOLD
     }
 
     private fun intersectionOverUnion(a: FloatArray, b: FloatArray): Float {
@@ -247,16 +298,24 @@ class BubbleDetector(private val context: Context) {
         const val MODEL_FILE_NAME = "translation-bubble-detector.onnx"
 
         const val INPUT_SIZE = 640
-        const val CONF_THRESHOLD = 0.25f
+        // Tiny manga words can score below 0.10 (YOU varies around 0.055-0.074 by bitmap resampler).
+        // DetectorProposalPolicy admits only
+        // compact line-shaped candidates in that range, and LowConfidenceSpeechGuard still requires
+        // credible OCR before any weak box can affect artwork.
+        const val CONF_THRESHOLD = 0.055f
         const val IOU_THRESHOLD = 0.5f
-        /** Share of a nested box that must be covered before it counts as a duplicate. */
-        const val CONTAINMENT_THRESHOLD = 0.65f
         const val LETTERBOX_GRAY = 114
         const val MIN_BOX_SIDE = 10
 
         const val MAX_ASPECT_RATIO = 3.0f
-        const val CHUNK_HEIGHT = 1500
-        const val CHUNK_OVERLAP = 200
+        // Keep lettering large enough at the detector's 640 px input. A 1,800 px window shrank the
+        // ordinary 25-35 px manhwa font below the model's useful resolution.
+        const val CHUNK_HEIGHT = 1200
+        // Must cover the tallest ordinary manhwa balloon so every interior balloon is complete in
+        // at least one detector window. The former 200 px overlap split 500-800 px balloons and
+        // silently left their English text untouched.
+        const val CHUNK_OVERLAP = 800
+        const val STRIP_EDGE_CONTEXT = 160
         const val MIN_CHUNK_HEIGHT = 50
     }
 }

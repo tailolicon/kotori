@@ -141,16 +141,22 @@ class MoonshineTtsEngine(context: Context) : NovelTtsEngine {
                 downloader.ensureModelPresent(assetRoot, ModelSpec.g2p(LANGUAGE), report)
                 downloader.ensureModelPresent(assetRoot, ModelSpec.tts(LANGUAGE, voice), report)
             }
-            synthesizer?.close()
             // Note: `g2p_dialect` is NOT passed here even though the native logs print one. It is
             // an internal value the library derives from the language ("vi" → "vi-VN") and not an
             // accepted option key — the option parser throws `Unknown G2P option` on it, which
             // would fail this whole prepare and silently push the reader onto the system voice.
-            synthesizer = TextToSpeech(
-                LANGUAGE,
-                assetRoot.absolutePath,
-                listOf(TranscriberOption(VOICE, voice)),
-            )
+            val nextSynthesizer = TextToSpeech(appContext)
+                .language(LANGUAGE)
+                .voice(voice)
+                .modelsFrom(assetRoot)
+            try {
+                nextSynthesizer.load()
+            } catch (error: Throwable) {
+                nextSynthesizer.close()
+                throw error
+            }
+            synthesizer?.close()
+            synthesizer = nextSynthesizer
             phonemizer?.close()
             phonemizer = runCatching {
                 GraphemeToPhonemizer(LANGUAGE, assetRoot.absolutePath, null)

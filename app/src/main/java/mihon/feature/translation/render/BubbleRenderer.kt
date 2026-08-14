@@ -40,7 +40,12 @@ class BubbleRenderer(private val context: Context) {
     }
 
     /** Returns a new bitmap; [source] is left untouched so the untranslated page stays cacheable. */
-    fun render(source: Bitmap, bubbles: List<TranslatedBubble>, fontName: String): Bitmap {
+    fun render(
+        source: Bitmap,
+        bubbles: List<TranslatedBubble>,
+        fontName: String,
+        horizontalSeams: IntArray = intArrayOf(),
+    ): Bitmap {
         val output = source.copy(Bitmap.Config.ARGB_8888, true)
         if (bubbles.isEmpty()) return output
 
@@ -69,15 +74,17 @@ class BubbleRenderer(private val context: Context) {
                     intersectionFraction(box, plan.sourceBox) >= SAME_BUBBLE_BOX_FRACTION
             }
             val absorbedCaptionFragment = !bubble.box.isTextBlock && plans.any { plan ->
-                plan.isTextBlock && sameHorizontalCaptionBand(box, plan.sourceBox) &&
-                    horizontalCaptionGap(box, plan.sourceBox) <=
-                    minOf(box.height(), plan.sourceBox.height()) * CAPTION_FRAGMENT_MAX_GAP_HEIGHTS
+                plan.isTextBlock && CaptionFragmentGuard.shouldAbsorb(
+                    speech = box.toFragmentBounds(),
+                    textBlock = plan.sourceBox.toFragmentBounds(),
+                    textSlot = plan.slot.toFragmentBounds(),
+                )
             }
             if (duplicateRegion || absorbedCaptionFragment) {
                 logcat { "Skipping ${bubble.box}: its bubble was already prepared for lettering" }
                 continue
             }
-            runCatching { eraseBubble(output, bubble)?.let { plans += it } }
+            runCatching { eraseBubble(output, bubble, horizontalSeams)?.let { plans += it } }
                 .onFailure { logcat { "Failed to erase bubble ${bubble.box}: ${it.message}" } }
         }
 
@@ -188,17 +195,7 @@ class BubbleRenderer(private val context: Context) {
         return (overlap.width().toLong() * overlap.height()).toFloat() / area
     }
 
-    private fun sameHorizontalCaptionBand(a: Rect, b: Rect): Boolean {
-        val vertical = minOf(a.bottom, b.bottom) - maxOf(a.top, b.top)
-        return vertical.coerceAtLeast(0).toFloat() /
-            minOf(a.height(), b.height()).coerceAtLeast(1) >= CAPTION_FRAGMENT_ROW_OVERLAP
-    }
-
-    private fun horizontalCaptionGap(a: Rect, b: Rect): Int = when {
-        a.right < b.left -> b.left - a.right
-        b.right < a.left -> a.left - b.right
-        else -> 0
-    }
+    private fun Rect.toFragmentBounds() = CaptionFragmentGuard.Bounds(left, top, right, bottom)
 
     /** Share of the smaller rectangle occupied by the intersection. */
     private fun intersectionFraction(a: Rect, b: Rect): Float {
@@ -296,7 +293,11 @@ class BubbleRenderer(private val context: Context) {
     }
 
     /** Clears one bubble's original lettering and reports where its translation may be written. */
-    private fun eraseBubble(bitmap: Bitmap, bubble: TranslatedBubble): Plan? {
+    private fun eraseBubble(
+        bitmap: Bitmap,
+        bubble: TranslatedBubble,
+        horizontalSeams: IntArray,
+    ): Plan? {
         val box = bubble.box.clampTo(bitmap.width, bitmap.height)
         if (!box.isUsable()) return null
 
@@ -319,10 +320,31 @@ class BubbleRenderer(private val context: Context) {
         // cannot cross that outline, and the non-flat fallback remains restricted to searchArea below.
         val padBase = max(box.width, box.height)
         val pad = (padBase * padRatio).roundToInt().coerceIn(4, padCeiling)
-        val regionLeft = (box.left - pad).coerceAtLeast(0)
-        val regionTop = (box.top - pad).coerceAtLeast(0)
-        val regionRight = (box.right + pad).coerceAtMost(bitmap.width)
-        val regionBottom = (box.bottom + pad).coerceAtMost(bitmap.height)
+        // A strip is an optimisation, not permission for one source page to paint into the next.
+        // Only a detector box that truly crosses a seam may keep a continuous crop, which is how
+        // split manhwa balloons remain supported without manga page boundaries leaking. OCR is not
+        // trusted as seam evidence: its padded crop can see lettering from the neighbouring source
+        // page, and treating that accidental line as a split balloon recreates the exact leak this
+        // guard exists to prevent.
+        val pageSegment = HorizontalSeamGuard.segment(
+            HorizontalSeamGuard.Span(box.top, box.bottom),
+            horizontalSeams,
+            bitmap.height,
+        )
+        val cropBounds = RenderCropGuard.bounds(
+            detector = RenderCropGuard.Bounds(box.left, box.top, box.right, box.bottom),
+            ocrLines = bubble.lines.map { line ->
+                RenderCropGuard.Bounds(line.rect.left, line.rect.top, line.rect.right, line.rect.bottom)
+            },
+            detectorPad = pad,
+            imageWidth = bitmap.width,
+            pageTop = pageSegment?.top ?: 0,
+            pageBottom = pageSegment?.bottom ?: bitmap.height,
+        ) ?: return null
+        val regionLeft = cropBounds.left
+        val regionTop = cropBounds.top
+        val regionRight = cropBounds.right
+        val regionBottom = cropBounds.bottom
         val width = regionRight - regionLeft
         val height = regionBottom - regionTop
         if (width < MIN_REGION_SIDE || height < MIN_REGION_SIDE) return null
@@ -469,7 +491,17 @@ class BubbleRenderer(private val context: Context) {
             }
             bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
 
-            var slot = TextArea.largestInscribedRect(layout.region, width, layout.bounds) ?: layout.bounds
+            var slot = if (
+                TextBlockSlotGuard.useWholeFlatBounds(
+                    bubble.box.isTextBlock,
+                    layout.bounds.width(),
+                    layout.bounds.height(),
+                )
+            ) {
+                Rect(layout.bounds)
+            } else {
+                TextArea.largestInscribedRect(layout.region, width, layout.bounds) ?: layout.bounds
+            }
             if (bubble.box.isTextBlock) {
                 textBlockPlacementBounds(bubble, regionLeft, regionTop, width, height)?.let { allowed ->
                     val constrained = Rect(slot)
@@ -477,6 +509,20 @@ class BubbleRenderer(private val context: Context) {
                         constrained.width() >= MIN_SLOT_SIDE && constrained.height() >= MIN_SLOT_SIDE
                     ) {
                         slot = constrained
+                    }
+                }
+            } else {
+                speechPlacementBounds(bubble, regionLeft, regionTop, width, height)?.let { allowed ->
+                    val constrained = Rect(slot)
+                    if (constrained.intersect(allowed) &&
+                        constrained.width() >= MIN_DRAW_WIDTH && constrained.height() >= MIN_SLOT_SIDE
+                    ) {
+                        slot = constrained
+                    } else {
+                        // The expanded fill escaped through an open tail into page-white. Its slot has
+                        // no usable overlap with the detector/OCR evidence, so fall back to the
+                        // conservative component that was safe enough to erase.
+                        slot = TextArea.largestInscribedRect(flat.region, width, flat.bounds) ?: flat.bounds
                     }
                 }
             }
@@ -1005,6 +1051,40 @@ class BubbleRenderer(private val context: Context) {
         return if (local.width() >= MIN_SLOT_SIDE && local.height() >= MIN_SLOT_SIDE) local else null
     }
 
+    /** Keeps speech lettering near the detector box even when the layout flood escapes a broken tail. */
+    private fun speechPlacementBounds(
+        bubble: TranslatedBubble,
+        regionLeft: Int,
+        regionTop: Int,
+        width: Int,
+        height: Int,
+    ): Rect? {
+        // Accepted OCR lines are stronger placement evidence than a detector box. On manga the
+        // detector can span a panel edge or include the neighbouring bubble; unioning that oversized
+        // box with good OCR geometry lets a white-page flood put tiny text outside the balloon. Keep
+        // the detector only as a fallback for engines that returned no line geometry at all.
+        val ocrEvidence = bubble.lines.map { line ->
+            PlacementGuard.Bounds(
+                line.rect.left - regionLeft,
+                line.rect.top - regionTop,
+                line.rect.right - regionLeft,
+                line.rect.bottom - regionTop,
+            )
+        }
+        val allowed = PlacementGuard.allowedFromOcrOrDetector(
+            ocrEvidence = ocrEvidence,
+            detectorEvidence = PlacementGuard.Bounds(
+                bubble.box.left - regionLeft,
+                bubble.box.top - regionTop,
+                bubble.box.right - regionLeft,
+                bubble.box.bottom - regionTop,
+            ),
+            cropWidth = width,
+            cropHeight = height,
+        ) ?: return null
+        return Rect(allowed.left, allowed.top, allowed.right, allowed.bottom)
+    }
+
     /**
      * Colour of the lettering inside [strips].
      *
@@ -1487,8 +1567,6 @@ class BubbleRenderer(private val context: Context) {
         const val NESTED_SLOT_FRACTION = 0.7f
         /** Overlap of detector boxes that is too large to represent two independent bubbles. */
         const val SAME_BUBBLE_BOX_FRACTION = 0.72f
-        const val CAPTION_FRAGMENT_ROW_OVERLAP = 0.45f
-        const val CAPTION_FRAGMENT_MAX_GAP_HEIGHTS = 2
         const val REGION_PAD_RATIO = 0.50f
         const val REGION_PAD_MAX = 240
         /** OCR boxes hug the letters, so the bubble around them needs much more room than this. */

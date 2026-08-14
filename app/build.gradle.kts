@@ -3,6 +3,8 @@ import mihon.gradle.getBuildTime
 import mihon.gradle.getLatestCommitCount
 import mihon.gradle.getLatestCommitSha
 import mihon.gradle.tasks.ReplaceShortcutsPlaceholderTask
+import mihon.gradle.tasks.VerifyOnnxCompatibilityTask
+import org.gradle.api.tasks.Sync
 import java.io.FileInputStream
 import java.util.Properties
 import kotlin.io.encoding.Base64
@@ -35,6 +37,24 @@ val kotoriVersionCode = providers.gradleProperty("kotori-version-code")
     ?.toIntOrNull()
     ?: (1_100_000_000 + getLatestCommitCount().toInt())
 
+val onnxRuntimeNative = configurations.create("onnxRuntimeNative") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    isTransitive = false
+}
+dependencies.add(onnxRuntimeNative.name, libs.onnxruntime.android)
+
+val extractedOnnxRuntimeDirectory = layout.buildDirectory.dir("generated/onnxRuntimeNative")
+val extractOnnxRuntimeNative = tasks.register<Sync>("extractOnnxRuntimeNative") {
+    val runtimeAar = onnxRuntimeNative.elements.map { files -> files.single().asFile }
+    from(runtimeAar.map(::zipTree)) {
+        include("jni/**/libonnxruntime.so")
+        eachFile { path = path.removePrefix("jni/") }
+        includeEmptyDirs = false
+    }
+    into(extractedOnnxRuntimeDirectory)
+}
+
 android {
     namespace = "eu.kanade.tachiyomi"
 
@@ -50,7 +70,7 @@ android {
         // semantic version, while debug/update/preview append `-${commitCount}` through their
         // versionNameSuffix — so a milestone reads as a milestone, and every other build still
         // says exactly which commit it came from.
-        versionName = "1.0.6"
+        versionName = "1.0.7"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -208,15 +228,10 @@ android {
             // (used by the novel reader's text-to-speech) and one from onnxruntime-android, which the
             // translation detector needs for the Java API that moonshine does not expose.
             //
-            // Only one can ship, and which one wins is not worth relying on — so the onnxruntime
-            // version in the catalogue is pinned to the version moonshine bundles (1.23.2). Keep them
-            // in step: ONNX Runtime versions its exported symbols, so a JNI library built against a
-            // different runtime asks for OrtGetApiBase@VERS_<its own version> and dlopen refuses to
-            // resolve it. That has now shipped twice, in both directions, most recently with the pin
-            // at 1.23.0 against moonshine's 1.23.2 — and each time every page failed with
-            // UnsatisfiedLinkError before the detector could even start, which reads to the user as
-            // "translation does nothing" rather than as a build problem.
-            // Verify with the ELF `.gnu.version_d` of both AARs, not with either project's docs.
+            // Only one can ship. The complete Microsoft runtime is injected as an app JNI source,
+            // and verify<Variant>OnnxCompatibility pins its SHA-256 and checks every consumer's
+            // versioned symbols after duplicate resolution. This makes dependency-ordering changes
+            // fail the build instead of breaking OCR only on users' devices.
             pickFirsts += "**/libonnxruntime.so"
 
             keepDebugSymbols += listOf(
@@ -333,19 +348,19 @@ dependencies {
     implementation(libs.seeker)
     implementation(libs.truetypeparser)
 
-    // On-device neural text-to-speech for the novel reader's listening mode. The library ships
-    // native ONNX runtimes; the voice models themselves are downloaded at runtime rather than
-    // bundled, so this adds no model weight to the APK.
-    implementation(libs.moonshine.voice)
-
     // On-device manga translation: YOLOv8-seg speech-bubble detector (ONNX Runtime) plus ML Kit
     // text recognition for CJK glyph geometry. Both run fully offline; the 12 MB ONNX model is
     // bundled in assets/translation/ and the ML Kit models are bundled by the AAR.
     //
-    // moonshine-voice bundles libonnxruntime.so inside its own AAR but does not expose the
-    // `ai.onnxruntime` Java API, so the artifact is required even though the native library is
-    // already present. See the pickFirsts rule in `packaging` for how the duplicate is resolved.
+    // OCR needs the complete Microsoft runtime rather than Moonshine's smaller embedded build.
+    // extractOnnxRuntimeNative injects this artifact as an app JNI source, and the native
+    // compatibility task pins the selected runtime's SHA-256 per ABI.
     implementation(libs.onnxruntime.android)
+
+    // On-device neural text-to-speech for the novel reader's listening mode. The library ships
+    // native ONNX runtimes; the voice models themselves are downloaded at runtime rather than
+    // bundled, so this adds no model weight to the APK.
+    implementation(libs.moonshine.voice)
     implementation(libs.mlkit.text.base)
     implementation(libs.mlkit.text.japanese)
     implementation(libs.mlkit.text.chinese)
@@ -450,6 +465,9 @@ dependencies {
 androidComponents {
     onVariants { variant ->
         val resSource = variant.sources.res ?: return@onVariants
+        variant.sources.jniLibs?.addStaticSourceDirectory(
+            extractedOnnxRuntimeDirectory.get().asFile.absolutePath,
+        )
 
         val variantName = variant.name.replaceFirstChar { it.uppercase() }
         val replaceShortcutsPlaceholderTask = tasks.register<ReplaceShortcutsPlaceholderTask>(
@@ -459,6 +477,33 @@ androidComponents {
             shortcutsFile.set(projectDir.resolve("src/main/shortcuts.xml"))
         }
         resSource.addGeneratedSourceDirectory(replaceShortcutsPlaceholderTask) { it.outputDir }
+
+        val verifyOnnxCompatibilityTask = tasks.register<VerifyOnnxCompatibilityTask>(
+            "verify${variantName}OnnxCompatibility",
+        ) {
+            nativeLibrariesDirectory.set(
+                layout.buildDirectory.dir(
+                    "intermediates/merged_native_libs/${variant.name}/merge${variantName}NativeLibs/out/lib",
+                ),
+            )
+            expectedAbis.set(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+            expectedRuntimeSha256.set(
+                mapOf(
+                    "armeabi-v7a" to "57048b8d54896d16355ee367bfc129c5925468ae503b681b8d0cd49ceefa468e",
+                    "arm64-v8a" to "e40f09d07dc53726b8bfbf48a7907673b8f86718a057655a62790a39874a7302",
+                    "x86" to "213d91ebb0cfd511c18c0057c69145de0abc6bdc9c63429bf04dcdeaf3fd861a",
+                    "x86_64" to "972c17c056eaae946a415d9efdd8018b729639974df075e495f0092441478fb7",
+                ),
+            )
+            dependsOn("merge${variantName}NativeLibs")
+        }
+        tasks.matching { it.name == "merge${variantName}JniLibFolders" }.configureEach {
+            dependsOn(extractOnnxRuntimeNative)
+        }
+        tasks.matching { it.name == "merge${variantName}NativeLibs" }.configureEach {
+            dependsOn(extractOnnxRuntimeNative)
+            finalizedBy(verifyOnnxCompatibilityTask)
+        }
     }
 
     onVariants(selector().withFlavor("default" to "standard")) {

@@ -58,21 +58,20 @@ mlkit-text = "16.0.1"
 # Must match the libonnxruntime.so that moonshine-voice bundles: only one native runtime can ship,
 # and a JNI library built against a different version fails to link at load time.
 #
-# moonshine-voice 0.0.73 bundles 1.23.2 — its libonnxruntime.so defines VERS_1.23.2, read straight
-# out of `.gnu.version_d`. This pin said 1.23.0 and shipped a JNI shim requiring VERS_1.23.0 next to
-# that 1.23.2 runtime, so dlopen could not resolve OrtGetApiBase, OrtEnvironment never initialised,
-# and the bubble detector failed on every page — translation was dead on arrival, not merely poor.
+# moonshine-voice 0.0.73 was internally inconsistent: its arm64-v8a runtime exported VERS_1.23.0,
+# while armeabi-v7a and x86_64 exported VERS_1.23.2. That made any single onnxruntime-android pin
+# fail on at least one supported device. Moonshine 0.1.2 aligns its native libraries on VERS_1.23.2.
 #
 # The mismatch is silent at build time and the runtime message is the useless "UnsatisfiedLinkError:
-# no error!", so re-check `.gnu.version_d` of both AARs whenever either dependency moves. Neither
-# project's release notes are a substitute for reading the ELF.
+# no error!", so verify<Variant>OnnxCompatibility reads every merged native binary and rejects a
+# build when an ABI disagrees. Do not remove that build gate when changing either dependency.
 onnxruntime = "1.23.2"
 markdown = "0.43.0"
 material = "1.12.0"
 media = "1.7.0"
 materialKolor = "5.0.0-alpha07"
 mockk = "1.14.11"
-moonshine-voice = "0.0.73"
+moonshine-voice = "0.1.2"
 moko-resources = "0.26.4"
 okhttp = "5.4.0"
 okio = "3.17.0"

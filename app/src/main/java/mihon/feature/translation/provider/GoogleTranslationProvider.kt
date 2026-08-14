@@ -54,7 +54,7 @@ class GoogleTranslationProvider : TranslationProvider {
                         BubbleTranslation(text, "")
                     } else {
                         semaphore.withPermit {
-                            val cleaned = cleanMangaOcr(text)
+                            val cleaned = MangaOcrCleaner.clean(text)
                             BubbleTranslation(text, translateOne(cleaned.replace('\n', ' '), context))
                         }
                     }
@@ -62,13 +62,6 @@ class GoogleTranslationProvider : TranslationProvider {
             }.awaitAll()
         }
     }
-
-    /** Repairs only high-confidence OCR artefacts before they become literal Vietnamese nonsense. */
-    private fun cleanMangaOcr(text: String): String = text
-        .replace(Regex("(?i)^(?:t|ti|tn)?\\s*in\\s*the\\s*year\\b"), "In the year")
-        .replace(Regex("/(?=\\s*$)"), "")
-        .replace(Regex("(?i)\\bgender equality[\"”]?\\s+was\\s+r$"), "gender equality was no more")
-        .replace(Regex("(?i)\\bMato[o0]{2,}\\b"), "Mato")
 
     override suspend fun translateProse(
         paragraphs: List<String>,

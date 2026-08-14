@@ -432,8 +432,15 @@ class ReaderViewModel @JvmOverloads constructor(
         run: List<Pair<Int, () -> java.io.InputStream>>,
     ) {
         val mangaId = manga?.id ?: return
+        val continuousViewer = ReadingMode.fromPreference(getMangaReadingMode()).type is
+            ReadingMode.ViewerType.Webtoon
         runCatching {
-            translationManager.translatePageRun(mangaId, chapter.chapter.id!!, run)
+            translationManager.translatePageRun(
+                mangaId,
+                chapter.chapter.id!!,
+                run,
+                joinContinuousPages = continuousViewer,
+            )
         }.onFailure {
             logcat(LogPriority.WARN, it) { "Translation prefetch failed for ${chapter.chapter.name}" }
         }

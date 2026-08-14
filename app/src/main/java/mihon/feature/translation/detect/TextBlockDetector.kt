@@ -1,6 +1,8 @@
 package mihon.feature.translation.detect
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Rect
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -48,7 +50,12 @@ class TextBlockDetector {
                 if (height < MIN_BAND_HEIGHT) break
                 val band = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, height)
                 try {
-                    found += readBlocks(recognizer, band, top)
+                    found += readBlocks(
+                        recognizer = recognizer,
+                        band = band,
+                        offsetY = top,
+                        padEdges = bitmap.height > BAND_HEIGHT,
+                    )
                 } finally {
                     // createBitmap hands back the *source* when the requested region is the whole
                     // image. Recycling that destroys the page mid-translation, and every later stage
@@ -65,11 +72,18 @@ class TextBlockDetector {
 
         val merged = mergeNearby(found)
         val extras = merged
-            .filter { it.characters >= MIN_BLOCK_CHARS }
-            .map { it.rect }
-            .filter { rect -> existing.none { overlaps(rect, it) } }
-            .filter { it.width() >= MIN_BLOCK_SIDE && it.height() >= MIN_BLOCK_SIDE }
-            .map { rect ->
+            .filter { it.rect.width() >= MIN_BLOCK_SIDE && it.rect.height() >= MIN_BLOCK_SIDE }
+            .mapNotNull { candidate ->
+                val rect = candidate.rect
+                val coveringSpeech = existing.firstOrNull { box -> overlaps(rect, box) }
+                if (!TextBlockFallbackPolicy.shouldKeep(candidate.characters, coveringSpeech != null, candidate.text)) {
+                    return@mapNotNull null
+                }
+                val fallbackOnly = coveringSpeech != null &&
+                    !OversizedSpeechRefiner.shouldReplace(
+                        coveringSpeech.toRefinerBounds(),
+                        rect.toRefinerBounds(),
+                    )
                 // Padded outward: ML Kit's block box hugs the glyphs, and the renderer needs the
                 // panel around them to sample a fill colour and to place the replacement text.
                 val padX = (rect.width() * BLOCK_PAD_RATIO).roundToInt().coerceIn(6, 40)
@@ -81,20 +95,44 @@ class TextBlockDetector {
                     bottom = (rect.bottom + padY).coerceAtMost(bitmap.height),
                     confidence = SYNTHETIC_CONFIDENCE,
                     isTextBlock = true,
+                    isFallbackTextBlock = fallbackOnly,
                 )
             }
 
         if (extras.isNotEmpty()) {
-            logcat { "Text-block pass added ${extras.size} region(s) the bubble detector missed" }
+            logcat {
+                "Text-block pass added ${extras.count { !it.isFallbackTextBlock }} region(s) and kept " +
+                    "${extras.count { it.isFallbackTextBlock }} speech fallback(s)"
+            }
         }
         return extras
     }
 
-    private fun readBlocks(recognizer: TextRecognizer, band: Bitmap, offsetY: Int): List<TextCandidate> {
+    private fun readBlocks(
+        recognizer: TextRecognizer,
+        band: Bitmap,
+        offsetY: Int,
+        padEdges: Boolean,
+    ): List<TextCandidate> {
         val latch = CountDownLatch(1)
         val blocks = ArrayList<TextCandidate>()
+        val edgePad = if (padEdges) BAND_EDGE_CONTEXT else 0
+        val input = if (edgePad == 0) {
+            band
+        } else {
+            Bitmap.createBitmap(
+                band.width,
+                band.height + edgePad * 2,
+                Bitmap.Config.ARGB_8888,
+            ).also { padded ->
+                Canvas(padded).apply {
+                    drawColor(Color.WHITE)
+                    drawBitmap(band, 0f, edgePad.toFloat(), null)
+                }
+            }
+        }
 
-        recognizer.process(InputImage.fromBitmap(band, 0))
+        recognizer.process(InputImage.fromBitmap(input, 0))
             .addOnSuccessListener { visionText ->
                 for (block in visionText.textBlocks) {
                     // Require real words: a single stray glyph recognised off artwork is noise, and
@@ -104,9 +142,13 @@ class TextBlockDetector {
                     // ("AND", "NO", "SO") in its own ML Kit block above a longer paragraph. It is
                     // accepted only if mergeNearby attaches it to enough real lettering; isolated
                     // artwork noise still fails MIN_BLOCK_CHARS after merging.
-                    if (characters < MIN_FRAGMENT_CHARS) continue
+                    if (!TextBlockFallbackPolicy.shouldReadFragment(characters, block.text)) continue
                     val box = block.boundingBox ?: continue
-                    blocks += TextCandidate(Rect(box).apply { offset(0, offsetY) }, characters)
+                    blocks += TextCandidate(
+                        Rect(box).apply { offset(0, offsetY - edgePad) },
+                        characters,
+                        block.text,
+                    )
                 }
                 latch.countDown()
             }
@@ -118,6 +160,7 @@ class TextBlockDetector {
         if (!latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             logcat { "Text-block pass timed out on band at $offsetY" }
         }
+        if (input !== band) input.recycle()
         return blocks
     }
 
@@ -137,6 +180,7 @@ class TextBlockDetector {
             val first = remaining.removeAt(0)
             val current = Rect(first.rect)
             var characters = first.characters
+            val text = StringBuilder(first.text)
             var grew = true
             while (grew) {
                 grew = false
@@ -152,17 +196,19 @@ class TextBlockDetector {
                     if (closeEnough && horizontal > narrower * MERGE_OVERLAP_RATIO) {
                         current.union(other.rect)
                         characters += other.characters
+                        if (text.isNotEmpty()) text.append('\n')
+                        text.append(other.text)
                         iterator.remove()
                         grew = true
                     }
                 }
             }
-            merged += TextCandidate(current, characters)
+            merged += TextCandidate(current, characters, text.toString())
         }
         return merged
     }
 
-    private data class TextCandidate(val rect: Rect, val characters: Int)
+    private data class TextCandidate(val rect: Rect, val characters: Int, val text: String)
 
     /** True when [rect] is substantially covered by [box] — the bubble detector already has it. */
     private fun overlaps(rect: Rect, box: BubbleBox): Boolean {
@@ -173,6 +219,10 @@ class TextBlockDetector {
         val covered = overlap.width().toLong() * overlap.height()
         return covered.toFloat() / area > COVERED_FRACTION
     }
+
+    private fun BubbleBox.toRefinerBounds() = OversizedSpeechRefiner.Bounds(left, top, right, bottom)
+
+    private fun Rect.toRefinerBounds() = OversizedSpeechRefiner.Bounds(left, top, right, bottom)
 
     private fun recognizerFor(sourceLanguage: String): TextRecognizer = when (sourceLanguage) {
         "ja" -> TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
@@ -185,13 +235,12 @@ class TextBlockDetector {
         const val TIMEOUT_SECONDS = 30L
 
         /** Band height for reading a long strip. Comfortably inside ML Kit's input limits. */
-        const val BAND_HEIGHT = 2400
-        const val BAND_OVERLAP = 400
+        const val BAND_HEIGHT = 1200
+        const val BAND_OVERLAP = 600
+        const val BAND_EDGE_CONTEXT = 96
         const val MIN_BAND_HEIGHT = 80
 
         /** Letters or digits a block needs before it counts as lettering rather than noise. */
-        const val MIN_BLOCK_CHARS = 8
-        const val MIN_FRAGMENT_CHARS = 2
         const val MIN_BLOCK_SIDE = 40
         const val BLOCK_PAD_RATIO = 0.04f
 

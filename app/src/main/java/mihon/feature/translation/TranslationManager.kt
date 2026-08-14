@@ -176,6 +176,7 @@ class TranslationManager(
         mangaId: Long,
         chapterId: Long,
         pages: List<Pair<Int, () -> InputStream>>,
+        joinContinuousPages: Boolean,
     ) {
         if (pages.isEmpty() || isRateLimited()) return
         val stamp = preferences.outputStamp()
@@ -194,7 +195,13 @@ class TranslationManager(
             val batch = group
             group = mutableListOf()
             groupPixels = 0
-            translateGroup(mangaId, chapterId, stamp, batch)
+            val continuous = joinContinuousPages &&
+                ContinuousPageClassifier.shouldJoin(batch.map { it.second })
+            if (continuous) {
+                translateGroup(mangaId, chapterId, stamp, batch)
+            } else {
+                batch.forEach { page -> translateGroup(mangaId, chapterId, stamp, listOf(page)) }
+            }
         }
 
         try {
@@ -206,7 +213,8 @@ class TranslationManager(
                 if (groupPixels > 0 && groupPixels + pixels > MAX_STRIP_PIXELS) flush()
                 group += index to bitmap
                 groupPixels += pixels
-                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= MAX_STRIP_PAGES) flush()
+                val maxPages = PageBatchPolicy.maxPages(joinContinuousPages, MAX_STRIP_PAGES)
+                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= maxPages) flush()
             }
             flush()
         } finally {
@@ -222,7 +230,10 @@ class TranslationManager(
     ) {
         pageSlots.withPermit {
             try {
-                val translated = translator.translateStrip(group.map { it.second })
+                val translated = translator.translateStrip(
+                    group.map { it.second },
+                    "chapter=$chapterId pages=${group.joinToString { it.first.toString() }}",
+                )
                 translated.forEachIndexed { position, bitmap ->
                     val index = group[position].first
                     val target = cache.pageFile(mangaId, chapterId, index, stamp)
@@ -234,7 +245,8 @@ class TranslationManager(
                 }
                 cache.trimToSize()
                 consecutiveFailures = 0
-                logcat { "Translated ${group.size} page(s) as one strip for chapter $chapterId" }
+                val mode = if (group.size == 1) "at native page resolution" else "as one continuous strip"
+                logcat { "Translated ${group.size} page(s) $mode for chapter $chapterId" }
             } catch (e: PageTranslator.NothingToTranslate) {
                 // The whole run had no dialogue: record that for each page so it is never retried.
                 group.forEach { (index, _) ->
@@ -290,7 +302,7 @@ class TranslationManager(
 
                 val source = decode(openSource) ?: return@withLock null
                 try {
-                    val translated = translator.translate(source)
+                    val translated = translator.translate(source, "chapter=$chapterId page=$pageIndex")
                     val written = try {
                         write(translated, target)
                     } finally {

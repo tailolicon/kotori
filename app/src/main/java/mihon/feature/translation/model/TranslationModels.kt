@@ -19,6 +19,8 @@ data class BubbleBox(
      * is the OCR line geometry, which says exactly where the lettering sits.
      */
     val isTextBlock: Boolean = false,
+    /** Whole-page OCR block retained only in case the overlapping speech crop reads no dialogue. */
+    val isFallbackTextBlock: Boolean = false,
 ) {
     val width: Int get() = right - left
     val height: Int get() = bottom - top

@@ -6,6 +6,8 @@ import android.graphics.Rect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.detect.BubbleDetector
+import mihon.feature.translation.detect.LowConfidenceSpeechGuard
+import mihon.feature.translation.detect.OversizedSpeechRefiner
 import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
@@ -33,7 +35,7 @@ class PageTranslator(
 
     private val detector by lazy { BubbleDetector(context) }
     private val textBlocks by lazy { TextBlockDetector() }
-    private val recognizer by lazy { BubbleTextRecognizer() }
+    private val recognizer by lazy { BubbleTextRecognizer(context) }
     private val renderer by lazy { BubbleRenderer(context) }
 
     /**
@@ -64,9 +66,9 @@ class PageTranslator(
      *   recycled here
      * @throws NothingToTranslate when the joined strip yielded no dialogue at all
      */
-    suspend fun translateStrip(sources: List<Bitmap>): List<Bitmap> {
+    suspend fun translateStrip(sources: List<Bitmap>, diagnosticLabel: String = "strip"): List<Bitmap> {
         require(sources.isNotEmpty()) { "translateStrip needs at least one page" }
-        if (sources.size == 1) return listOf(translate(sources[0]))
+        if (sources.size == 1) return listOf(translate(sources[0], diagnosticLabel))
 
         val width = sources.maxOf { it.width }
         // Heights after scaling every page to the common width, so the seams land where expected.
@@ -82,7 +84,8 @@ class PageTranslator(
             }
             logcat { "Stitched ${sources.size} pages into ${width}x${strip.height} strip" }
 
-            val translated = translate(strip)
+            val seams = heights.runningFold(0, Int::plus).drop(1).dropLast(1).toIntArray()
+            val translated = translate(strip, seams, diagnosticLabel)
             return try {
                 var top = 0
                 sources.mapIndexed { index, page ->
@@ -109,7 +112,14 @@ class PageTranslator(
      * @return a new bitmap with translated dialogue; [source] is never recycled here
      * @throws NothingToTranslate when no bubble yielded usable text
      */
-    suspend fun translate(source: Bitmap): Bitmap = withIOContext {
+    suspend fun translate(source: Bitmap, diagnosticLabel: String = "page"): Bitmap =
+        translate(source, intArrayOf(), diagnosticLabel)
+
+    private suspend fun translate(
+        source: Bitmap,
+        horizontalSeams: IntArray,
+        diagnosticLabel: String,
+    ): Bitmap = withIOContext {
         val translationContext = TranslationContext(
             sourceLanguage = preferences.sourceLanguage.get(),
             targetLanguage = preferences.targetLanguage.get(),
@@ -124,7 +134,7 @@ class PageTranslator(
         // response, which is most of a page's wall-clock time. Releasing it here lets one page be
         // read while another is in flight.
         val (boxes, recognized) = localWork.withLock {
-            val detected = detector.detect(source)
+            val detected = detector.detect(source, horizontalSeams)
             // The bubble model only knows speech bubbles. Status windows, captions and narration
             // boxes are lettering too, and readers care about them just as much — a chapter whose
             // skill panels stay in English is not a translated chapter.
@@ -132,39 +142,216 @@ class PageTranslator(
                 .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
                 .getOrDefault(emptyList())
 
-            val ordered = (detected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
-            if (ordered.size < detected.size + extras.size) {
-                logcat { "Dropped ${detected.size + extras.size - ordered.size} edge-sliver box(es)" }
+            val refinedDetected = detected.filterNot { speech ->
+                extras.any { text ->
+                    !text.isFallbackTextBlock &&
+                    OversizedSpeechRefiner.shouldReplace(
+                        OversizedSpeechRefiner.Bounds(speech.left, speech.top, speech.right, speech.bottom),
+                        OversizedSpeechRefiner.Bounds(text.left, text.top, text.right, text.bottom),
+                    )
+                }
+            }
+            if (refinedDetected.size < detected.size) {
+                logcat {
+                    "Replaced ${detected.size - refinedDetected.size} oversized speech box(es) " +
+                        "with precise OCR text blocks"
+                }
+            }
+
+            val ordered = (refinedDetected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
+            if (ordered.size < refinedDetected.size + extras.size) {
+                logcat { "Dropped ${refinedDetected.size + extras.size - ordered.size} edge-sliver box(es)" }
             }
             if (ordered.isEmpty()) throw NothingToTranslate()
             logcat {
-                "Detected ${ordered.size} regions (${detected.size} bubbles + ${extras.size} text " +
+                "Detected ${ordered.size} regions (${refinedDetected.size} bubbles + ${extras.size} text " +
                     "blocks) on ${source.width}x${source.height} page"
             }
-
             // Glyph geometry is collected regardless of who does the reading, because the renderer
             // needs it to mask strokes rather than whole bubbles. It is cheap and fully local.
             val read = recognizer.recognize(source, ordered, translationContext.sourceLanguage)
-            val (coalescedBoxes, coalescedRead) = coalesceTextRegions(ordered, read)
+            val longStrip = source.height > source.width * 3
+            val evidenced = ordered.indices.filter { index ->
+                ordered[index].isTextBlock ||
+                    LowConfidenceSpeechGuard.shouldKeep(
+                        ordered[index].confidence,
+                        read[index].text,
+                        strictShortFragment = longStrip,
+                    )
+            }
+            if (evidenced.size < ordered.size) {
+                logcat { "Dropped ${ordered.size - evidenced.size} low-confidence box(es) without OCR evidence" }
+            }
+            val evidencedBoxes = evidenced.map(ordered::get)
+            val evidencedRead = evidenced.map(read::get)
+            val speechResolved = SpeechDuplicateResolver.keepIndices(
+                evidencedBoxes.mapIndexed { index, box ->
+                    SpeechDuplicateResolver.Candidate(
+                        left = box.left,
+                        top = box.top,
+                        right = box.right,
+                        bottom = box.bottom,
+                        isSpeech = !box.isTextBlock,
+                        text = evidencedRead[index].text,
+                    )
+                },
+            )
+            if (speechResolved.size < evidencedBoxes.size) {
+                logcat { "Dropped ${evidencedBoxes.size - speechResolved.size} duplicate speech box(es)" }
+            }
+            val speechResolvedBoxes = speechResolved.map(evidencedBoxes::get)
+            val speechResolvedRead = speechResolved.map(evidencedRead::get)
+            val resolved = FallbackTextBlockResolver.keepIndices(
+                speechResolvedBoxes.mapIndexed { index, box ->
+                    FallbackTextBlockResolver.Candidate(
+                        left = box.left,
+                        top = box.top,
+                        right = box.right,
+                        bottom = box.bottom,
+                        isSpeech = !box.isTextBlock,
+                        isFallback = box.isFallbackTextBlock,
+                        text = speechResolvedRead[index].text,
+                    )
+                },
+            )
+            if (resolved.size < speechResolvedBoxes.size) {
+                logcat { "Resolved ${speechResolvedBoxes.size - resolved.size} overlapping speech OCR fallback(s)" }
+            }
+            val resolvedBoxes = resolved.map(speechResolvedBoxes::get)
+            val resolvedRead = resolved.map(speechResolvedRead::get)
+            val (coalescedBoxes, coalescedRead) = coalesceTextRegions(resolvedBoxes, resolvedRead)
             val kept = coalescedBoxes.indices.filterNot { index ->
                 isDecorativeDisplayText(coalescedBoxes[index], coalescedRead[index], source.width)
             }
             if (kept.size < coalescedBoxes.size) {
                 logcat { "Dropped ${coalescedBoxes.size - kept.size} decorative title/SFX region(s)" }
             }
-            kept.map { coalescedBoxes[it] } to kept.map { coalescedRead[it] }
+            val finalBoxes = kept.map { coalescedBoxes[it] }
+            val finalRead = kept.map { coalescedRead[it] }
+            finalBoxes to finalRead
         }
 
+        val readForTranslation = recognized.map { bubbleText ->
+            bubbleText.copy(text = ShortDialogueNormalizer.normalize(bubbleText.text))
+        }
         val provider = currentProvider()
 
         val answered = if (provider.supportsVisionOcr) {
             provider.ocrAndTranslate(source, boxes, translationContext)
         } else {
-            translateFromOcr(provider, boxes, recognized, translationContext)
+            translateFromOcr(provider, boxes, readForTranslation, translationContext)
         }
-        val translations = realignToOcr(answered, recognized)
+        val aligned = realignToOcr(answered, readForTranslation)
+        var translations = aligned.mapIndexed { index, answer ->
+            val sourceText = readForTranslation[index].text
+            ShortDialogueNormalizer.directTranslation(
+                sourceText,
+                translationContext.sourceLanguage,
+                translationContext.targetLanguage,
+            ) ?: if (
+                NearEchoNameGuard.preserveSource(
+                    sourceText,
+                    answer.translation,
+                    translationContext.sourceLanguage,
+                    translationContext.targetLanguage,
+                )
+            ) {
+                sourceText
+            } else {
+                answer.translation
+            }
+        }
+        if (provider.supportsVisionOcr) {
+            val missing = VisionFallbackSelector.missingIndices(
+                translations = translations,
+                ocrTexts = recognized.map { it.text },
+                speechBoxes = boxes.map { !it.isTextBlock },
+                providerSources = aligned.map { it.source },
+            )
+            if (missing.isNotEmpty()) {
+                // Vision models occasionally omit a tiny numbered bubble even though the native OCR
+                // crop read it cleanly. One batched text-only fallback recovers only those omissions;
+                // meaningful-text filtering keeps short hand-drawn SFX out of this path.
+                val recovered = provider.translateLines(
+                    missing.map { index ->
+                        recognized[index].text.ifBlank { aligned[index].source }
+                    },
+                    translationContext,
+                )
+                val patched = translations.toMutableList()
+                var filled = 0
+                missing.forEachIndexed { position, index ->
+                    val translated = recovered.getOrNull(position)?.translation?.trim().orEmpty()
+                    if (translated.isNotEmpty()) {
+                        patched[index] = translated
+                        filled++
+                    }
+                }
+                translations = patched
+                logcat { "Recovered $filled/${missing.size} omitted vision bubble(s) from on-device OCR" }
+            }
+
+            // A vision model can label a tiny handwritten interjection as unreadable and return both
+            // fields empty even though the region is a detector-confirmed speech balloon. Native OCR
+            // cannot seed the text fallback in that case either. Retry only those blank speech slots
+            // as a much smaller labelled set; the page stays at native resolution and the model no
+            // longer has dozens of unrelated regions competing for attention.
+            val focusedIndices = FocusedVisionRetrySelector.indices(
+                translations = translations,
+                speechBoxes = boxes.map { !it.isTextBlock },
+                suspectedEchoes = translations.map { text ->
+                    SourceEchoHeuristic.isLikely(
+                        text,
+                        translationContext.sourceLanguage,
+                        translationContext.targetLanguage,
+                    )
+                },
+                limit = MAX_FOCUSED_VISION_BOXES,
+            )
+            if (focusedIndices.isNotEmpty()) {
+                val focusedBoxes = focusedIndices.map(boxes::get)
+                val focusedRead = focusedIndices.map(recognized::get)
+                val focusedAnswered = provider.ocrAndTranslate(source, focusedBoxes, translationContext)
+                val focusedAligned = realignToOcr(focusedAnswered, focusedRead)
+                val focusedTranslations = focusedAligned.map { it.translation }.toMutableList()
+                val focusedFallback = VisionFallbackSelector.missingIndices(
+                    translations = focusedTranslations,
+                    ocrTexts = focusedRead.map { it.text },
+                    speechBoxes = List(focusedIndices.size) { true },
+                    providerSources = focusedAligned.map { it.source },
+                )
+                if (focusedFallback.isNotEmpty()) {
+                    val recovered = provider.translateLines(
+                        focusedFallback.map { position ->
+                            focusedRead[position].text.ifBlank { focusedAligned[position].source }
+                        },
+                        translationContext,
+                    )
+                    focusedFallback.forEachIndexed { position, focusedIndex ->
+                        val translated = recovered.getOrNull(position)?.translation?.trim().orEmpty()
+                        if (translated.isNotEmpty()) focusedTranslations[focusedIndex] = translated
+                    }
+                }
+                val patched = translations.toMutableList()
+                var filled = 0
+                focusedIndices.forEachIndexed { position, globalIndex ->
+                    val translated = focusedTranslations.getOrNull(position)?.trim().orEmpty()
+                    if (translated.isNotEmpty()) {
+                        patched[globalIndex] = translated
+                        filled++
+                    }
+                }
+                translations = patched
+                logcat { "Recovered $filled/${focusedIndices.size} blank speech bubble(s) with focused vision" }
+            }
+        }
 
         val bubbles = boxes.mapIndexedNotNull { index, box ->
+            val ocrText = recognized.getOrNull(index)?.text.orEmpty()
+            if (NoisyVocalizationGuard.shouldLeaveUntouched(ocrText)) {
+                logcat { "Leaving non-lexical vocalization untouched in bubble ${index + 1}" }
+                return@mapIndexedNotNull null
+            }
             val translated = translations.getOrNull(index)?.trim().orEmpty()
             if (translated.isEmpty()) return@mapIndexedNotNull null
             if (!plausibleForTarget(translated, translationContext.targetLanguage)) {
@@ -174,7 +361,6 @@ class PageTranslator(
                 logcat { "Dropping non-target-script translation for bubble ${index + 1}" }
                 return@mapIndexedNotNull null
             }
-            val ocrText = recognized.getOrNull(index)?.text.orEmpty()
             if (isUntranslated(ocrText, translated)) {
                 // Providers echo the input when they cannot translate it, which is what happens to
                 // misread sound effects ("MHM~~" recognised as "WAWHW"). Erasing hand-drawn lettering
@@ -192,9 +378,9 @@ class PageTranslator(
         }
 
         if (bubbles.isEmpty()) throw NothingToTranslate()
-        logcat { "Rendering ${bubbles.size}/${boxes.size} translated bubbles" }
+        logcat { "$diagnosticLabel rendering ${bubbles.size}/${boxes.size} translated bubbles" }
 
-        renderer.render(source, bubbles, preferences.font.get())
+        renderer.render(source, bubbles, preferences.font.get(), horizontalSeams)
     }
 
     /**
@@ -299,14 +485,14 @@ class PageTranslator(
      * captions while the area condition avoids dropping a single short exclamation.
      */
     private fun isDecorativeDisplayText(box: BubbleBox, text: BubbleText, pageWidth: Int): Boolean {
-        if (!box.isTextBlock || text.lines.isEmpty() || pageWidth <= 0) return false
-        val heights = text.lines.map { it.rect.height() }.filter { it > 0 }.sorted()
-        if (heights.isEmpty()) return false
-        val medianHeight = heights[heights.size / 2]
-        val largeType = medianHeight >= maxOf(MIN_DISPLAY_TEXT_HEIGHT, (pageWidth * DISPLAY_TEXT_HEIGHT_RATIO).toInt())
-        val area = box.width.toLong() * box.height
-        val substantial = area >= pageWidth.toLong() * pageWidth * DISPLAY_TEXT_AREA_RATIO
-        return largeType && substantial
+        return DecorativeTextGuard.shouldDrop(
+            isTextBlock = box.isTextBlock,
+            text = text.text,
+            lineHeights = text.lines.map { it.rect.height() },
+            boxWidth = box.width,
+            boxHeight = box.height,
+            pageWidth = pageWidth,
+        )
     }
 
     /**
@@ -356,8 +542,8 @@ class PageTranslator(
     private fun realignToOcr(
         answered: List<BubbleTranslation>,
         recognized: List<BubbleText>,
-    ): List<String> {
-        val current = answered.map { it.translation }
+    ): List<BubbleTranslation> {
+        val current = answered
         if (answered.size < 2 || answered.size != recognized.size) return current
         // Nothing to match against if the provider did not echo what it read.
         if (answered.none { it.source.isNotBlank() }) return current
@@ -399,7 +585,7 @@ class PageTranslator(
         // strongly, and that bubble's own entry is itself misplaced or empty, it moves there. When no
         // such home exists the translation is dropped outright: wrong dialogue in a bubble reads as a
         // worse defect than an untranslated bubble.
-        val translations = MutableList(order.size) { answered[order[it]].translation }
+        val translations = MutableList(order.size) { answered[order[it]] }
         val sourceAt = List(order.size) { said[order[it]] }
         // OCR shorter than a few characters is not evidence — a lone misread glyph must not get a
         // real translation dropped on its account.
@@ -412,7 +598,7 @@ class PageTranslator(
         var relocated = 0
         var dropped = 0
         for (i in order.indices) {
-            if (translations[i].isBlank() || !misplacedAt(i)) continue
+            if (translations[i].translation.isBlank() || !misplacedAt(i)) continue
             val home = order.indices
                 .filter { it != i && it !in claimed && ocr[it].isNotBlank() }
                 .maxByOrNull { similarity(sourceAt[i], ocr[it]) }
@@ -424,7 +610,7 @@ class PageTranslator(
             } else {
                 dropped++
             }
-            if (i !in claimed) result[i] = ""
+            if (i !in claimed) result[i] = BubbleTranslation("", "")
         }
         if (relocated > 0 || dropped > 0) {
             logcat { "Relocated $relocated and dropped $dropped misplaced translation(s)" }
@@ -534,12 +720,10 @@ class PageTranslator(
 
     fun close() {
         runCatching { detector.close() }
+        runCatching { recognizer.close() }
     }
 
     private companion object {
-        const val MIN_DISPLAY_TEXT_HEIGHT = 42
-        const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f
-        const val DISPLAY_TEXT_AREA_RATIO = 0.08f
         const val CAPTION_ROW_OVERLAP = 0.45f
         const val CAPTION_MAX_GAP_HEIGHTS = 2
         const val CAPTION_CONTAINMENT = 0.65f
@@ -566,6 +750,9 @@ class PageTranslator(
         const val SLIVER_WIDTH_RATIO = 0.10f
         const val SLIVER_MIN_WIDTH = 48
         const val EDGE_SLOP = 2
+
+        /** Avoid turning a page full of false detector boxes into an unbounded second request. */
+        const val MAX_FOCUSED_VISION_BOXES = 12
 
         val NON_WORD = Regex("[^\\p{L}\\p{N}]+")
         val WHITESPACE = Regex("\\s+")

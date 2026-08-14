@@ -27,6 +27,8 @@ internal object TranslationPrompts {
             appendLine(geometry)
             appendLine()
             appendLine("NHIỆM VỤ: với từng số, đọc text nằm TRONG ô mang số đó, rồi dịch sang tiếng Việt.")
+            appendLine("- Chữ nằm TRONG KHUNG THOẠI phải dịch, kể cả chỉ một từ/thán từ như YES, WAIT, WHOA, AH.")
+            appendLine("- Chỉ bỏ hiệu ứng âm thanh vẽ trực tiếp trên tranh, KHÔNG nằm trong khung thoại.")
             appendLine("- Ô không có thoại (tranh, credit nhà xuất bản, chữ trang trí) → \"text\": \"\", \"translation\": \"\".")
             appendLine("- TUYỆT ĐỐI không điền lời của ô khác vào một ô. Thà bỏ trống còn hơn điền sai.")
             appendLine()
@@ -98,7 +100,8 @@ internal object TranslationPrompts {
      *    `Run!!" -> "Chạy đi!!`. Giving the source text somewhere legitimate to go stops it.
      */
     private fun vietnameseOutputContract(count: Int): String = buildString {
-        appendLine("Ô trống, chỉ có hiệu ứng âm thanh không cần dịch, hoặc không đọc được → \"translation\": \"\".")
+        appendLine("Ô thật sự trống hoặc chữ trang trí ngoài khung thoại → \"translation\": \"\".")
+        appendLine("Nếu đã có khung thoại thì PHẢI dịch cả câu một từ/thán từ; không được coi nó là SFX để bỏ qua.")
         appendLine(
             "Nếu ô là bảng thông số / cửa sổ hệ thống (\"Kỹ năng cấp D:\", \"Hiệu ứng kỹ năng:\"...), " +
                 "giữ NGUYÊN cách xuống dòng của bản gốc: mỗi mục một dòng, ngăn cách bằng \\n.",
@@ -111,7 +114,8 @@ internal object TranslationPrompts {
     }
 
     private fun genericOutputContract(count: Int): String = buildString {
-        appendLine("Empty, sound-effect-only or unreadable bubbles → \"translation\": \"\".")
+        appendLine("Truly empty regions or decorative text outside a speech balloon → \"translation\": \"\".")
+        appendLine("Text inside a speech balloon must be translated even when it is a one-word interjection.")
         appendLine(
             "When a box is a stat block or system window (\"Level D Skill:\", \"Skill effect:\"...), " +
                 "KEEP the original line breaks: one item per line, separated by \\n.",
