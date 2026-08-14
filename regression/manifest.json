@@ -1,0 +1,205 @@
+{
+ "note": "Fixture pages for the translation regression suite. Each set exposed real, since-fixed bugs; goldens lock today's behaviour.",
+ "sets": {
+  "asg8": [
+   {
+    "file": "asg8-d27f138f.jpg",
+    "w": 1280,
+    "h": 12755,
+    "kb": 1584
+   },
+   {
+    "file": "asg8-8e6b7be3.jpg",
+    "w": 1280,
+    "h": 10920,
+    "kb": 1282
+   },
+   {
+    "file": "asg8-33701eba.jpg",
+    "w": 1280,
+    "h": 8730,
+    "kb": 951
+   },
+   {
+    "file": "asg8-16f89bd3.jpg",
+    "w": 676,
+    "h": 952,
+    "kb": 81
+   },
+   {
+    "file": "asg8-e96789f9.jpg",
+    "w": 1280,
+    "h": 12530,
+    "kb": 1256
+   },
+   {
+    "file": "asg8-cba8b00a.jpg",
+    "w": 1280,
+    "h": 12780,
+    "kb": 1318
+   },
+   {
+    "file": "asg8-84b3d935.jpg",
+    "w": 1280,
+    "h": 10530,
+    "kb": 1276
+   },
+   {
+    "file": "asg8-9c9986fa.jpg",
+    "w": 1280,
+    "h": 13000,
+    "kb": 1592
+   },
+   {
+    "file": "asg8-44ac9a3b.jpg",
+    "w": 1280,
+    "h": 9255,
+    "kb": 942
+   },
+   {
+    "file": "asg8-a39e8b73.jpg",
+    "w": 1280,
+    "h": 12100,
+    "kb": 1299
+   },
+   {
+    "file": "asg8-b47e70b7.jpg",
+    "w": 1280,
+    "h": 11760,
+    "kb": 1094
+   },
+   {
+    "file": "asg8-be2c5ffa.jpg",
+    "w": 1280,
+    "h": 13000,
+    "kb": 1143
+   },
+   {
+    "file": "asg8-f23f78f9.jpg",
+    "w": 1280,
+    "h": 11350,
+    "kb": 1157
+   },
+   {
+    "file": "asg8-13e96338.jpg",
+    "w": 1280,
+    "h": 7555,
+    "kb": 936
+   },
+   {
+    "file": "asg8-b16a2e12.jpg",
+    "w": 1280,
+    "h": 8975,
+    "kb": 925
+   }
+  ],
+  "ch35": [
+   {
+    "file": "ch35-4360dbde.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1375
+   },
+   {
+    "file": "ch35-bfd7d976.jpg",
+    "w": 900,
+    "h": 1563,
+    "kb": 109
+   },
+   {
+    "file": "ch35-a28fffa5.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1280
+   },
+   {
+    "file": "ch35-ab8f7cc3.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1271
+   },
+   {
+    "file": "ch35-7c333568.jpg",
+    "w": 900,
+    "h": 1700,
+    "kb": 175
+   },
+   {
+    "file": "ch35-93ff335a.jpg",
+    "w": 900,
+    "h": 2215,
+    "kb": 155
+   },
+   {
+    "file": "ch35-d2448b25.jpg",
+    "w": 900,
+    "h": 1478,
+    "kb": 93
+   },
+   {
+    "file": "ch35-c4d49261.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1327
+   },
+   {
+    "file": "ch35-192082e0.jpg",
+    "w": 900,
+    "h": 16096,
+    "kb": 1414
+   },
+   {
+    "file": "ch35-66e7ba52.jpg",
+    "w": 900,
+    "h": 3102,
+    "kb": 255
+   },
+   {
+    "file": "ch35-16576d2b.jpg",
+    "w": 900,
+    "h": 1583,
+    "kb": 139
+   },
+   {
+    "file": "ch35-61820b2a.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1487
+   },
+   {
+    "file": "ch35-f5aff9af.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1561
+   },
+   {
+    "file": "ch35-1216589a.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1329
+   },
+   {
+    "file": "ch35-e031d952.jpg",
+    "w": 900,
+    "h": 2241,
+    "kb": 195
+   },
+   {
+    "file": "ch35-17c3a488.jpg",
+    "w": 900,
+    "h": 3565,
+    "kb": 296
+   },
+   {
+    "file": "ch35-e7db607f.jpg",
+    "w": 900,
+    "h": 16000,
+    "kb": 1235
+   }
+  ]
+ },
+ "sets_doc": {
+  "asg8": "Apocalypse Sword God ch.8 (KaiScans, 1280w webtoon strips). Guards: ghost lettering framing translations (fixed r17-r19), blue skill panels erase-by-strip + left alignment, jagged shout bubbles, TL/N captions, credit page dense panels, edge slivers, near-black ink #0c1924 vs the title-art saturation gate.",
+  "ch35": "Chapter 35 set (900w WEBP, mixes a 16000px strip with short slices). Material the r20+ renderer revisions were tuned against; locks their current behaviour."
+ }
+}

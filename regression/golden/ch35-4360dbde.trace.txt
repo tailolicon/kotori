@@ -1,0 +1,7 @@
+D/TextBlockDetector: Text-block pass added 2 region(s) and kept 0 speech fallback(s)
+D/PageTranslator: Merged 2 detector fragment(s) into complete caption blocks
+D/BubbleRenderer: bubble=BubbleBox(left=284, top=8731, right=709, bottom=8937, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(58, 106 - 665, 398) layout=Rect(58, 106 - 665, 398) slot=Rect(69, 106 - 654, 398) page=Rect(204, 8688 - 789, 8980) fill=fffcfcfc ink=ff141414
+D/BubbleRenderer: bubble=BubbleBox(left=703, top=9328, right=854, bottom=9421, confidence=0.25662538, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(87, 98 - 181, 161) layout=Rect(106, 136 - 186, 235) slot=Rect(124, 172 - 171, 235) page=Rect(751, 9424 - 798, 9487) fill=fff6ecdc ink=ff756e67
+D/BubbleRenderer: bubble=BubbleBox(left=169, top=5868, right=280, bottom=5949, confidence=0.19963455, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(101, 63 - 158, 103) layout=Rect(101, 63 - 158, 103) slot=Rect(108, 63 - 153, 96) page=Rect(221, 5875 - 266, 5908) fill=fff5f0ed ink=ff484443
+D/BubbleRenderer: bubble=BubbleBox(left=557, top=10400, right=622, bottom=10411, confidence=0.09419358, isTextBlock=false, isFallbackTextBlock=false) region=131x77 search=Rect(37, 34 - 94, 43) stroke=1 core=43 masked=205 blocked=0 glyphBounds=Rect(42, 38 - 94, 42) textArea=Rect(54, 34 - 84, 43) lines=0 ink=ff010101
+D/BubbleRenderer: Skipping Rect(578, 10401 - 608, 10410): its text slot is already occupied

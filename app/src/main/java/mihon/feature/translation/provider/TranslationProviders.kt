@@ -20,8 +20,17 @@ object TranslationProviders {
     @Volatile
     private var cachedOffline: OfflineTranslationProvider? = null
 
+    /**
+     * Regression-harness escape hatch. The debug-only harness translates a fixed corpus of pages
+     * and diffs the rendered output against blessed goldens; that only means anything if the
+     * provider is deterministic, so the harness installs one here for the duration of a run.
+     * Nothing in release code sets this — the harness itself lives in the debug source set.
+     */
+    @Volatile
+    var overrideForTesting: TranslationProvider? = null
+
     fun current(preferences: TranslationPreferences): TranslationProvider =
-        of(preferences.provider.get(), preferences)
+        overrideForTesting ?: of(preferences.provider.get(), preferences)
 
     fun of(type: TranslationProviderType, preferences: TranslationPreferences): TranslationProvider =
         when (type) {

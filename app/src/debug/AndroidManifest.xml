@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Debug builds only: entry point for the translation regression suite. Exported so the
+             host runner can fire it from adb; the release manifest never merges this file. -->
+        <receiver
+            android:name="mihon.feature.translation.debug.RegressionReceiver"
+            android:exported="true" />
+    </application>
+</manifest>
