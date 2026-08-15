@@ -80,19 +80,24 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
      * the next request carrying those cookies gets a normal `200`, which is why the site works in
      * a browser but every call from here failed. OkHttp has already stored the cookies by the
      * time an application interceptor sees the response, so replaying once is the whole fix.
+     *
+     * Wrapped by [MirrorResolver.install] so a blocked domain invalidates the cached answer
+     * rather than failing every request until the TTL expires.
      */
     override val client: OkHttpClient by lazy {
-        network.client.newBuilder()
-            .addInterceptor { chain ->
-                val response = chain.proceed(chain.request())
-                if (response.code != 403 || response.headers("Set-Cookie").isEmpty()) {
-                    response
-                } else {
-                    response.close()
-                    chain.proceed(chain.request())
+        mirrors.install(
+            network.client.newBuilder()
+                .addInterceptor { chain ->
+                    val response = chain.proceed(chain.request())
+                    if (response.code != 403 || response.headers("Set-Cookie").isEmpty()) {
+                        response
+                    } else {
+                        response.close()
+                        chain.proceed(chain.request())
+                    }
                 }
-            }
-            .build()
+                .build(),
+        )
     }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -374,14 +379,24 @@ class AnimeVietsubSource : BuiltInHttpSource(), ConfigurableAnimeSource {
             "Yuri" to "yuri",
         )
 
-        const val DEFAULT_BASE_URL = "https://animevietsub.ing"
+        const val DEFAULT_BASE_URL = "https://animevietsub.mom"
 
         /**
          * Hosts to probe, best-known first. This is a starting point, not a fixed list:
          * whichever one answers is followed through its redirects, so the domain the app
          * settles on can be one that is not written here.
+         *
+         * Unlike AnimeHay this site does redirect its old domains at the current one, so the
+         * dead entries below are worth keeping — they are the trail that leads to wherever it
+         * moves next, and that is why this source needs no guessing.
          */
-        private val MIRRORS = listOf("animevietsub.ing", "animevietsub.moe", "animevietsub.info", "animevietsub.meme")
+        private val MIRRORS = listOf(
+            "animevietsub.mom",
+            "animevietsub.moe",
+            "animevietsub.info",
+            "animevietsub.ing",
+            "animevietsub.meme",
+        )
         private const val PREF_DOMAIN_KEY = "override_base_url"
 
         private val M3U8_REGEX = Regex("""https?://[^\s"'\\]+\.m3u8[^\s"'\\]*""")

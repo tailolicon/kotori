@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import eu.kanade.tachiyomi.source.builtin.MirrorResolver
+import eu.kanade.tachiyomi.source.builtin.numberedHosts
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.network.GET
@@ -15,6 +16,7 @@ import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -39,8 +41,27 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
      * Resolved rather than hardcoded: [MirrorResolver] probes the known hosts, follows
      * redirects and keeps whichever one answers, so a domain change the site itself
      * redirects is picked up without an app update. A pasted override still wins.
+     *
+     * This site is the reason guessing exists. It does not redirect an old domain to a new one
+     * — once a host is blocked it simply stops answering — so there is nothing for a redirect
+     * to teach the app, and every shipped host eventually goes dark at once. What it does do is
+     * increment: `animehay08` through `animehay15` are all the same site, registered ahead of
+     * time. Walking that counter is therefore the only discovery that actually works here.
      */
-    private val mirrors by lazy { MirrorResolver(preferences, MIRRORS) }
+    private val mirrors by lazy {
+        MirrorResolver(
+            preferences = preferences,
+            candidates = MIRRORS,
+            guesses = { resolved ->
+                val current = resolved?.let { HOST_NUMBER_REGEX.find(it)?.value?.toIntOrNull() } ?: 0
+                numberedHosts(HOST_TEMPLATE, highest = maxOf(current, HIGHEST_KNOWN), ahead = 10)
+            },
+            guessMarker = GUESS_MARKER,
+        )
+    }
+
+    /** Wrapped so a blocked domain invalidates the cached answer instead of failing for hours. */
+    override val client: OkHttpClient by lazy { mirrors.install(network.client) }
 
     override val baseUrl: String
         get() = mirrors.baseUrl(preferences.getString(PREF_DOMAIN_KEY, null))
@@ -290,14 +311,35 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
             "Khoa huyễn" to "khoa-huyen-49",
         )
 
-        const val DEFAULT_BASE_URL = "https://animehay10.site"
+        const val DEFAULT_BASE_URL = "https://animehay15.site"
 
         /**
-         * Hosts to probe, best-known first. This is a starting point, not a fixed list:
-         * whichever one answers is followed through its redirects, so the domain the app
-         * settles on can be one that is not written here.
+         * Hosts to probe, best-known first. This is a starting point, not a fixed list: the
+         * resolver follows redirects, and when none of these answers it walks the counter past
+         * [HIGHEST_KNOWN], so the domain the app settles on can be one not written here.
          */
-        private val MIRRORS = listOf("animehay10.site", "animehay09.site", "animehay08.site")
+        private val MIRRORS = listOf(
+            "animehay15.site",
+            "animehay14.site",
+            "animehay13.site",
+            "animehay12.site",
+            "animehay11.site",
+            "animehay10.site",
+            "animehay09.site",
+            "animehay08.site",
+        )
+
+        /** The counter [MIRRORS] runs up to, and the shape it is written in (`animehay08`, not `animehay8`). */
+        private const val HIGHEST_KNOWN = 15
+        private const val HOST_TEMPLATE = "animehay%02d.site"
+        private val HOST_NUMBER_REGEX = Regex("""\d+""")
+
+        /**
+         * Proof a guessed host is the site: the genre listing every page links to. Verified
+         * present on the real domains, and not something a parked or for-sale page would carry.
+         */
+        private const val GUESS_MARKER = "the-loai/anime-1"
+
         private const val PREF_DOMAIN_KEY = "override_base_url"
 
         // var $wp_servers = { 'AHS': 'https://ahay.stream/embed-jw/76075', };
