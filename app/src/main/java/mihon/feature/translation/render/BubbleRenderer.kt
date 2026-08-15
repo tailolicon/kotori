@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.TextLineBox
 import mihon.feature.translation.model.TranslatedBubble
 import tachiyomi.core.common.util.system.logcat
@@ -301,6 +302,19 @@ class BubbleRenderer(private val context: Context) {
         val box = bubble.box.clampTo(bitmap.width, bitmap.height)
         if (!box.isUsable()) return null
 
+        // A fallback text block is OCR's word alone — it exists precisely because no bubble and no
+        // confirmed text region was found there. When such a block carries a single short word, the
+        // common case by far is page texture misread as lettering (hair, grass, an explosion), and
+        // honouring it stamps a stray translation onto open artwork with an inpaint smear under it.
+        // Real dialogue that reaches the renderer through this fallback is longer in practice.
+        if (box.isFallbackTextBlock && looksLikeTextureMisread(bubble.original)) {
+            logcat {
+                "Skipping ${bubble.box}: lone short word \"${bubble.original.take(12)}\" in a " +
+                    "speech-fallback block — texture, not text"
+            }
+            return null
+        }
+
         // Work on a padded crop: the detector's box often clips stroke tips, and the inpainter needs
         // known pixels on all sides of the mask to reconstruct from.
         //
@@ -405,9 +419,8 @@ class BubbleRenderer(private val context: Context) {
         }
         if (flat != null) {
             for (i in pixels.indices) if (flat.region[i]) pixels[i] = flat.fillColor
-            val clearedDarkCaption = bubble.box.isTextBlock &&
-                luminanceOf(flat.fillColor) <= DARK_CAPTION_MAX_LUMA
-            if (clearedDarkCaption) {
+            var clearedDarkCaption = false
+            if (bubble.box.isTextBlock && luminanceOf(flat.fillColor) <= DARK_CAPTION_MAX_LUMA) {
                 // BubbleFill correctly identifies the black caption field but deliberately excludes
                 // its light glyphs from the flood. On outlined subtitles those excluded islands are
                 // precisely the source text, so cover their OCR-bounded strip with the proven fill.
@@ -420,11 +433,23 @@ class BubbleRenderer(private val context: Context) {
                 caption.top = caption.top.coerceIn(0, height - 1)
                 caption.right = caption.right.coerceIn(caption.left + 1, width)
                 caption.bottom = caption.bottom.coerceIn(caption.top + 1, height)
-                for (y in caption.top until caption.bottom) {
-                    val base = y * width
-                    for (x in caption.left until caption.right) pixels[base + x] = flat.fillColor
+                // Flattening the whole rect is only safe when everything in it is strip and glyphs.
+                // OCR happily reads a logotype, so its line boxes can union across a credit page's
+                // logo and mascot — and the wholesale paint then replaced 88% of a band with one
+                // flat colour. Paint island by island instead: a subtitle glyph is a component of
+                // roughly line height sitting on an OCR line; a logo block, a mascot or a panel
+                // border is bigger than any line or barely overlaps one, and stays.
+                val painted = paintCaptionGlyphIslands(
+                    pixels, originalPixels, flat.region, width, height, caption, textLines,
+                    flat.fillColor,
+                )
+                if (painted > 0) {
+                    clearedDarkCaption = true
+                    logcat {
+                        "text-block=${bubble.box} cleared outlined dark-caption strip=$caption " +
+                            "($painted glyph px)"
+                    }
                 }
-                logcat { "text-block=${bubble.box} cleared outlined dark-caption strip=$caption" }
             }
             // OCR text-block boxes hug lettering rather than the enclosing balloon. On manga's
             // white paper an expanded flood can escape through a tail or a panel gap and treat the
@@ -526,6 +551,14 @@ class BubbleRenderer(private val context: Context) {
                     }
                 }
             }
+            slot = anchorSlotToText(slot, textLines, width, height, bubble.box)
+            if (!ensureErased(
+                    bitmap, pixels, originalPixels, width, height, regionLeft, regionTop,
+                    textLines, bubble.box,
+                )
+            ) {
+                return null
+            }
             val page = Rect(slot).apply { offset(regionLeft, regionTop) }
             logcat {
                 "bubble=${bubble.box} flat-fill bounds=${flat.bounds} layout=${layout.bounds} " +
@@ -552,7 +585,8 @@ class BubbleRenderer(private val context: Context) {
             // of lettering; limit the fallback to those rectangles and leave every other pixel of
             // the panel untouched.
             return eraseTextBlockGlyphs(
-                bitmap, bubble, pixels, width, height, textLines, regionLeft, regionTop, leftAligned,
+                bitmap, bubble, pixels, originalPixels, width, height, textLines, regionLeft,
+                regionTop, leftAligned,
             )
         }
 
@@ -611,7 +645,15 @@ class BubbleRenderer(private val context: Context) {
             seed = coreBounds.centerX() to coreBounds.centerY(),
             blocked = mask.blocked,
             fallback = glyphFallback,
-        )
+        ).let { anchorSlotToText(it, textLines, width, height, bubble.box) }
+
+        if (!ensureErased(
+                bitmap, pixels, originalPixels, width, height, regionLeft, regionTop,
+                textLines, bubble.box,
+            )
+        ) {
+            return null
+        }
 
         val paperColor = averageColorIn(pixels, width, textArea)
 
@@ -889,6 +931,34 @@ class BubbleRenderer(private val context: Context) {
             fill.sumOf { (it shr 8) and 0xFF } / fill.size,
             fill.sumOf { it and 0xFF } / fill.size,
         )
+
+        // The border ring only says which polarity the strip is; it says nothing about what sits
+        // *inside* the bounds. On the page that exposed this, the ring around a credit page's
+        // lettering was dark page while the interior held a logo, a character and panel borders —
+        // and the solid repaint below replaced 88% of the band with one flat colour. A wholesale
+        // repaint is only safe when the strip really is one colour apart from its lettering, so
+        // demand exactly that of the pixels outside the OCR lines before touching any of them.
+        var uniform = 0
+        var inspected = 0
+        for (y in bounds.top until bounds.bottom) {
+            val base = y * width
+            for (x in bounds.left until bounds.right) {
+                val insideLine = textLines.any {
+                    x >= it.left && x < it.right && y >= it.top && y < it.bottom
+                }
+                if (insideLine) continue
+                inspected++
+                if (channelSum(pixels[base + x], fillColor) <= CAPTION_UNIFORM_TOLERANCE) uniform++
+            }
+        }
+        if (inspected > 0 && uniform.toFloat() / inspected < CAPTION_UNIFORM_MIN_SHARE) {
+            logcat {
+                "text-block=${bubble.box}: caption interior is not one colour " +
+                    "($uniform/$inspected uniform); leaving it to the safer paths"
+            }
+            return null
+        }
+
         for (y in bounds.top until bounds.bottom) {
             val base = y * width
             for (x in bounds.left until bounds.right) pixels[base + x] = fillColor
@@ -901,6 +971,349 @@ class BubbleRenderer(private val context: Context) {
             bubble.box.toRect(), true,
             bubble.box.isTextBlock,
         )
+    }
+
+    /**
+     * Paints a dark caption's excluded glyph islands with its proven fill, one component at a time.
+     *
+     * Only components shaped like lettering are touched: roughly line height, lying on an OCR
+     * line. A component taller than every line or mostly off the lines is a logo, a mascot or a
+     * border — painting those is how a credit page once lost 88% of a band to one flat colour.
+     *
+     * @return the number of pixels painted.
+     */
+    private fun paintCaptionGlyphIslands(
+        pixels: IntArray,
+        original: IntArray,
+        region: BooleanArray,
+        width: Int,
+        height: Int,
+        caption: Rect,
+        textLines: List<Rect>,
+        fillColor: Int,
+    ): Int {
+        val aw = caption.width()
+        val ah = caption.height()
+        if (aw <= 0 || ah <= 0) return 0
+        val count = aw * ah
+        val lineHeight = textLines.maxOf { it.height() }
+        val maxComponentHeight = (lineHeight * CAPTION_ISLAND_MAX_LINE_HEIGHTS).roundToInt()
+        val paddedLines = textLines.map { line ->
+            Rect(line).apply {
+                val pad = max(3, (line.height() * CAPTION_ISLAND_LINE_PAD).roundToInt())
+                inset(-pad, -pad)
+            }
+        }
+
+        val candidate = BooleanArray(count)
+        var idx = 0
+        for (y in caption.top until caption.bottom) {
+            val base = y * width
+            for (x in caption.left until caption.right) {
+                val i = base + x
+                candidate[idx++] = !region[i] &&
+                    channelSum(original[i], fillColor) > CAPTION_UNIFORM_TOLERANCE
+            }
+        }
+
+        var paintedTotal = 0
+        val visited = BooleanArray(count)
+        val stack = ArrayDeque<Int>()
+        val members = ArrayList<Int>()
+        for (start in 0 until count) {
+            if (!candidate[start] || visited[start]) continue
+            members.clear()
+            var minX = Int.MAX_VALUE
+            var maxX = -1
+            var minY = Int.MAX_VALUE
+            var maxY = -1
+            visited[start] = true
+            stack.addLast(start)
+            while (stack.isNotEmpty()) {
+                val i = stack.removeLast()
+                members += i
+                val x = i % aw
+                val y = i / aw
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+                if (x > 0 && candidate[i - 1] && !visited[i - 1]) {
+                    visited[i - 1] = true
+                    stack.addLast(i - 1)
+                }
+                if (x < aw - 1 && candidate[i + 1] && !visited[i + 1]) {
+                    visited[i + 1] = true
+                    stack.addLast(i + 1)
+                }
+                if (y > 0 && candidate[i - aw] && !visited[i - aw]) {
+                    visited[i - aw] = true
+                    stack.addLast(i - aw)
+                }
+                if (i + aw < count && candidate[i + aw] && !visited[i + aw]) {
+                    visited[i + aw] = true
+                    stack.addLast(i + aw)
+                }
+            }
+            val bbox = Rect(
+                caption.left + minX,
+                caption.top + minY,
+                caption.left + maxX + 1,
+                caption.top + maxY + 1,
+            )
+            if (bbox.height() > maxComponentHeight) continue
+            val bboxArea = bbox.width().toLong() * bbox.height()
+            val onLines = paddedLines.sumOf { line ->
+                val o = Rect()
+                if (o.setIntersect(bbox, line)) o.width().toLong() * o.height() else 0L
+            }
+            if (onLines < bboxArea * CAPTION_ISLAND_MIN_LINE_OVERLAP) continue
+            for (i in members) {
+                pixels[(caption.top + i / aw) * width + (caption.left + i % aw)] = fillColor
+            }
+            paintedTotal += members.size
+        }
+        return paintedTotal
+    }
+
+    /** A lone short word in a fallback block: page texture OCR mistook for lettering. */
+    private fun looksLikeTextureMisread(original: String): Boolean {
+        val trimmed = original.trim()
+        val words = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
+        return words.size <= 1 && trimmed.length <= STRAY_FALLBACK_MAX_CHARS
+    }
+
+    /**
+     * Keeps the text slot where the original text was.
+     *
+     * A slot is normally the erased interior, but two escapes produce slots that have left their
+     * bubble entirely: an expanded flood slips through an open tail into the page gutter, and a
+     * text-area flood walks off a low-contrast boundary. Both were observed stamping the
+     * translation into the gap *between* two balloons while the balloons themselves sat empty. The
+     * one thing always true of a correct slot is that it covers the lettering it replaces, so when
+     * it covers less than half of the OCR union, fall back to the original footprint.
+     */
+    private fun anchorSlotToText(
+        slot: Rect,
+        textLines: List<Rect>,
+        width: Int,
+        height: Int,
+        box: BubbleBox,
+    ): Rect {
+        if (textLines.isEmpty()) return slot
+        val union = Rect(textLines[0])
+        textLines.drop(1).forEach { union.union(it) }
+        union.left = union.left.coerceIn(0, width)
+        union.top = union.top.coerceIn(0, height)
+        union.right = union.right.coerceIn(union.left, width)
+        union.bottom = union.bottom.coerceIn(union.top, height)
+        val unionArea = union.width().toLong() * union.height()
+        if (unionArea <= 0L) return slot
+        val overlap = Rect()
+        val covered = if (overlap.setIntersect(slot, union)) {
+            overlap.width().toLong() * overlap.height()
+        } else {
+            0L
+        }
+        if (covered * 2 >= unionArea) return slot
+        val anchored = Rect(union).apply {
+            inset(
+                -max(4, (union.height() * SLOT_ANCHOR_PAD_X).roundToInt()),
+                -max(3, (union.height() * SLOT_ANCHOR_PAD_Y).roundToInt()),
+            )
+            left = left.coerceIn(0, width - 1)
+            top = top.coerceIn(0, height - 1)
+            right = right.coerceIn(left + 1, width)
+            bottom = bottom.coerceIn(top + 1, height)
+        }
+        logcat { "bubble=$box slot=$slot covers under half of lettering=$union; anchoring to the text" }
+        return anchored
+    }
+
+    private class GhostReport(val survivors: BooleanArray, val inkCount: Int, val survivorCount: Int)
+
+    /**
+     * Ink of the original lettering that is still on the page, inside the OCR line geometry.
+     *
+     * A pixel counts when it was ink in the original — far from the line's own paper colour — and
+     * is essentially unchanged now. That is what the reader experiences as ghosting: the
+     * translation stamped over a bubble whose original sentence, or its outline shell, was never
+     * actually removed.
+     *
+     * Two filters keep this from firing on things that are not lettering. Components crossing the
+     * whole line area are structure — a panel border or bubble rim passing through — and erasing
+     * those would damage exactly what the erase paths go out of their way to protect. Tiny
+     * components are compression noise. Both are ignored.
+     */
+    private fun ghostSurvivors(
+        pixels: IntArray,
+        original: IntArray,
+        width: Int,
+        height: Int,
+        textLines: List<Rect>,
+    ): GhostReport {
+        val survivors = BooleanArray(pixels.size)
+        var ink = 0
+        var kept = 0
+        for (line in textLines) {
+            val area = Rect(line).apply {
+                inset(
+                    -max(4, (line.height() * GHOST_LINE_PAD_X).roundToInt()),
+                    -max(2, (line.height() * GHOST_LINE_PAD_Y).roundToInt()),
+                )
+                left = left.coerceIn(0, width)
+                top = top.coerceIn(0, height)
+                right = right.coerceIn(left, width)
+                bottom = bottom.coerceIn(top, height)
+            }
+            val aw = area.width()
+            val ah = area.height()
+            if (aw < 3 || ah < 3) continue
+            val count = aw * ah
+
+            // The line's own paper: ink is a minority of the area, so the luma median lands on it.
+            val areaPixels = IntArray(count)
+            var idx = 0
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) areaPixels[idx++] = original[base + x]
+            }
+            val paper = areaPixels.sortedBy { luminanceOf(it) }[count / 2]
+
+            val candidate = BooleanArray(count)
+            idx = 0
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    val o = original[base + x]
+                    if (colorDistance(o, paper) >= GHOST_INK_DISTANCE_SQ) {
+                        ink++
+                        if (colorDistance(pixels[base + x], o) <= GHOST_UNCHANGED_DISTANCE_SQ) {
+                            candidate[idx] = true
+                        }
+                    }
+                    idx++
+                }
+            }
+
+            val visited = BooleanArray(count)
+            val stack = ArrayDeque<Int>()
+            val members = ArrayList<Int>()
+            for (start in 0 until count) {
+                if (!candidate[start] || visited[start]) continue
+                members.clear()
+                var minX = Int.MAX_VALUE
+                var maxX = -1
+                var minY = Int.MAX_VALUE
+                var maxY = -1
+                visited[start] = true
+                stack.addLast(start)
+                while (stack.isNotEmpty()) {
+                    val i = stack.removeLast()
+                    members += i
+                    val x = i % aw
+                    val y = i / aw
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                    if (x > 0 && candidate[i - 1] && !visited[i - 1]) {
+                        visited[i - 1] = true
+                        stack.addLast(i - 1)
+                    }
+                    if (x < aw - 1 && candidate[i + 1] && !visited[i + 1]) {
+                        visited[i + 1] = true
+                        stack.addLast(i + 1)
+                    }
+                    if (y > 0 && candidate[i - aw] && !visited[i - aw]) {
+                        visited[i - aw] = true
+                        stack.addLast(i - aw)
+                    }
+                    if (i + aw < count && candidate[i + aw] && !visited[i + aw]) {
+                        visited[i + aw] = true
+                        stack.addLast(i + aw)
+                    }
+                }
+                if (members.size < GHOST_MIN_COMPONENT) continue
+                if (maxX - minX + 1 >= aw * GHOST_CROSSING_WIDTH_SHARE ||
+                    maxY - minY + 1 >= ah * GHOST_CROSSING_HEIGHT_SHARE
+                ) {
+                    continue
+                }
+                for (i in members) {
+                    val page = (area.top + i / aw) * width + (area.left + i % aw)
+                    if (!survivors[page]) {
+                        survivors[page] = true
+                        kept++
+                    }
+                }
+            }
+        }
+        return GhostReport(survivors, ink, kept)
+    }
+
+    /**
+     * Final gate on every erase path: if the original lettering survived, repair it or refuse to
+     * stamp.
+     *
+     * Every path can fail partially — a glyph mask keyed to the wrong polarity erases speckles and
+     * leaves the sentence, a strip stops one row short of a descender, a flood never reaches a
+     * line outside its component. Whatever the cause, stamping the translation over surviving
+     * lettering produces an unreadable overprint, which the audit found to be the single worst
+     * defect class. So: measure what survived, inpaint exactly those pixels, and if the lettering
+     * still stands after that, leave the bubble untranslated — the original by itself is strictly
+     * better than the original with a translation on top.
+     */
+    private fun ensureErased(
+        bitmap: Bitmap,
+        pixels: IntArray,
+        original: IntArray,
+        width: Int,
+        height: Int,
+        regionLeft: Int,
+        regionTop: Int,
+        textLines: List<Rect>,
+        box: BubbleBox,
+    ): Boolean {
+        if (textLines.isEmpty()) return true
+        var report = ghostSurvivors(pixels, original, width, height, textLines)
+        if (report.survivorCount < GHOST_MIN_SURVIVORS ||
+            report.survivorCount < report.inkCount * GHOST_ESCALATE_RATIO
+        ) {
+            return true
+        }
+
+        // Swallow each survivor's antialiased edge along with its body.
+        val mask = BooleanArray(pixels.size)
+        for (i in pixels.indices) {
+            if (!report.survivors[i]) continue
+            val x = i % width
+            val y = i / width
+            for (dy in -GHOST_DILATE_RADIUS..GHOST_DILATE_RADIUS) {
+                val py = y + dy
+                if (py !in 0 until height) continue
+                for (dx in -GHOST_DILATE_RADIUS..GHOST_DILATE_RADIUS) {
+                    val px = x + dx
+                    if (px in 0 until width) mask[py * width + px] = true
+                }
+            }
+        }
+        val before = report.survivorCount
+        Inpainter.fill(pixels, width, height, mask)
+        bitmap.setPixels(pixels, 0, width, regionLeft, regionTop, width, height)
+
+        report = ghostSurvivors(pixels, original, width, height, textLines)
+        if (report.survivorCount >= GHOST_MIN_SURVIVORS &&
+            report.survivorCount >= report.inkCount * GHOST_SKIP_RATIO
+        ) {
+            logcat {
+                "bubble=$box ghost gate: ${report.survivorCount}/${report.inkCount} ink px still " +
+                    "standing after repair — leaving the original rather than overprinting"
+            }
+            return false
+        }
+        logcat { "bubble=$box ghost gate: erased $before surviving px of original lettering" }
+        return true
     }
 
     /** Pixels close enough to OCR element geometry to plausibly be leftover source lettering. */
@@ -936,6 +1349,7 @@ class BubbleRenderer(private val context: Context) {
         bitmap: Bitmap,
         bubble: TranslatedBubble,
         pixels: IntArray,
+        original: IntArray,
         width: Int,
         height: Int,
         textLines: List<Rect>,
@@ -1017,6 +1431,13 @@ class BubbleRenderer(private val context: Context) {
             top = top.coerceIn(0, height - 1)
             right = right.coerceIn(left + 1, width)
             bottom = bottom.coerceIn(top + 1, height)
+        }
+        if (!ensureErased(
+                bitmap, pixels, original, width, height, regionLeft, regionTop,
+                textLines, bubble.box,
+            )
+        ) {
+            return null
         }
         val paperColor = averageColorIn(pixels, width, slot)
         val page = Rect(slot).apply { offset(regionLeft, regionTop) }
@@ -1614,6 +2035,56 @@ class BubbleRenderer(private val context: Context) {
         const val LIGHT_CAPTION_MIN_LUMA = 220f
         const val LIGHT_CAPTION_MIN_SHARE = 0.40f
         const val LIGHT_CAPTION_EXTRA_X = 3.0f
+
+        /** Per-pixel summed channel difference at which a caption pixel still counts as its fill. */
+        const val CAPTION_UNIFORM_TOLERANCE = 60
+
+        /** Share of the non-lettering interior that must match the fill for a wholesale repaint. */
+        const val CAPTION_UNIFORM_MIN_SHARE = 0.90f
+
+        /** Tallest paintable caption island, in multiples of the tallest OCR line. */
+        const val CAPTION_ISLAND_MAX_LINE_HEIGHTS = 1.6f
+
+        /** Outset around each OCR line when testing whether an island lies on the lettering. */
+        const val CAPTION_ISLAND_LINE_PAD = 0.30f
+
+        /** Share of an island's box that must lie on OCR lines for it to count as lettering. */
+        const val CAPTION_ISLAND_MIN_LINE_OVERLAP = 0.55f
+
+        /** Longest lone word a speech-fallback block may carry before it reads as texture. */
+        const val STRAY_FALLBACK_MAX_CHARS = 7
+
+        // ── Ghost gate ────────────────────────────────────────────────────────────────────────────
+        /** Squared distance from the line's paper at which an original pixel counts as ink. */
+        const val GHOST_INK_DISTANCE_SQ = 80 * 80
+
+        /** Squared distance below which a pixel is considered untouched by the erase. */
+        const val GHOST_UNCHANGED_DISTANCE_SQ = 40 * 40
+
+        const val GHOST_LINE_PAD_X = 0.35f
+        const val GHOST_LINE_PAD_Y = 0.18f
+
+        /** Fewer surviving pixels than this is specks, not lettering. */
+        const val GHOST_MIN_SURVIVORS = 40
+
+        /** Survivor share of the original ink at which the repair pass runs. */
+        const val GHOST_ESCALATE_RATIO = 0.10f
+
+        /** Survivor share after repair at which the stamp is abandoned. */
+        const val GHOST_SKIP_RATIO = 0.45f
+
+        const val GHOST_DILATE_RADIUS = 3
+
+        /** Components smaller than this are compression noise, not glyph remains. */
+        const val GHOST_MIN_COMPONENT = 6
+
+        /** A component spanning this much of its line area is structure, never a letter. */
+        const val GHOST_CROSSING_WIDTH_SHARE = 0.90f
+        const val GHOST_CROSSING_HEIGHT_SHARE = 0.92f
+
+        /** Outset around the OCR union when a wandering slot is re-anchored to the lettering. */
+        const val SLOT_ANCHOR_PAD_X = 0.15f
+        const val SLOT_ANCHOR_PAD_Y = 0.10f
         const val UNIFORM_CAPTION_MIN_ASPECT = 4
         const val UNIFORM_CAPTION_ART_MIN_ASPECT = 7f
         const val UNIFORM_CAPTION_ART_MIN_WIDTH = 400

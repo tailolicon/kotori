@@ -1,6 +1,8 @@
 D/TextBlockDetector: Text-block pass added 3 region(s) and kept 0 speech fallback(s)
 D/BubbleRenderer: text-block BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
+D/BubbleRenderer: bubble=BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 10773 surviving px of original lettering
 D/BubbleRenderer: text-block=BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=8711 slot=Rect(234, 220 - 823, 292) page=Rect(416, 8276 - 1005, 8348) ink=ff3b2159
 D/BubbleRenderer: text-block BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
+D/BubbleRenderer: bubble=BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 14764 surviving px of original lettering
 D/BubbleRenderer: text-block=BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=9077 slot=Rect(234, 219 - 824, 291) page=Rect(648, 3519 - 1238, 3591) ink=ff4d3a8b
 D/BubbleRenderer: bubble=BubbleBox(left=536, top=8736, right=622, bottom=8785, confidence=0.23367599, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(58, 56 - 94, 74) layout=Rect(50, 6 - 122, 63) slot=Rect(57, 6 - 122, 55) page=Rect(550, 8699 - 615, 8748) fill=ff487176 ink=ffa6ccd4
