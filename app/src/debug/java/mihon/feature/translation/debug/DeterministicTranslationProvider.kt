@@ -34,8 +34,18 @@ class DeterministicTranslationProvider : TranslationProvider {
         prose: ProseContext,
     ): ProseTranslation = ProseTranslation(paragraphs.joinToString("\n\n") { vietnamize(it) })
 
-    private fun vietnamize(text: String): String = buildString(text.length) {
-        for (ch in text) append(VOWELS[ch] ?: ch)
+    private fun vietnamize(text: String): String {
+        // Echo what a real provider echoes. Google returns short sound effects ("FWAAH", "HMPH")
+        // and letterless strings unchanged, and the pipeline's isUntranslated guard then drops the
+        // bubble instead of erasing artwork to stamp a non-translation. Transforming those here
+        // made the harness stamp grey patches over SFX that live output leaves untouched — the
+        // audit then counted defects no user would ever see. Deterministic either way.
+        val trimmed = text.trim()
+        val isShortShout = !trimmed.contains(Regex("\\s")) && trimmed.length <= 5
+        if (isShortShout || trimmed.none { it.isLetter() }) return text
+        return buildString(text.length) {
+            for (ch in text) append(VOWELS[ch] ?: ch)
+        }
     }
 
     private companion object {

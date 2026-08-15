@@ -1,3 +1,4 @@
 D/TextBlockDetector: Text-block pass added 1 region(s) and kept 0 speech fallback(s)
 D/PageTranslator: Merged 1 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: bubble=BubbleBox(left=163, top=1048, right=740, bottom=1299, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(73, 149 - 830, 506) layout=Rect(73, 149 - 830, 506) slot=Rect(83, 149 - 820, 506) page=Rect(83, 995 - 820, 1352) fill=fffcfcfc ink=ff161616
+D/BubbleRenderer: text-block=BubbleBox(left=163, top=1048, right=740, bottom=1299, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 13193 flood px outside the lettering's neighbourhood Rect(109, 141 - 794, 519)
+D/BubbleRenderer: bubble=BubbleBox(left=163, top=1048, right=740, bottom=1299, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(109, 149 - 794, 506) layout=Rect(109, 149 - 794, 506) slot=Rect(136, 151 - 767, 506) page=Rect(136, 997 - 767, 1352) fill=fffcfcfc ink=ff060606

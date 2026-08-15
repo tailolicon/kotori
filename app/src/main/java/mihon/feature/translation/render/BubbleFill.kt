@@ -83,7 +83,7 @@ internal object BubbleFill {
         }
         val swallowsBox = filled > area * MAX_INTERIOR_RATIO
 
-        val textColor = sampleInk(pixels, region, fillColor) ?: return null
+        val textColor = sampleInk(pixels, region, width, fillColor, textLines) ?: return null
 
         // Pull back from the outline so repainting cannot touch it. This is the step whose absence
         // showed up as a smeared fringe around every bubble.
@@ -141,21 +141,102 @@ internal object BubbleFill {
         return (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
     }
 
-    /** Ink colour: the pixels inside the region that differ most from the fill. */
-    private fun sampleInk(pixels: IntArray, region: BooleanArray, fillColor: Int): Int? {
+    /**
+     * Ink colour: the glyphs' own core, not the average of everything that is not paper.
+     *
+     * Averaging all far-from-fill pixels folds a glyph's decorations into its colour — white
+     * lettering with a red glow came out flat pink, and red headlines re-rendered beige. The core
+     * is found instead: take the far pixel most distant from the fill and average only the far
+     * pixels near that extreme in colour. On plain lettering this is the old answer; on decorated
+     * lettering it is the core the decoration wraps.
+     *
+     * Sampling prefers the OCR line rectangles when they hold enough ink — the region can contain
+     * hearts, ornaments or a second speaker's lettering, and lines are where *this* text is.
+     */
+    private fun sampleInk(
+        pixels: IntArray,
+        region: BooleanArray,
+        width: Int,
+        fillColor: Int,
+        textLines: List<Rect>,
+    ): Int? {
+        // Every pass iterates either the line rectangles or the whole region directly — never the
+        // whole region with a per-pixel line test. A strip crop runs to millions of region pixels
+        // and dozens of lines, and the crossed version was quadratic enough that one 16000px page
+        // simply never finished. No allocation per pixel either, for the same reason.
+        val height = region.size / width
+        fun forDomain(restrict: Boolean, action: (Int) -> Unit) {
+            if (restrict) {
+                for (line in textLines) {
+                    val top = line.top.coerceIn(0, height)
+                    val bottom = line.bottom.coerceIn(top, height)
+                    val left = line.left.coerceIn(0, width)
+                    val right = line.right.coerceIn(left, width)
+                    for (y in top until bottom) {
+                        val base = y * width
+                        for (x in left until right) action(base + x)
+                    }
+                }
+            } else {
+                for (i in region.indices) action(i)
+            }
+        }
+
+        var restrict = textLines.isNotEmpty()
+        var farCount = 0
+        var core = 0
+        var coreDistance = -1
+        while (true) {
+            farCount = 0
+            coreDistance = -1
+            forDomain(restrict) { i ->
+                val p = pixels[i]
+                if (region[i] && distance(p, fillColor) >= INK_SEPARATION) {
+                    farCount++
+                    val d = distance(p, fillColor)
+                    if (d > coreDistance) {
+                        coreDistance = d
+                        core = p
+                    }
+                }
+            }
+            if (farCount >= MIN_INK_SAMPLES || !restrict) break
+            restrict = false
+        }
+        if (farCount < MIN_INK_SAMPLES) return null
+
         var r = 0L
         var g = 0L
         var b = 0L
         var n = 0
-        for (i in region.indices) {
-            if (!region[i]) continue
-            if (distance(pixels[i], fillColor) < INK_SEPARATION) continue
-            r += (pixels[i] shr 16) and 0xFF
-            g += (pixels[i] shr 8) and 0xFF
-            b += pixels[i] and 0xFF
-            n++
+        forDomain(restrict) { i ->
+            val p = pixels[i]
+            if (region[i] && distance(p, fillColor) >= INK_SEPARATION &&
+                distance(p, core) <= INK_CLUSTER_RADIUS
+            ) {
+                r += (p shr 16) and 0xFF
+                g += (p shr 8) and 0xFF
+                b += p and 0xFF
+                n++
+            }
         }
-        if (n < MIN_INK_SAMPLES) return null
+        if (n < MIN_INK_SAMPLES / 2) {
+            // The extreme sits alone (a stray saturated pixel); the plain average is safer.
+            r = 0
+            g = 0
+            b = 0
+            n = 0
+            forDomain(restrict) { i ->
+                val p = pixels[i]
+                if (region[i] && distance(p, fillColor) >= INK_SEPARATION) {
+                    r += (p shr 16) and 0xFF
+                    g += (p shr 8) and 0xFF
+                    b += p and 0xFF
+                    n++
+                }
+            }
+        }
+        if (n == 0) return null
         return (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
     }
 
@@ -520,6 +601,9 @@ internal object BubbleFill {
     private const val INTERIOR_TOLERANCE = 46
     private const val INK_SEPARATION = 70
     private const val MIN_INK_SAMPLES = 24
+
+    /** How close (max per-channel) an ink pixel must sit to the core extreme to share its colour. */
+    private const val INK_CLUSTER_RADIUS = 60
     private const val MIN_INTERIOR_RATIO = 0.12f
     private const val MAX_INTERIOR_RATIO = 0.94f
     private const val MIN_FLAT_SHARE = 0.62f

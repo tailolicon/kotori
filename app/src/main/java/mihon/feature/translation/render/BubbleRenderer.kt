@@ -302,15 +302,16 @@ class BubbleRenderer(private val context: Context) {
         val box = bubble.box.clampTo(bitmap.width, bitmap.height)
         if (!box.isUsable()) return null
 
-        // A fallback text block is OCR's word alone — it exists precisely because no bubble and no
-        // confirmed text region was found there. When such a block carries a single short word, the
-        // common case by far is page texture misread as lettering (hair, grass, an explosion), and
-        // honouring it stamps a stray translation onto open artwork with an inpaint smear under it.
-        // Real dialogue that reaches the renderer through this fallback is longer in practice.
-        if (box.isFallbackTextBlock && looksLikeTextureMisread(bubble.original)) {
+        // A synthetic text block is OCR's word alone — no bubble model confirmed it. When such a
+        // block carries only a short word or two, the common case by far is page texture misread
+        // as lettering (hair, grass, rocks, an explosion), and honouring it stamps a stray
+        // translation onto open artwork with an inpaint smear under it. Real dialogue that reaches
+        // the renderer without a bubble is longer in practice, and real short shouts live in
+        // bubbles the detector does find.
+        if ((box.isTextBlock || box.isFallbackTextBlock) && looksLikeTextureMisread(bubble.original)) {
             logcat {
-                "Skipping ${bubble.box}: lone short word \"${bubble.original.take(12)}\" in a " +
-                    "speech-fallback block — texture, not text"
+                "Skipping ${bubble.box}: short fragment \"${bubble.original.take(16)}\" in a " +
+                    "synthetic block — texture, not text"
             }
             return null
         }
@@ -418,6 +419,41 @@ class BubbleRenderer(private val context: Context) {
             null
         }
         if (flat != null) {
+            // A synthetic block's flood may only repaint the lettering's neighbourhood. Its search
+            // area is OCR geometry, not a bubble, so the flood can grow across anything
+            // fill-coloured that touches it — on a credit page it climbed from the caption box
+            // into a character's black hair and the repaint took the top of their head off. The
+            // lines plus a margin cover everything the replacement text needs.
+            if (bubble.box.isTextBlock && textLines.isNotEmpty()) {
+                val lineHeight = textLines.maxOf { it.height() }
+                val allowed = Rect(textLines[0])
+                textLines.drop(1).forEach { allowed.union(it) }
+                allowed.inset(
+                    -(lineHeight * SYNTHETIC_REGION_PAD).roundToInt(),
+                    -(lineHeight * SYNTHETIC_REGION_PAD).roundToInt(),
+                )
+                allowed.left = allowed.left.coerceIn(0, width)
+                allowed.top = allowed.top.coerceIn(0, height)
+                allowed.right = allowed.right.coerceIn(allowed.left, width)
+                allowed.bottom = allowed.bottom.coerceIn(allowed.top, height)
+                var clipped = 0
+                for (i in flat.region.indices) {
+                    if (!flat.region[i]) continue
+                    val x = i % width
+                    val y = i / width
+                    if (x < allowed.left || x >= allowed.right || y < allowed.top || y >= allowed.bottom) {
+                        flat.region[i] = false
+                        clipped++
+                    }
+                }
+                if (clipped > 0) {
+                    flat.bounds.intersect(allowed)
+                    logcat {
+                        "text-block=${bubble.box}: clipped $clipped flood px outside the " +
+                            "lettering's neighbourhood $allowed"
+                    }
+                }
+            }
             paintRegionWithBackground(
                 pixels, originalPixels, flat.region, width, height, flat.bounds, flat.fillColor,
             )
@@ -1037,23 +1073,40 @@ class BubbleRenderer(private val context: Context) {
             return
         }
 
-        // Rows the lettering covered completely borrow the nearest measured row: the forward pass
-        // carries the estimate down through them, and rows above the first measurement copy it.
-        var lastSeen = -1
-        for (k in 0 until rows) {
-            if (has[k]) {
-                lastSeen = k
-            } else if (lastSeen >= 0) {
-                rowR[k] = rowR[lastSeen]
-                rowG[k] = rowG[lastSeen]
-                rowB[k] = rowB[lastSeen]
-            }
-        }
+        // Rows the lettering covered take a linear blend of the nearest measured rows above and
+        // below. Carrying the last measurement down instead held it flat through the gap and then
+        // jumped at the next measurement — on a glowing box each text line became a visible stripe.
         val firstMeasured = has.indexOfFirst { it }
+        val lastMeasured = has.indexOfLast { it }
         for (k in 0 until firstMeasured) {
             rowR[k] = rowR[firstMeasured]
             rowG[k] = rowG[firstMeasured]
             rowB[k] = rowB[firstMeasured]
+        }
+        for (k in lastMeasured + 1 until rows) {
+            rowR[k] = rowR[lastMeasured]
+            rowG[k] = rowG[lastMeasured]
+            rowB[k] = rowB[lastMeasured]
+        }
+        var prev = firstMeasured
+        var k = firstMeasured + 1
+        while (k <= lastMeasured) {
+            if (has[k]) {
+                prev = k
+                k++
+                continue
+            }
+            var next = k + 1
+            while (!has[next]) next++
+            val span = (next - prev).toFloat()
+            for (j in k until next) {
+                val t = (j - prev) / span
+                rowR[j] = rowR[prev] + (rowR[next] - rowR[prev]) * t
+                rowG[j] = rowG[prev] + (rowG[next] - rowG[prev]) * t
+                rowB[j] = rowB[prev] + (rowB[next] - rowB[prev]) * t
+            }
+            prev = next
+            k = next + 1
         }
 
         // A light box smooth keeps JPEG row noise from becoming visible banding.
@@ -1217,11 +1270,22 @@ class BubbleRenderer(private val context: Context) {
         return paintedTotal
     }
 
-    /** A lone short word in a fallback block: page texture OCR mistook for lettering. */
+    /**
+     * A short scrap of "text" in a synthetic block: page texture OCR mistook for lettering.
+     *
+     * One word up to [STRAY_FALLBACK_MAX_CHARS] is the classic case ("HEY" read off a rock). Two
+     * words pass only when they look like language — texture misreads come out as consonant
+     * clusters ("MNAL FNNN"), and a vowel-less word of any length is not dialogue in any language
+     * this pipeline translates.
+     */
     private fun looksLikeTextureMisread(original: String): Boolean {
         val trimmed = original.trim()
         val words = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
-        return words.size <= 1 && trimmed.length <= STRAY_FALLBACK_MAX_CHARS
+        if (words.isEmpty()) return true
+        if (words.size == 1) return trimmed.length <= STRAY_FALLBACK_MAX_CHARS
+        if (words.size > 2 || trimmed.length > STRAY_FALLBACK_MAX_PAIR_CHARS) return false
+        val vowels = "aeiouyAEIOUY"
+        return words.any { word -> word.count { it.isLetter() } >= 3 && word.none { it in vowels } }
     }
 
     /**
@@ -1313,16 +1377,45 @@ class BubbleRenderer(private val context: Context) {
             val count = aw * ah
 
             // The line's own paper: ink is a minority of the area, so the luma median lands on it.
-            val areaPixels = IntArray(count)
-            var idx = 0
+            // Median via a 256-bin histogram — sorting boxed the whole area per line, and on a
+            // 16000px strip's wide captions that alone could thrash the collector.
+            val histogram = IntArray(256)
             for (y in area.top until area.bottom) {
                 val base = y * width
-                for (x in area.left until area.right) areaPixels[idx++] = original[base + x]
+                for (x in area.left until area.right) {
+                    histogram[luminanceOf(original[base + x]).toInt().coerceIn(0, 255)]++
+                }
             }
-            val paper = areaPixels.sortedBy { luminanceOf(it) }[count / 2]
+            var remaining = count / 2
+            var medianLuma = 0
+            while (medianLuma < 255 && remaining >= histogram[medianLuma]) {
+                remaining -= histogram[medianLuma]
+                medianLuma++
+            }
+            var pr = 0L
+            var pg = 0L
+            var pb = 0L
+            var pn = 0
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    val o = original[base + x]
+                    if (kotlin.math.abs(luminanceOf(o).toInt() - medianLuma) <= 4) {
+                        pr += (o shr 16) and 0xFF
+                        pg += (o shr 8) and 0xFF
+                        pb += o and 0xFF
+                        pn++
+                    }
+                }
+            }
+            val paper = if (pn > 0) {
+                Color.rgb((pr / pn).toInt(), (pg / pn).toInt(), (pb / pn).toInt())
+            } else {
+                Color.rgb(medianLuma, medianLuma, medianLuma)
+            }
 
             val candidate = BooleanArray(count)
-            idx = 0
+            var idx = 0
             for (y in area.top until area.bottom) {
                 val base = y * width
                 for (x in area.left until area.right) {
@@ -2192,8 +2285,14 @@ class BubbleRenderer(private val context: Context) {
         /** Share of an island's box that must lie on OCR lines for it to count as lettering. */
         const val CAPTION_ISLAND_MIN_LINE_OVERLAP = 0.55f
 
-        /** Longest lone word a speech-fallback block may carry before it reads as texture. */
+        /** Longest lone word a synthetic block may carry before it reads as texture. */
         const val STRAY_FALLBACK_MAX_CHARS = 7
+
+        /** Longest two-word fragment still checked for the vowel-less texture signature. */
+        const val STRAY_FALLBACK_MAX_PAIR_CHARS = 14
+
+        /** Margin around a synthetic block's OCR lines, in line heights, that its flood may paint. */
+        const val SYNTHETIC_REGION_PAD = 1.5f
 
         // ── Ghost gate ────────────────────────────────────────────────────────────────────────────
         /** Squared distance from the line's paper at which an original pixel counts as ink. */
