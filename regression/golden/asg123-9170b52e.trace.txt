@@ -12,4 +12,5 @@ D/BubbleRenderer: bubble=BubbleBox(left=309, top=142, right=558, bottom=214, con
 D/BubbleRenderer: Skipping BubbleBox(left=497, top=5521, right=647, bottom=5587, confidence=0.1009199, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
 D/BubbleRenderer: Skipping BubbleBox(left=257, top=5180, right=400, bottom=5200, confidence=0.22340098, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
 D/BubbleRenderer: Skipping BubbleBox(left=107, top=5183, right=226, bottom=5200, confidence=0.19600329, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
+D/BubbleRenderer: gradient interior: painted 14 rows per-row (spread 62)
 D/BubbleRenderer: bubble=BubbleBox(left=600, top=5877, right=650, bottom=5902, confidence=0.09323403, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(30, 29 - 53, 43) layout=Rect(30, 4 - 70, 43) slot=Rect(30, 4 - 67, 30) page=Rect(605, 5856 - 642, 5882) fill=ffe5effd ink=ff6c7585

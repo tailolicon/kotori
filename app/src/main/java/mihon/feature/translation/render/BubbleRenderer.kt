@@ -418,7 +418,9 @@ class BubbleRenderer(private val context: Context) {
             null
         }
         if (flat != null) {
-            for (i in pixels.indices) if (flat.region[i]) pixels[i] = flat.fillColor
+            paintRegionWithBackground(
+                pixels, originalPixels, flat.region, width, height, flat.bounds, flat.fillColor,
+            )
             var clearedDarkCaption = false
             if (bubble.box.isTextBlock && luminanceOf(flat.fillColor) <= DARK_CAPTION_MAX_LUMA) {
                 // BubbleFill correctly identifies the black caption field but deliberately excludes
@@ -971,6 +973,145 @@ class BubbleRenderer(private val context: Context) {
             bubble.box.toRect(), true,
             bubble.box.isTextBlock,
         )
+    }
+
+    /**
+     * Repaints a flood region with its own background rather than one flat colour.
+     *
+     * A single colour is right for the white bubble this pass was designed around and visibly
+     * wrong for anything with depth: the audit found grey slabs inside glowing narration boxes and
+     * a hard seam across a black-to-purple balloon. Estimate the background per row from the
+     * original's near-background pixels, bridge and smooth the rows the lettering hid, and paint
+     * that. When every row agrees with the overall fill — a genuinely flat bubble — paint the flat
+     * colour exactly as before, so the pages that were already right do not change by a byte.
+     */
+    private fun paintRegionWithBackground(
+        pixels: IntArray,
+        original: IntArray,
+        region: BooleanArray,
+        width: Int,
+        height: Int,
+        bounds: Rect,
+        fillColor: Int,
+    ) {
+        val top = bounds.top.coerceIn(0, height)
+        val bottom = bounds.bottom.coerceIn(top, height)
+        val left = bounds.left.coerceIn(0, width)
+        val right = bounds.right.coerceIn(left, width)
+        val rows = bottom - top
+        if (rows <= 0) {
+            for (i in pixels.indices) if (region[i]) pixels[i] = fillColor
+            return
+        }
+
+        val rowR = FloatArray(rows)
+        val rowG = FloatArray(rows)
+        val rowB = FloatArray(rows)
+        val has = BooleanArray(rows)
+        for (y in top until bottom) {
+            val base = y * width
+            var r = 0L
+            var g = 0L
+            var b = 0L
+            var n = 0
+            for (x in left until right) {
+                val i = base + x
+                if (!region[i]) continue
+                val o = original[i]
+                if (colorDistance(o, fillColor) > ROW_FILL_NEAR_SQ) continue
+                r += (o shr 16) and 0xFF
+                g += (o shr 8) and 0xFF
+                b += o and 0xFF
+                n++
+            }
+            val k = y - top
+            if (n >= ROW_FILL_MIN_SAMPLES) {
+                rowR[k] = r.toFloat() / n
+                rowG[k] = g.toFloat() / n
+                rowB[k] = b.toFloat() / n
+                has[k] = true
+            }
+        }
+        if (!has.any { it }) {
+            for (i in pixels.indices) if (region[i]) pixels[i] = fillColor
+            return
+        }
+
+        // Rows the lettering covered completely borrow the nearest measured row: the forward pass
+        // carries the estimate down through them, and rows above the first measurement copy it.
+        var lastSeen = -1
+        for (k in 0 until rows) {
+            if (has[k]) {
+                lastSeen = k
+            } else if (lastSeen >= 0) {
+                rowR[k] = rowR[lastSeen]
+                rowG[k] = rowG[lastSeen]
+                rowB[k] = rowB[lastSeen]
+            }
+        }
+        val firstMeasured = has.indexOfFirst { it }
+        for (k in 0 until firstMeasured) {
+            rowR[k] = rowR[firstMeasured]
+            rowG[k] = rowG[firstMeasured]
+            rowB[k] = rowB[firstMeasured]
+        }
+
+        // A light box smooth keeps JPEG row noise from becoming visible banding.
+        val smoothR = FloatArray(rows)
+        val smoothG = FloatArray(rows)
+        val smoothB = FloatArray(rows)
+        for (k in 0 until rows) {
+            var r = 0f
+            var g = 0f
+            var b = 0f
+            var n = 0
+            for (dk in -ROW_FILL_SMOOTH_RADIUS..ROW_FILL_SMOOTH_RADIUS) {
+                val j = k + dk
+                if (j !in 0 until rows) continue
+                r += rowR[j]
+                g += rowG[j]
+                b += rowB[j]
+                n++
+            }
+            smoothR[k] = r / n
+            smoothG[k] = g / n
+            smoothB[k] = b / n
+        }
+
+        val fr = (fillColor shr 16) and 0xFF
+        val fg = (fillColor shr 8) and 0xFF
+        val fb = fillColor and 0xFF
+        var maxDelta = 0f
+        for (k in 0 until rows) {
+            val delta = kotlin.math.abs(smoothR[k] - fr) +
+                kotlin.math.abs(smoothG[k] - fg) +
+                kotlin.math.abs(smoothB[k] - fb)
+            if (delta > maxDelta) maxDelta = delta
+        }
+        if (maxDelta <= ROW_FILL_FLAT_DELTA) {
+            for (i in pixels.indices) if (region[i]) pixels[i] = fillColor
+            return
+        }
+
+        for (y in 0 until height) {
+            val c = if (y in top until bottom) {
+                val k = y - top
+                Color.rgb(
+                    smoothR[k].roundToInt().coerceIn(0, 255),
+                    smoothG[k].roundToInt().coerceIn(0, 255),
+                    smoothB[k].roundToInt().coerceIn(0, 255),
+                )
+            } else {
+                // A tail escaping the estimated bounds keeps the flat fill.
+                fillColor
+            }
+            val base = y * width
+            for (x in 0 until width) {
+                val i = base + x
+                if (region[i]) pixels[i] = c
+            }
+        }
+        logcat { "gradient interior: painted $rows rows per-row (spread ${maxDelta.roundToInt()})" }
     }
 
     /**
@@ -2085,6 +2226,25 @@ class BubbleRenderer(private val context: Context) {
         /** Outset around the OCR union when a wandering slot is re-anchored to the lettering. */
         const val SLOT_ANCHOR_PAD_X = 0.15f
         const val SLOT_ANCHOR_PAD_Y = 0.10f
+
+        // ── Gradient-aware region fill ────────────────────────────────────────────────────────────
+        /** Squared distance from the overall fill within which a pixel is background, not ink. */
+        const val ROW_FILL_NEAR_SQ = 80 * 80
+
+        /** Rows with fewer background samples than this are treated as fully covered by lettering. */
+        const val ROW_FILL_MIN_SAMPLES = 8
+
+        /**
+         * Largest per-row summed-channel spread that still counts as a flat interior.
+         *
+         * Measured on the kd53 corpus: genuine gradients — glowing narration boxes, a black-to-
+         * purple balloon, a caption over art — run 51..97, while bubbles with a faint tint or
+         * translucency sit at 15..42. Painting the latter per-row exposed the tint as a visible
+         * band across the erased rows, so they keep the flat fill that already looked right.
+         */
+        const val ROW_FILL_FLAT_DELTA = 45f
+
+        const val ROW_FILL_SMOOTH_RADIUS = 3
         const val UNIFORM_CAPTION_MIN_ASPECT = 4
         const val UNIFORM_CAPTION_ART_MIN_ASPECT = 7f
         const val UNIFORM_CAPTION_ART_MIN_WIDTH = 400

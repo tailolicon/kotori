@@ -1,5 +1,6 @@
 D/TextBlockDetector: Text-block pass added 3 region(s) and kept 3 speech fallback(s)
 D/PageTranslator: Merged 4 detector fragment(s) into complete caption blocks
+D/BubbleRenderer: gradient interior: painted 381 rows per-row (spread 51)
 D/BubbleRenderer: text-block=BubbleBox(left=139, top=1224, right=672, bottom=1491, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) cleared outlined dark-caption strip=Rect(51, 156 - 761, 487) (3 glyph px)
 D/BubbleRenderer: bubble=BubbleBox(left=139, top=1224, right=672, bottom=1491, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(24, 130 - 787, 511) layout=Rect(24, 130 - 787, 511) slot=Rect(59, 130 - 752, 511) page=Rect(59, 1167 - 752, 1548) fill=ff060404 ink=ffbdacad
 D/BubbleRenderer: bubble=BubbleBox(left=123, top=9968, right=670, bottom=10119, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(85, 160 - 788, 373) layout=Rect(85, 160 - 788, 373) slot=Rect(85, 160 - 750, 373) page=Rect(85, 9937 - 750, 10150) fill=ffeafaf9 ink=ff445656

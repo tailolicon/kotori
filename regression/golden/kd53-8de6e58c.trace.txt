@@ -1,13 +1,20 @@
 D/TextBlockDetector: Text-block pass added 3 region(s) and kept 5 speech fallback(s)
 D/PageTranslator: Merged 24 detector fragment(s) into complete caption blocks
 D/BubbleRenderer: bubble=BubbleBox(left=164, top=13, right=628, bottom=372, confidence=0.15988168, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(194, 37 - 598, 348) layout=Rect(194, 8 - 598, 399) slot=Rect(240, 58 - 560, 306) page=Rect(240, 58 - 560, 306) fill=fffdfdfd ink=ff1d1d1d
+D/BubbleRenderer: gradient interior: painted 310 rows per-row (spread 65)
 D/BubbleRenderer: bubble=BubbleBox(left=142, top=7046, right=645, bottom=7264, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(146, 130 - 653, 440) layout=Rect(146, 130 - 653, 440) slot=Rect(146, 130 - 653, 440) page=Rect(146, 7000 - 653, 7310) fill=ffefefef ink=ff1a1a1a
+D/BubbleRenderer: gradient interior: painted 323 rows per-row (spread 53)
 D/BubbleRenderer: bubble=BubbleBox(left=247, top=9525, right=680, bottom=9752, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(115, 104 - 641, 427) layout=Rect(115, 104 - 641, 427) slot=Rect(115, 104 - 641, 427) page=Rect(210, 9477 - 736, 9800) fill=ffededed ink=ff191919
+D/BubbleRenderer: gradient interior: painted 195 rows per-row (spread 63)
 D/BubbleRenderer: bubble=BubbleBox(left=195, top=8900, right=604, bottom=9127, confidence=0.2006914, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(222, 221 - 577, 416) layout=Rect(222, 182 - 577, 431) slot=Rect(222, 182 - 577, 431) page=Rect(222, 8877 - 577, 9126) fill=ffd6d6d6 ink=ff121212
+D/BubbleRenderer: gradient interior: painted 312 rows per-row (spread 88)
 D/BubbleRenderer: bubble=BubbleBox(left=187, top=10894, right=568, bottom=11114, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(68, 87 - 592, 399) layout=Rect(68, 87 - 592, 399) slot=Rect(68, 87 - 592, 398) page=Rect(122, 10848 - 646, 11159) fill=fff1f2f2 ink=ff1b1b1b
+D/BubbleRenderer: gradient interior: painted 297 rows per-row (spread 88)
 D/BubbleRenderer: bubble=BubbleBox(left=140, top=8261, right=434, bottom=8470, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(40, 59 - 460, 356) layout=Rect(40, 59 - 460, 356) slot=Rect(40, 59 - 460, 356) page=Rect(77, 8217 - 497, 8514) fill=fff0f0f0 ink=ff1b1b1b
+D/BubbleRenderer: gradient interior: painted 107 rows per-row (spread 71)
 D/BubbleRenderer: bubble=BubbleBox(left=246, top=6288, right=550, bottom=6399, confidence=0.2907974, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(172, 147 - 446, 254) layout=Rect(172, 67 - 446, 293) slot=Rect(172, 67 - 446, 292) page=Rect(266, 6203 - 540, 6428) fill=ffd4d4d4 ink=ff131313
 D/BubbleRenderer: text-block=BubbleBox(left=369, top=11613, right=623, bottom=11685, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): caption interior is not one colour (7772/19420 uniform); leaving it to the safer paths
+D/BubbleRenderer: gradient interior: painted 100 rows per-row (spread 57)
 D/BubbleRenderer: Erased 267 leftover glyph px outside the flat fill of BubbleBox(left=369, top=11613, right=623, bottom=11685, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true)
 D/BubbleRenderer: bubble=BubbleBox(left=369, top=11613, right=623, bottom=11685, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(69, 75 - 366, 175) layout=Rect(69, 75 - 366, 175) slot=Rect(69, 75 - 366, 175) page=Rect(349, 11599 - 646, 11699) fill=ffd9d9d9 ink=ff101010
 D/BubbleRenderer: bubble=BubbleBox(left=84, top=8124, right=296, bottom=8167, confidence=0.5581795, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 374 surviving px of original lettering
