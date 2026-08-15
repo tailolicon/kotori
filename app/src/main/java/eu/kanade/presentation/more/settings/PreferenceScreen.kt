@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -118,9 +119,28 @@ private fun KotoriTabletPreferenceGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
+    val gridState = rememberLazyStaggeredGridState()
+    if (highlightKey != null) {
+        LaunchedEffect(highlightKey) {
+            val i = items.indexOfFirst { preference ->
+                when (preference) {
+                    is Preference.PreferenceGroup ->
+                        preference.title == highlightKey ||
+                            preference.preferenceItems.any { it.title == highlightKey }
+                    is Preference.PreferenceItem<*, *> -> preference.title == highlightKey
+                }
+            }
+            if (i >= 0) {
+                delay(0.5.seconds)
+                gridState.animateScrollToItem(i)
+            }
+            SearchableSettings.highlightKey = null
+        }
+    }
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
+        state = gridState,
         contentPadding = contentPadding + PaddingValues(horizontal = 30.dp, vertical = 22.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalItemSpacing = 14.dp,

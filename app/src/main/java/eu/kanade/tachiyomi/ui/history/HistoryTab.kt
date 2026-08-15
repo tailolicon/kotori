@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.tachiyomi.ui.history.anime.AnimeHistoryHome
+import eu.kanade.tachiyomi.ui.history.anime.resumeLastEpisodeSeenEvent
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import eu.kanade.presentation.history.HistoryScreen
@@ -61,7 +62,11 @@ data object HistoryTab : Tab {
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        resumeLastChapterReadEvent.send(Unit)
+        if (Injekt.get<UiPreferences>().activeMediaMode.get() == MediaType.ANIME) {
+            resumeLastEpisodeSeenEvent.send(Unit)
+        } else {
+            resumeLastChapterReadEvent.send(Unit)
+        }
     }
 
     @Composable

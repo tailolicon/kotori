@@ -621,8 +621,9 @@ private fun ColumnScope.MangaContentInfo(
     }
 }
 
+/** Shared with the anime info header so both descriptions render the same markdown. */
 @Composable
-private fun descriptionAnnotator(loadImages: Boolean, linkStyle: SpanStyle) = remember(loadImages, linkStyle) {
+internal fun descriptionAnnotator(loadImages: Boolean, linkStyle: SpanStyle) = remember(loadImages, linkStyle) {
     markdownAnnotator(
         annotate = { content, child ->
             if (!loadImages && child.type == MarkdownElementTypes.IMAGE) {
@@ -714,11 +715,9 @@ private fun MangaSummary(
                 }
             },
             {
-                val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
-                Box(
-                    modifier = Modifier.background(Brush.verticalGradient(colors = colors)),
-                    contentAlignment = Alignment.Center,
-                ) {
+                // No solid scrim: the page is an aurora gradient, so any flat fill lands as a
+                // black band across it. The caret alone carries the affordance.
+                Box(contentAlignment = Alignment.Center) {
                     val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_caret_down)
                     Icon(
                         painter = rememberAnimatedVectorPainter(image, !expanded),
@@ -726,7 +725,6 @@ private fun MangaSummary(
                             if (expanded) MR.strings.manga_info_collapse else MR.strings.manga_info_expand,
                         ),
                         tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.background(Brush.radialGradient(colors = colors.asReversed())),
                     )
                 }
             },

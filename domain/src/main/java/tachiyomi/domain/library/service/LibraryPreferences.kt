@@ -250,6 +250,33 @@ class LibraryPreferences(
 
     fun animeLandscapeColumns() = preferenceStore.getInt("pref_animelib_columns_landscape_key", 0)
 
+    // Display settings are per-mode: the shelf of covers a user wants for anime is rarely the
+    // one they want for manga, and the columns preference was already split this way.
+
+    fun animeDisplayMode() = preferenceStore.getObjectFromString(
+        "pref_display_mode_animelib",
+        LibraryDisplayMode.default,
+        LibraryDisplayMode.Serializer::serialize,
+        LibraryDisplayMode.Serializer::deserialize,
+    )
+
+    fun animeDownloadBadge() = preferenceStore.getBoolean("display_download_badge_anime", false)
+
+    fun animeUnseenBadge() = preferenceStore.getBoolean("display_unseen_badge_anime", true)
+
+    fun animeLocalBadge() = preferenceStore.getBoolean("display_local_badge_anime", true)
+
+    fun animeLanguageBadge() = preferenceStore.getBoolean("display_language_badge_anime", false)
+
+    fun animeShowContinueViewingButton() = preferenceStore.getBoolean(
+        "display_continue_watching_button_anime",
+        false,
+    )
+
+    fun animeCategoryTabs() = preferenceStore.getBoolean("display_category_tabs_anime", true)
+
+    fun animeCategoryNumberOfItems() = preferenceStore.getBoolean("display_number_of_items_anime", false)
+
     fun autoUpdateItemRestrictions() = preferenceStore.getStringSet(
         "library_update_manga_restriction",
         setOf(

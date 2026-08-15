@@ -794,6 +794,16 @@ class AnimeScreenModel(
             ?: emptyList()
     }
 
+    private fun getBookmarkedEpisodes(): List<Episode> {
+        return successState?.processedEpisodes
+            ?.filter { (episode, dlStatus) ->
+                episode.bookmark && dlStatus == AnimeDownload.State.NOT_DOWNLOADED
+            }
+            ?.map { it.episode }
+            ?.toList()
+            ?: emptyList()
+    }
+
     private fun getUnseenEpisodesSorted(): List<Episode> {
         val anime = successState?.anime ?: return emptyList()
         val episodes = getUnseenEpisodes().sortedWith(getEpisodeSort(anime))
@@ -867,6 +877,7 @@ class AnimeScreenModel(
             DownloadAction.NEXT_25_ITEMS -> getUnseenEpisodesSorted().take(25)
 
             DownloadAction.UNVIEWED_ITEMS -> getUnseenEpisodes()
+            DownloadAction.BOOKMARKED_ITEMS -> getBookmarkedEpisodes()
         }
         if (episodesToDownload.isNotEmpty()) {
             startDownload(episodesToDownload, false)
@@ -1147,6 +1158,20 @@ class AnimeScreenModel(
 
         screenModelScope.launchNonCancellable {
             setAnimeEpisodeFlags.awaitShowEpisodeSummaries(anime, flag)
+        }
+    }
+
+    fun resetToDefaultSettings() {
+        val anime = successState?.anime ?: return
+        screenModelScope.launchNonCancellable {
+            setAnimeDefaultEpisodeFlags.await(anime)
+        }
+    }
+
+    fun resetSeasonToDefaultSettings() {
+        val anime = successState?.anime ?: return
+        screenModelScope.launchNonCancellable {
+            setAnimeDefaultSeasonFlags.await(anime)
         }
     }
 

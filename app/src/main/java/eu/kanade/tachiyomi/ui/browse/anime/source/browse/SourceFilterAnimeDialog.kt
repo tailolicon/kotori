@@ -137,7 +137,7 @@ private fun FilterItem(filter: AnimeFilter<*>, onUpdate: () -> Unit) {
                             val ascending = if (index == filter.state?.index) {
                                 !filter.state!!.ascending
                             } else {
-                                filter.state!!.ascending
+                                filter.state?.ascending ?: true
                             }
                             filter.state = AnimeFilter.Sort.Selection(
                                 index = index,

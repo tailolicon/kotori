@@ -57,7 +57,6 @@ import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearch
 import eu.kanade.tachiyomi.ui.category.anime.AnimeCategoryScreen
 import eu.kanade.tachiyomi.ui.entries.anime.track.AnimeTrackInfoDialogHomeScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
-import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
@@ -286,6 +285,7 @@ class AnimeScreen(
                 onShowPreviewsEnabled = screenModel::showEpisodePreviews,
                 onShowSummariesEnabled = screenModel::showEpisodeSummaries,
                 onSetAsDefault = screenModel::setCurrentSettingsAsDefault,
+                onResetToDefault = screenModel::resetToDefaultSettings,
             )
             AnimeScreenModel.Dialog.SeasonSettingsSheet -> SeasonSettingsDialog(
                 onDismissRequest = onDismissRequest,
@@ -306,6 +306,7 @@ class AnimeScreen(
                 onOverlayContinueChanged = screenModel::setSeasonContinueOverlay,
                 onDisplayModeChanged = screenModel::setSeasonDisplayMode,
                 onSetAsDefault = screenModel::setSeasonCurrentSettingsAsDefault,
+                onResetToDefault = screenModel::resetSeasonToDefaultSettings,
             )
             AnimeScreenModel.Dialog.TrackSheet -> {
                 NavigatorAdaptiveSheet(
@@ -479,7 +480,7 @@ class AnimeScreen(
         when (val previousController = navigator.items[navigator.size - 2]) {
             is HomeScreen -> {
                 navigator.pop()
-                AnimeLibraryTab.search(query)
+                previousController.search(query)
             }
             is BrowseAnimeSourceScreen -> {
                 navigator.pop()
@@ -498,17 +499,23 @@ class AnimeScreen(
         genreName: String,
         source: AnimeSource,
     ) {
-        if (navigator.size < 2) {
+        // Same contract as the manga side: a genre always lands on that genre inside the source,
+        // whether the detail was opened from a browse listing or straight from the library. The
+        // old fallback dropped back to the library and typed the genre into its search box.
+        if (source is AnimeHttpSource) {
+            val previousController = navigator.items.getOrNull(navigator.size - 2)
+            if (previousController is BrowseAnimeSourceScreen) {
+                navigator.pop()
+                previousController.searchGenre(genreName)
+            } else {
+                val browseSourceScreen = BrowseAnimeSourceScreen(source.id, null)
+                navigator.replace(browseSourceScreen)
+                browseSourceScreen.searchGenre(genreName)
+            }
             return
         }
 
-        val previousController = navigator.items[navigator.size - 2]
-        if (previousController is BrowseAnimeSourceScreen && source is AnimeHttpSource) {
-            navigator.pop()
-            previousController.searchGenre(genreName)
-        } else {
-            performSearch(navigator, genreName, global = false)
-        }
+        performSearch(navigator, genreName, global = false)
     }
 
     /**

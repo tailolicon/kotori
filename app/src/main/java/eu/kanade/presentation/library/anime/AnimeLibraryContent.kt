@@ -15,8 +15,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.dp
 import eu.kanade.core.preference.PreferenceMutableState
-import eu.kanade.presentation.library.components.LibraryTabs
+import eu.kanade.presentation.category.visualName
+import eu.kanade.presentation.library.components.KotoriCategoryChips
 import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,17 +66,19 @@ fun AnimeLibraryContent(
 
         topContent()
 
-        if (showPageTabs && categories.size > 1) {
+        if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
             LaunchedEffect(categories) {
                 if (categories.size <= pagerState.currentPage) {
                     pagerState.scrollToPage(categories.size - 1)
                 }
             }
-            LibraryTabs(
-                categories = categories,
-                pagerState = pagerState,
-                getItemCountForCategory = getNumberOfAnimeForCategory,
-            ) { scope.launch { pagerState.animateScrollToPage(it) } }
+            KotoriCategoryChips(
+                categories = categories.map { it.visualName },
+                counts = categories.map { getNumberOfAnimeForCategory(it) },
+                activeIndex = pagerState.currentPage,
+                onSelect = { scope.launch { pagerState.animateScrollToPage(it) } },
+                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+            )
         }
 
         val notSelectionMode = selection.isEmpty()
@@ -89,7 +93,7 @@ fun AnimeLibraryContent(
         PullRefresh(
             refreshing = isRefreshing,
             onRefresh = {
-                val started = onRefresh(categories[currentPage()])
+                val started = onRefresh(categories.getOrNull(currentPage()))
                 if (!started) return@PullRefresh
                 scope.launch {
                     // Fake refresh status but hide it after a second as it's a long running task

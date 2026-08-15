@@ -65,6 +65,9 @@ object KotoriShapes {
     /** Search fields and larger pills */
     val pill = RoundedCornerShape(16.dp)
 
+    /** Overflow menus and popups: uniform 18 */
+    val menu = RoundedCornerShape(18.dp)
+
     /** Bottom nav container */
     val nav = RoundedCornerShape(28.dp)
 

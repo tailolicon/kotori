@@ -23,21 +23,28 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.TravelExplore
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +82,8 @@ import eu.kanade.tachiyomi.ui.browse.anime.source.browse.BrowseAnimeSourceScreen
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.AnimeSearchItemResult
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.AnimeSourceFilter
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreenModel
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterScreen
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionUiModel
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsScreenModel
@@ -107,8 +116,11 @@ fun Screen.KotoriTabletMangaBrowse(
     state: PagerState,
 ) {
     val navigator = LocalNavigator.currentOrThrow
+    val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }
     var activeTab by remember { mutableIntStateOf(state.currentPage) }
+    val tabScope = rememberCoroutineScope()
+    LaunchedEffect(state.currentPage) { activeTab = state.currentPage }
     val extensionModel = rememberScreenModel { ExtensionsScreenModel() }
     val searchModel = rememberScreenModel { GlobalSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
@@ -122,7 +134,10 @@ fun Screen.KotoriTabletMangaBrowse(
         TabletBrowseHost(
             tabs = tabs,
             activeTab = activeTab,
-            onSelectTab = { activeTab = it },
+            onSelectTab = { index ->
+                activeTab = index
+                tabScope.launch { state.scrollToPage(index) }
+            },
             // Read back from whichever model the typing goes to. Reading the global search state
             // unconditionally while routing Tiện ích keystrokes into the extension model left the
             // box permanently empty on that tab: the field is controlled, so it renders the value
@@ -136,6 +151,7 @@ fun Screen.KotoriTabletMangaBrowse(
             activeSearchFilters = buildSet {
                 add(if (searchState.sourceFilter == SourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
+                if (searchState.onlyShowHasResults) add(3)
             },
             searchPlaceholder = if (activeTab == EXTENSIONS_TAB) {
                 "Tìm tiện ích…"
@@ -158,6 +174,7 @@ fun Screen.KotoriTabletMangaBrowse(
                     0 -> searchModel.setSourceFilter(SourceFilter.All)
                     1 -> searchModel.setSourceFilter(SourceFilter.PinnedOnly)
                     2 -> libraryOnly = !libraryOnly
+                    3 -> searchModel.toggleFilterResults()
                 }
             },
             onResetSearch = {
@@ -168,6 +185,10 @@ fun Screen.KotoriTabletMangaBrowse(
             onOpenCalendar = { navigator.push(UpcomingScreen()) },
             onOpenSourceFilter = { navigator.push(SourcesFilterScreen()) },
             onOpenExtensionFilter = { navigator.push(ExtensionFilterScreen()) },
+            onOpenExtensionStores = { navigator.push(ExtensionStoresScreen()) },
+            onOpenMigrateHelp = {
+                uriHandler.openUri("https://mihon.app/docs/guides/source-migration")
+            },
             sourceContent = {
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
@@ -208,8 +229,11 @@ fun Screen.KotoriTabletAnimeBrowse(
     state: PagerState,
 ) {
     val navigator = LocalNavigator.currentOrThrow
+    val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }
     var activeTab by remember { mutableIntStateOf(state.currentPage) }
+    val tabScope = rememberCoroutineScope()
+    LaunchedEffect(state.currentPage) { activeTab = state.currentPage }
     val extensionModel = rememberScreenModel { AnimeExtensionsScreenModel() }
     val searchModel = rememberScreenModel { GlobalAnimeSearchScreenModel() }
     val searchState by searchModel.state.collectAsState()
@@ -222,7 +246,10 @@ fun Screen.KotoriTabletAnimeBrowse(
         TabletBrowseHost(
             tabs = tabs,
             activeTab = activeTab,
-            onSelectTab = { activeTab = it },
+            onSelectTab = { index ->
+                activeTab = index
+                tabScope.launch { state.scrollToPage(index) }
+            },
             // See the note in KotoriTabletBrowse — same field, same fault.
             searchQuery = if (activeTab == EXTENSIONS_TAB) {
                 extensionState.searchQuery.orEmpty()
@@ -232,6 +259,7 @@ fun Screen.KotoriTabletAnimeBrowse(
             activeSearchFilters = buildSet {
                 add(if (searchState.sourceFilter == AnimeSourceFilter.All) 0 else 1)
                 if (libraryOnly) add(2)
+                if (searchState.onlyShowHasResults) add(3)
             },
             searchPlaceholder = if (activeTab == EXTENSIONS_TAB) {
                 "Tìm tiện ích…"
@@ -254,6 +282,7 @@ fun Screen.KotoriTabletAnimeBrowse(
                     0 -> searchModel.setSourceFilter(AnimeSourceFilter.All)
                     1 -> searchModel.setSourceFilter(AnimeSourceFilter.PinnedOnly)
                     2 -> libraryOnly = !libraryOnly
+                    3 -> searchModel.toggleFilterResults()
                 }
             },
             onResetSearch = {
@@ -264,6 +293,10 @@ fun Screen.KotoriTabletAnimeBrowse(
             onOpenCalendar = { navigator.push(UpcomingAnimeScreen()) },
             onOpenSourceFilter = { navigator.push(AnimeSourcesFilterScreen()) },
             onOpenExtensionFilter = { navigator.push(AnimeExtensionFilterScreen()) },
+            onOpenExtensionStores = { navigator.push(AnimeExtensionReposScreen()) },
+            onOpenMigrateHelp = {
+                uriHandler.openUri("https://aniyomi.org/help/guides/source-migration/")
+            },
             sourceContent = {
                 tabs.first().content(PaddingValues(), snackbarHostState)
             },
@@ -308,6 +341,8 @@ private fun TabletBrowseHost(
     onOpenCalendar: () -> Unit,
     onOpenSourceFilter: () -> Unit,
     onOpenExtensionFilter: () -> Unit,
+    onOpenExtensionStores: (() -> Unit)? = null,
+    onOpenMigrateHelp: (() -> Unit)? = null,
     sourceContent: @Composable () -> Unit,
     pendingUpdates: @Composable () -> Unit,
     searchResults: @Composable () -> Unit,
@@ -315,6 +350,16 @@ private fun TabletBrowseHost(
 ) {
     var searchActive by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    DisposableEffect(Unit) {
+        BrowseTab.markTabletHostVisible(true)
+        onDispose { BrowseTab.markTabletHostVisible(false) }
+    }
+    LaunchedEffect(Unit) {
+        BrowseTab.focusInlineSearchFlow().collectLatest {
+            searchActive = true
+        }
+    }
     val closeSearch = {
         searchActive = false
         focusManager.clearFocus(force = true)
@@ -398,6 +443,20 @@ private fun TabletBrowseHost(
                             label = stringResource(MR.strings.action_filter),
                             icon = Icons.Outlined.FilterList,
                             onClick = if (activeTab == 0) onOpenSourceFilter else onOpenExtensionFilter,
+                        )
+                    }
+                    if (activeTab == EXTENSIONS_TAB && onOpenExtensionStores != null) {
+                        TabletBrowseAction(
+                            label = stringResource(MR.strings.extensionStores),
+                            icon = Icons.Outlined.TravelExplore,
+                            onClick = onOpenExtensionStores,
+                        )
+                    }
+                    if (activeTab == 2 && onOpenMigrateHelp != null) {
+                        TabletBrowseAction(
+                            label = stringResource(MR.strings.migration_help_guide),
+                            icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                            onClick = onOpenMigrateHelp,
                         )
                     }
                     TabletBrowseAction(
@@ -499,7 +558,7 @@ private fun TabletSearchFilters(
     onSelect: (Int) -> Unit,
 ) {
     val accent = KotoriTheme.accent
-    val labels = listOf("Mọi nguồn", "Đã ghim", "Có trong thư viện")
+    val labels = listOf("Mọi nguồn", "Đã ghim", "Có trong thư viện", stringResource(MR.strings.has_results))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         labels.forEachIndexed { index, label ->
             val selected = index in activeFilters

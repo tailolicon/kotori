@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -47,6 +48,7 @@ import coil3.compose.AsyncImage
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriCircleAction
 import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.KotoriTabletChip
 import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
 import eu.kanade.presentation.theme.kotori.KotoriTheme
@@ -93,6 +95,8 @@ fun KotoriTabletUpcomingBoard(
     onNotifyAll: () -> Unit,
     onPreviousWeek: () -> Unit,
     onNextWeek: () -> Unit,
+    onToday: () -> Unit = {},
+    onHelp: (() -> Unit)? = null,
     onNavigateUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -151,13 +155,42 @@ fun KotoriTabletUpcomingBoard(
                 icon = Icons.Filled.Notifications,
                 onClick = onNotifyAll,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (onHelp != null) {
+                KotoriCircleAction(
+                    icon = Icons.AutoMirrored.Filled.HelpOutline,
+                    contentDescription = "Trợ giúp",
+                    onClick = onHelp,
+                    size = 40.dp,
+                    iconSize = 19.dp,
+                )
+            }
+            // `Hôm nay` is week navigation, so it rides between the arrows instead of queueing
+            // up as a third chip beside them.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 KotoriCircleAction(
                     icon = Icons.Filled.ChevronLeft,
                     contentDescription = "Tuần trước",
                     onClick = onPreviousWeek,
                     size = 40.dp,
                     iconSize = 19.dp,
+                )
+                Text(
+                    text = "Hôm nay",
+                    fontFamily = BeVietnamProFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    color = KotoriColors.textSecondary,
+                    modifier = Modifier
+                        .clip(KotoriShapes.pill)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onToday,
+                        )
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                 )
                 KotoriCircleAction(
                     icon = Icons.Filled.ChevronRight,

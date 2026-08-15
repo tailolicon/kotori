@@ -392,7 +392,9 @@ data class BrowseAnimeSourceScreen(
     suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
 
     companion object {
-        private val queryEvent = Channel<SearchType>()
+        // A genre tap can replace the detail screen before this screen starts collecting. Buffer
+        // the navigation event so cancellation of the old screen cannot silently drop the filter.
+        private val queryEvent = Channel<SearchType>(Channel.BUFFERED)
     }
 
     sealed class SearchType(val txt: String) {

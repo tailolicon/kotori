@@ -16,6 +16,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import eu.kanade.tachiyomi.util.system.hideStatusBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -73,6 +74,8 @@ import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.interactor.GetIncognitoState
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.presentation.components.AppStateBanners
 import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
@@ -90,9 +93,12 @@ import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreen
+import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreenType
+import eu.kanade.tachiyomi.ui.deeplink.anime.DeepLinkAnimeScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
@@ -203,6 +209,7 @@ class MainActivity : BaseActivity() {
                     statusBarStyle = if (statusBarBackgroundColor.luminance() > 0.5) lightStyle else darkStyle,
                     navigationBarStyle = if (isSystemInDarkTheme) darkStyle else lightStyle,
                 )
+                this@MainActivity.hideStatusBar()
             }
 
             Navigator(
@@ -577,6 +584,7 @@ class MainActivity : BaseActivity() {
             )
         }
 
+        val uiPreferences = Injekt.get<UiPreferences>()
         val tabToOpen = when (intent.action) {
             Constants.SHORTCUT_LIBRARY -> HomeScreen.Tab.Library()
             Constants.SHORTCUT_MANGA -> {
@@ -584,12 +592,34 @@ class MainActivity : BaseActivity() {
                 navigator.popUntilRoot()
                 HomeScreen.Tab.Library(idToOpen)
             }
+            Constants.SHORTCUT_ANIMELIB -> {
+                uiPreferences.activeMediaMode.set(MediaType.ANIME)
+                HomeScreen.Tab.Library()
+            }
+            Constants.SHORTCUT_ANIME -> {
+                val idToOpen = intent.extras?.getLong(Constants.ANIME_EXTRA) ?: return false
+                navigator.popUntilRoot()
+                HomeScreen.Tab.AnimeLib(idToOpen)
+            }
             Constants.SHORTCUT_UPDATES -> HomeScreen.Tab.Updates
             Constants.SHORTCUT_HISTORY -> HomeScreen.Tab.History
             Constants.SHORTCUT_SOURCES -> HomeScreen.Tab.Browse(false)
-            Constants.SHORTCUT_EXTENSIONS -> HomeScreen.Tab.Browse(true)
+            Constants.SHORTCUT_EXTENSIONS -> {
+                uiPreferences.activeMediaMode.set(MediaType.MANGA)
+                HomeScreen.Tab.Browse(true)
+            }
+            Constants.SHORTCUT_ANIMEEXTENSIONS -> {
+                uiPreferences.activeMediaMode.set(MediaType.ANIME)
+                HomeScreen.Tab.Browse(true)
+            }
             Constants.SHORTCUT_DOWNLOADS -> {
                 navigator.popUntilRoot()
+                uiPreferences.activeMediaMode.set(MediaType.MANGA)
+                HomeScreen.Tab.More(toDownloads = true)
+            }
+            Constants.SHORTCUT_ANIME_DOWNLOADS -> {
+                navigator.popUntilRoot()
+                uiPreferences.activeMediaMode.set(MediaType.ANIME)
                 HomeScreen.Tab.More(toDownloads = true)
             }
             Intent.ACTION_APPLICATION_PREFERENCES -> {
@@ -605,7 +635,11 @@ class MainActivity : BaseActivity() {
                 val query = intent.getStringExtra(SearchManager.QUERY) ?: intent.getStringExtra(Intent.EXTRA_TEXT)
                 if (!query.isNullOrEmpty()) {
                     navigator.popUntilRoot()
-                    navigator.push(DeepLinkScreen(query))
+                    if (uiPreferences.activeMediaMode.get() == MediaType.ANIME) {
+                        navigator.push(DeepLinkAnimeScreen(query))
+                    } else {
+                        navigator.push(DeepLinkScreen(query))
+                    }
                 }
                 null
             }
@@ -614,7 +648,12 @@ class MainActivity : BaseActivity() {
                 if (!query.isNullOrEmpty()) {
                     val filter = intent.getStringExtra(INTENT_SEARCH_FILTER)
                     navigator.popUntilRoot()
-                    navigator.push(GlobalSearchScreen(query, filter))
+                    if (intent.getStringExtra(INTENT_SEARCH_TYPE) == DeepLinkScreenType.ANIME.toString()) {
+                        uiPreferences.activeMediaMode.set(MediaType.ANIME)
+                        navigator.push(GlobalAnimeSearchScreen(query, filter))
+                    } else {
+                        navigator.push(GlobalSearchScreen(query, filter))
+                    }
                 }
                 null
             }

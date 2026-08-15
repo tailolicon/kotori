@@ -228,6 +228,8 @@ fun NovelReaderScreen(
     val twoColumn = isKotoriTablet() && columnCount >= 2 && pagedMode == NovelReadingMode.PAGED
     var columnPage by rememberSaveable(content) { mutableStateOf(0) }
     var columnPageCount by remember(content) { mutableStateOf(1) }
+    var columnPagination by remember { mutableStateOf<NovelPagination?>(null) }
+    var restoredTwoCol by rememberSaveable(content) { mutableStateOf(false) }
 
     val progressPercent by remember {
         derivedStateOf {
@@ -235,8 +237,14 @@ fun NovelReaderScreen(
         }
     }
     LaunchedEffect(progressPercent, twoColumn) { if (!twoColumn) onProgressChanged(progressPercent) }
-    LaunchedEffect(columnPage, columnPageCount, twoColumn) {
-        if (twoColumn && columnPageCount > 0) {
+    LaunchedEffect(twoColumn, columnPageCount, startPercent) {
+        if (!twoColumn || columnPageCount <= 0 || restoredTwoCol) return@LaunchedEffect
+        columnPage = ((startPercent * columnPageCount / 100f).toInt() - 1)
+            .coerceIn(0, columnPageCount - 1)
+        restoredTwoCol = true
+    }
+    LaunchedEffect(columnPage, columnPageCount, twoColumn, restoredTwoCol) {
+        if (twoColumn && restoredTwoCol && columnPageCount > 0) {
             onProgressChanged((columnPage + 1) * 100 / columnPageCount)
         }
     }
@@ -308,6 +316,9 @@ fun NovelReaderScreen(
      */
     fun sentenceInView(): Int {
         if (script.isEmpty) return 0
+        if (twoColumn) {
+            return columnPagination?.firstSentenceOnPage(columnPage, script) ?: 0
+        }
         val anchor = scrollState.value + (viewportHeight * FOLLOW_ANCHOR).toInt()
         val block = blockOffsets.entries
             .filter { it.value <= anchor }
@@ -322,9 +333,18 @@ fun NovelReaderScreen(
 
     // Follow playback the way a lyrics view does: keep the line being read in the upper third, so
     // the listener can see what comes next rather than reading at the very bottom of the screen.
-    LaunchedEffect(ttsState.sentence, followPlayback) {
-        if (!followPlayback || readingMode != NovelReadingMode.SCROLL) return@LaunchedEffect
+    LaunchedEffect(ttsState.sentence, followPlayback, twoColumn, columnPagination) {
+        if (!followPlayback) return@LaunchedEffect
         val sentence = script[ttsState.sentence] ?: return@LaunchedEffect
+        if (twoColumn) {
+            val page = columnPagination?.pageIndexForOffset(
+                sentence.blockIndex,
+                sentence.range.first,
+            ) ?: return@LaunchedEffect
+            if (page >= 0) columnPage = page
+            return@LaunchedEffect
+        }
+        if (readingMode != NovelReadingMode.SCROLL) return@LaunchedEffect
         val top = blockOffsets[sentence.blockIndex] ?: return@LaunchedEffect
         val target = (top - viewportHeight * FOLLOW_ANCHOR).toInt()
         scrollState.animateScrollTo(target.coerceIn(0, scrollState.maxValue))
@@ -489,7 +509,13 @@ fun NovelReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { translationY = boundaryOffset }
-                .verticalScroll(scrollState, enabled = !twoColumn && readingMode == NovelReadingMode.SCROLL)
+                .then(
+                    if (!twoColumn && readingMode == NovelReadingMode.SCROLL) {
+                        Modifier.verticalScroll(scrollState)
+                    } else {
+                        Modifier
+                    },
+                )
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 22.dp),
         ) {
@@ -522,6 +548,7 @@ fun NovelReaderScreen(
                         columnPageCount = count.coerceAtLeast(1)
                         if (columnPage > count - 1) columnPage = (count - 1).coerceAtLeast(0)
                     },
+                    onPaginationChange = { columnPagination = it },
                     onSeek = { index ->
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         ttsControlsVisible = true
@@ -574,8 +601,8 @@ fun NovelReaderScreen(
         // Reader chrome: the exact same app bars as the manga reader, wired to prose.
         if (!menuVisible && showPageNumber) {
             ReaderPageIndicator(
-                currentPage = progressPercent,
-                totalPages = 100,
+                currentPage = if (twoColumn) columnPage + 1 else progressPercent,
+                totalPages = if (twoColumn) columnPageCount else 100,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding(),
@@ -599,15 +626,19 @@ fun NovelReaderScreen(
             enabledNext = canOpenNext,
             onPreviousChapter = { if (canOpenPrevious) latestPreviousChapter() },
             enabledPrevious = canOpenPrevious,
-            currentPage = progressPercent.coerceAtLeast(1),
-            totalPages = 100,
+            currentPage = if (twoColumn) columnPage + 1 else progressPercent.coerceAtLeast(1),
+            totalPages = if (twoColumn) columnPageCount.coerceAtLeast(1) else 100,
             onPageIndexChange = { index ->
-                scope.launch {
-                    scrollState.scrollTo(scrollState.maxValue * (index + 1) / 100)
+                if (twoColumn) {
+                    columnPage = index.coerceIn(0, (columnPageCount - 1).coerceAtLeast(0))
+                } else {
+                    scope.launch {
+                        scrollState.scrollTo(scrollState.maxValue * (index + 1) / 100)
+                    }
                 }
             },
             onPageIndexChangeFinished = {},
-            continuousSlider = true,
+            continuousSlider = !twoColumn,
             // The bars take the page's own paper rather than the app's dark chrome, so the reader
             // reads as one surface instead of a cream page with a night-mode frame around it.
             surface = barSurface,

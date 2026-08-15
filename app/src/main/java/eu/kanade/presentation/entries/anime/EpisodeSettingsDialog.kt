@@ -49,6 +49,7 @@ fun EpisodeSettingsDialog(
     onShowPreviewsEnabled: (Long) -> Unit,
     onShowSummariesEnabled: (Long) -> Unit,
     onSetAsDefault: (applyToExistingAnime: Boolean) -> Unit,
+    onResetToDefault: () -> Unit,
 ) {
     var showSetAsDefaultDialog by rememberSaveable { mutableStateOf(false) }
     if (showSetAsDefaultDialog) {
@@ -72,6 +73,13 @@ fun EpisodeSettingsDialog(
                 text = { Text(stringResource(MR.strings.set_chapter_settings_as_default)) },
                 onClick = {
                     showSetAsDefaultDialog = true
+                    closeMenu()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(MR.strings.action_reset)) },
+                onClick = {
+                    onResetToDefault()
                     closeMenu()
                 },
             )

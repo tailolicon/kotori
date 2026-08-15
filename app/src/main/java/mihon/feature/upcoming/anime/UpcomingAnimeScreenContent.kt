@@ -1,7 +1,9 @@
 package mihon.feature.upcoming.anime
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
@@ -10,8 +12,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.Badge
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,12 +27,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import eu.kanade.presentation.components.AppBar
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.util.formatEpisodeNumber
+import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.GradientButton
+import eu.kanade.presentation.theme.kotori.KotoriHeader
+import eu.kanade.presentation.theme.kotori.KotoriHeaderAction
+import eu.kanade.presentation.theme.kotori.KotoriScreenScaffold
+import eu.kanade.presentation.theme.kotori.KotoriTheme
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.util.isTabletUi
 import tachiyomi.core.common.Constants
@@ -58,7 +65,6 @@ import uy.kohesive.injekt.api.get
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.TwoPanelBox
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.DayOfWeek
@@ -92,32 +98,72 @@ fun UpcomingAnimeScreenContent(
         return
     }
 
-    Scaffold(
-        topBar = { UpcomingToolbar() },
+    val navigator = LocalNavigator.currentOrThrow
+    val uriHandler = LocalUriHandler.current
+    val isTablet = isTabletUi()
+    KotoriScreenScaffold(
         modifier = modifier,
+        header = {
+            KotoriHeader(
+                title = "Lịch mùa",
+                subtitle = "Tháng ${state.selectedYearMonth.monthValue} · ${state.selectedYearMonth.year}",
+                onNavigateUp = navigator::pop,
+                actions = {
+                    KotoriHeaderAction(
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        contentDescription = stringResource(MR.strings.upcoming_guide),
+                        onClick = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) },
+                    )
+                },
+            )
+        },
     ) { paddingValues ->
-        if (isTabletUi()) {
-            UpcomingAnimeScreenLargeImpl(
-                listState = listState,
-                items = state.items,
-                events = state.events,
-                paddingValues = paddingValues,
-                selectedYearMonth = state.selectedYearMonth,
-                setSelectedYearMonth = setSelectedYearMonth,
-                onClickDay = { onClickDay(it, 0) },
-                onClickUpcoming = onClickUpcoming,
-            )
-        } else {
-            UpcomingAnimeScreenSmallImpl(
-                listState = listState,
-                items = state.items,
-                events = state.events,
-                paddingValues = paddingValues,
-                selectedYearMonth = state.selectedYearMonth,
-                setSelectedYearMonth = setSelectedYearMonth,
-                onClickDay = { onClickDay(it, 1) },
-                onClickUpcoming = onClickUpcoming,
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isTablet) {
+                UpcomingAnimeScreenLargeImpl(
+                    listState = listState,
+                    items = state.items,
+                    events = state.events,
+                    paddingValues = paddingValues,
+                    selectedYearMonth = state.selectedYearMonth,
+                    setSelectedYearMonth = setSelectedYearMonth,
+                    onClickDay = { onClickDay(it, 0) },
+                    onClickUpcoming = onClickUpcoming,
+                )
+            } else {
+                UpcomingAnimeScreenSmallImpl(
+                    listState = listState,
+                    items = state.items,
+                    events = state.events,
+                    paddingValues = paddingValues,
+                    selectedYearMonth = state.selectedYearMonth,
+                    setSelectedYearMonth = setSelectedYearMonth,
+                    onClickDay = { onClickDay(it, 1) },
+                    onClickUpcoming = onClickUpcoming,
+                )
+            }
+
+            // `Hôm nay`: jump back to today's releases
+            if (state.headerIndexes.containsKey(LocalDate.now())) {
+                GradientButton(
+                    onClick = {
+                        setSelectedYearMonth(YearMonth.now())
+                        onClickDay(LocalDate.now(), if (isTablet) 0 else 1)
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 18.dp),
+                    contentPadding = 10.dp,
+                ) {
+                    Text(
+                        text = "Hôm nay",
+                        color = KotoriTheme.accent.onAccent,
+                        fontFamily = BeVietnamProFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
         }
     }
 }
@@ -133,6 +179,7 @@ private fun KotoriTabletUpcomingWeek(
     modifier: Modifier = Modifier,
 ) {
     val navigator = LocalNavigator.currentOrThrow
+    val uriHandler = LocalUriHandler.current
     val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
     val notifyIds by libraryPreferences.upcomingNotifyAnimeIds.collectAsState()
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
@@ -210,26 +257,9 @@ private fun KotoriTabletUpcomingWeek(
         },
         onPreviousWeek = { weekOffset-- },
         onNextWeek = { weekOffset++ },
+        onToday = { weekOffset = 0 },
+        onHelp = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) },
         onNavigateUp = navigator::pop,
-    )
-}
-
-@Composable
-private fun UpcomingToolbar() {
-    val navigator = LocalNavigator.currentOrThrow
-    val uriHandler = LocalUriHandler.current
-
-    AppBar(
-        title = stringResource(MR.strings.label_upcoming),
-        navigateUp = navigator::pop,
-        actions = {
-            IconButton(onClick = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
-                    contentDescription = stringResource(MR.strings.upcoming_guide),
-                )
-            }
-        },
     )
 }
 

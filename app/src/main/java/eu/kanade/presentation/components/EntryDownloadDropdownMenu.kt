@@ -27,6 +27,7 @@ fun EntryDownloadDropdownMenu(
         DownloadAction.NEXT_10_ITEMS to pluralStringResource(downloadAmount, 10, 10),
         DownloadAction.NEXT_25_ITEMS to pluralStringResource(downloadAmount, 25, 25),
         DownloadAction.UNVIEWED_ITEMS to stringResource(downloadUnviewed),
+        DownloadAction.BOOKMARKED_ITEMS to stringResource(MR.strings.download_bookmarked),
     )
 
     DropdownMenu(

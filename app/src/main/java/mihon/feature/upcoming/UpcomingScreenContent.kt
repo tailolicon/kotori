@@ -295,6 +295,7 @@ private fun KotoriTabletUpcomingWeek(
     modifier: Modifier = Modifier,
 ) {
     val navigator = LocalNavigator.currentOrThrow
+    val uriHandler = LocalUriHandler.current
     val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
     val notifyIds by libraryPreferences.upcomingNotifyMangaIds.collectAsState()
     var weekOffset by rememberSaveable { mutableIntStateOf(0) }
@@ -382,6 +383,8 @@ private fun KotoriTabletUpcomingWeek(
         },
         onPreviousWeek = { weekOffset-- },
         onNextWeek = { weekOffset++ },
+        onToday = { weekOffset = 0 },
+        onHelp = { uriHandler.openUri(Constants.URL_HELP_UPCOMING) },
         onNavigateUp = navigator::pop,
     )
 }

@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.view.View
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.TabletUiMode
 import uy.kohesive.injekt.Injekt
@@ -79,4 +82,16 @@ fun View.hasDisplayCutout(): Boolean {
 fun Context.isNavigationBarNeedsScrim(): Boolean {
     return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
         InternalResourceHelper.getBoolean(this, "config_navBarNeedsScrim", true)
+}
+
+/**
+ * Hide the status bar (clock / battery / notifications) so it cannot sit on top of
+ * the app chrome. A swipe from the top still brings it back briefly.
+ */
+fun Activity.hideStatusBar() {
+    WindowCompat.setDecorFitsSystemWindows(window, false)
+    WindowInsetsControllerCompat(window, window.decorView).apply {
+        hide(WindowInsetsCompat.Type.statusBars())
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
 }

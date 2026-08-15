@@ -1,5 +1,6 @@
 package eu.kanade.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.KotoriShapes
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import androidx.compose.material3.DropdownMenu as ComposeDropdownMenu
@@ -28,6 +31,9 @@ import androidx.compose.material3.DropdownMenu as ComposeDropdownMenu
 /**
  * DropdownMenu but overlaps anchor and has width constraints to better
  * match non-Compose implementation.
+ *
+ * Wears the Kotori sheet surface — rounded, glass-bordered — so an overflow opening over a
+ * screen full of glass panels does not land as a flat black slab.
  */
 @Composable
 fun DropdownMenu(
@@ -46,6 +52,10 @@ fun DropdownMenu(
         offset = offset,
         scrollState = scrollState,
         properties = properties,
+        shape = KotoriShapes.menu,
+        containerColor = KotoriColors.bgSheet,
+        border = BorderStroke(1.dp, KotoriColors.glassBorderElevated),
+        shadowElevation = 14.dp,
         content = content,
     )
 }

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
@@ -33,7 +34,8 @@ fun AnimeDownloadQueueScreen(
     downloadList: List<AnimeDownloadHeaderItem>,
     nestedScrollConnection: NestedScrollConnection,
 ) {
-    Scaffold {
+    // Transparent: the host screen paints the aurora behind this list.
+    Scaffold(containerColor = Color.Transparent) {
         if (downloadList.isEmpty()) {
             EmptyScreen(
                 stringRes = MR.strings.information_no_downloads,

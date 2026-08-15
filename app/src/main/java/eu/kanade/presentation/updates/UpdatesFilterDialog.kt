@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.ui.updates.UpdatesSettingsScreenModel
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.domain.updates.service.UpdatesPreferences
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.SettingsItemsPaddings
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.components.material.padding
@@ -33,6 +34,7 @@ import tachiyomi.presentation.core.util.collectAsState
 fun UpdatesFilterDialog(
     onDismissRequest: () -> Unit,
     screenModel: UpdatesSettingsScreenModel,
+    isAnime: Boolean = false,
 ) {
     TabbedDialog(
         onDismissRequest = onDismissRequest,
@@ -45,7 +47,7 @@ fun UpdatesFilterDialog(
                 .padding(vertical = TabbedDialogPaddings.Vertical)
                 .verticalScroll(rememberScrollState()),
         ) {
-            FilterSheet(screenModel = screenModel)
+            FilterSheet(screenModel = screenModel, isAnime = isAnime)
         }
     }
 }
@@ -53,6 +55,7 @@ fun UpdatesFilterDialog(
 @Composable
 private fun ColumnScope.FilterSheet(
     screenModel: UpdatesSettingsScreenModel,
+    isAnime: Boolean,
 ) {
     val filterDownloaded by screenModel.updatesPreferences.filterDownloaded.collectAsState()
     TriStateItem(
@@ -63,7 +66,9 @@ private fun ColumnScope.FilterSheet(
 
     val filterUnread by screenModel.updatesPreferences.filterUnread.collectAsState()
     TriStateItem(
-        label = stringResource(MR.strings.action_filter_unread),
+        label = stringResource(
+            if (isAnime) AYMR.strings.action_filter_unseen else MR.strings.action_filter_unread,
+        ),
         state = filterUnread,
         onClick = { screenModel.toggleFilter(UpdatesPreferences::filterUnread) },
     )
@@ -82,29 +87,31 @@ private fun ColumnScope.FilterSheet(
         onClick = { screenModel.toggleFilter(UpdatesPreferences::filterBookmarked) },
     )
 
-    HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.small))
+    if (!isAnime) {
+        HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.small))
 
-    val filterExcludedScanlators by screenModel.updatesPreferences.filterExcludedScanlators.collectAsState()
+        val filterExcludedScanlators by screenModel.updatesPreferences.filterExcludedScanlators.collectAsState()
 
-    fun toggleScanlatorFilter() = screenModel.updatesPreferences.filterExcludedScanlators.getAndSet { !it }
+        fun toggleScanlatorFilter() = screenModel.updatesPreferences.filterExcludedScanlators.getAndSet { !it }
 
-    Row(
-        modifier = Modifier
-            .clickable { toggleScanlatorFilter() }
-            .fillMaxWidth()
-            .padding(horizontal = SettingsItemsPaddings.Horizontal),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = stringResource(MR.strings.action_filter_excluded_scanlators),
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Row(
+            modifier = Modifier
+                .clickable { toggleScanlatorFilter() }
+                .fillMaxWidth()
+                .padding(horizontal = SettingsItemsPaddings.Horizontal),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(MR.strings.action_filter_excluded_scanlators),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
 
-        Switch(
-            checked = filterExcludedScanlators,
-            onCheckedChange = { toggleScanlatorFilter() },
-        )
+            Switch(
+                checked = filterExcludedScanlators,
+                onCheckedChange = { toggleScanlatorFilter() },
+            )
+        }
     }
 }

@@ -235,7 +235,7 @@ private val displayModes = listOf(
 private fun ColumnScope.DisplayPage(
     screenModel: AnimeLibrarySettingsScreenModel,
 ) {
-    val displayMode by screenModel.libraryPreferences.displayMode.collectAsState()
+    val displayMode by screenModel.libraryPreferences.animeDisplayMode().collectAsState()
     SettingsChipRow(MR.strings.action_display_mode) {
         displayModes.map { (titleRes, mode) ->
             FilterChip(
@@ -287,32 +287,32 @@ private fun ColumnScope.DisplayPage(
     HeadingItem(MR.strings.overlay_header)
     CheckboxItem(
         label = stringResource(AYMR.strings.action_display_download_badge_anime),
-        pref = screenModel.libraryPreferences.downloadBadge,
+        pref = screenModel.libraryPreferences.animeDownloadBadge(),
     )
     CheckboxItem(
         label = stringResource(AYMR.strings.action_display_unseen_badge),
-        pref = screenModel.libraryPreferences.unreadBadge,
+        pref = screenModel.libraryPreferences.animeUnseenBadge(),
     )
     CheckboxItem(
         label = stringResource(MR.strings.action_display_local_badge),
-        pref = screenModel.libraryPreferences.localBadge,
+        pref = screenModel.libraryPreferences.animeLocalBadge(),
     )
     CheckboxItem(
         label = stringResource(MR.strings.action_display_language_badge),
-        pref = screenModel.libraryPreferences.languageBadge,
+        pref = screenModel.libraryPreferences.animeLanguageBadge(),
     )
     CheckboxItem(
         label = stringResource(AYMR.strings.action_display_show_continue_reading_button),
-        pref = screenModel.libraryPreferences.showContinueReadingButton,
+        pref = screenModel.libraryPreferences.animeShowContinueViewingButton(),
     )
 
     HeadingItem(MR.strings.tabs_header)
     CheckboxItem(
         label = stringResource(MR.strings.action_display_show_tabs),
-        pref = screenModel.libraryPreferences.categoryTabs,
+        pref = screenModel.libraryPreferences.animeCategoryTabs(),
     )
     CheckboxItem(
         label = stringResource(MR.strings.action_display_show_number_of_items),
-        pref = screenModel.libraryPreferences.categoryNumberOfItems,
+        pref = screenModel.libraryPreferences.animeCategoryNumberOfItems(),
     )
 }

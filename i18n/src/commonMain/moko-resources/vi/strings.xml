@@ -633,7 +633,7 @@
     <string name="pref_tracking_summary">Đồng bộ tiến trình đọc, đồng bộ nâng cao</string>
     <string name="pref_browse_summary">Nguồn, tiện ích, tìm kiếm toàn bộ</string>
     <string name="action_display_show_continue_reading_button">Nút tiếp tục đọc</string>
-    <string name="action_open_random_manga">Mở một truyện ngẫu nhiên</string>
+    <string name="action_open_random_manga">Mở một bộ ngẫu nhiên</string>
     <string name="invalid_location">Vị trí không hợp lệ: %s</string>
     <string name="label_stats">Thống kê</string>
     <string name="label_downloaded">Đã tải xuống</string>

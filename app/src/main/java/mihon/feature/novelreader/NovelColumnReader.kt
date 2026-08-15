@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -120,7 +121,26 @@ internal data class NovelColumnPage(
 internal data class NovelPagination(
     val pages: List<NovelColumnPage>,
     val runs: List<NovelProseFlow>,
-)
+) {
+    fun pageIndexForOffset(blockIndex: Int, offsetInBlock: Int): Int {
+        pages.forEachIndexed { index, page ->
+            val flow = runs.getOrNull(page.runIndex) ?: return@forEachIndexed
+            val start = flow.startOf(blockIndex)
+            if (start < 0) return@forEachIndexed
+            val pos = start + offsetInBlock
+            if (page.columns.any { pos in it.start until it.end }) return index
+        }
+        return -1
+    }
+
+    fun firstSentenceOnPage(pageIndex: Int, script: SpeechScript): Int {
+        val page = pages.getOrNull(pageIndex) ?: return 0
+        val flow = runs.getOrNull(page.runIndex) ?: return 0
+        val start = page.columns.minOfOrNull { it.start } ?: return 0
+        val block = flow.blockAt(start)
+        return script.sentencesIn(block).firstOrNull()?.index ?: 0
+    }
+}
 
 /**
  * T5 · the two-column reading area: the chapter's prose measured and cut into columns that
@@ -141,6 +161,7 @@ internal fun NovelColumnReader(
     columnCount: Int,
     pageIndex: Int,
     onPageCountChange: (Int) -> Unit,
+    onPaginationChange: (NovelPagination) -> Unit = {},
     onSeek: (Int) -> Unit,
     onTapOutsideSeek: () -> Unit,
     modifier: Modifier = Modifier,
@@ -178,6 +199,7 @@ internal fun NovelColumnReader(
         }
 
         LaunchedEffect(pagination.pages.size) { onPageCountChange(pagination.pages.size) }
+        LaunchedEffect(pagination) { onPaginationChange(pagination) }
 
         val page = pagination.pages.getOrNull(pageIndex.coerceIn(0, (pagination.pages.size - 1).coerceAtLeast(0)))
         if (page == null) {
@@ -203,27 +225,29 @@ internal fun NovelColumnReader(
             horizontalArrangement = Arrangement.spacedBy(COLUMN_GAP),
         ) {
             page.columns.forEachIndexed { index, slice ->
-                if (index > 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .background(ink.copy(alpha = 0.12f)),
+                Box(modifier = Modifier.width(columnWidth).fillMaxHeight()) {
+                    if (index > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .fillMaxHeight()
+                                .width(1.dp)
+                                .offset(x = -COLUMN_GAP / 2)
+                                .background(ink.copy(alpha = 0.12f)),
+                        )
+                    }
+                    NovelTextColumn(
+                        flow = flow,
+                        slice = slice,
+                        script = script,
+                        highlight = highlight,
+                        style = style,
+                        accent = accent,
+                        onSeek = onSeek,
+                        onTapOutsideSeek = onTapOutsideSeek,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
-                NovelTextColumn(
-                    flow = flow,
-                    slice = slice,
-                    script = script,
-                    highlight = highlight,
-                    style = style,
-                    accent = accent,
-                    onSeek = onSeek,
-                    onTapOutsideSeek = onTapOutsideSeek,
-                    modifier = Modifier
-                        .width(columnWidth)
-                        .fillMaxHeight(),
-                )
             }
         }
     }

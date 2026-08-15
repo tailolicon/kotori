@@ -95,6 +95,9 @@ object KotoriTabletTokens {
     /** Screen horizontal padding inside the content pane. */
     val screenPadding = 26.dp
 
+    /** Pull-to-refresh spinner inset: clears the persistent top bar of a tablet screen. */
+    val pullIndicatorInset = 74.dp
+
     /** T1 right column. */
     val libraryAsideWidth = 316.dp
 

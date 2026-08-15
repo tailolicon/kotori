@@ -131,13 +131,17 @@ class AnimeLibraryScreenModel(
                             library = it,
                         )
                     }
+                    val lastIndex = it.keys.toList().lastIndex.coerceAtLeast(0)
+                    if (activeCategoryIndex > lastIndex) {
+                        activeCategoryIndex = lastIndex
+                    }
                 }
         }
 
         combine(
-            libraryPreferences.categoryTabs.changes(),
-            libraryPreferences.categoryNumberOfItems.changes(),
-            libraryPreferences.showContinueReadingButton.changes(),
+            libraryPreferences.animeCategoryTabs().changes(),
+            libraryPreferences.animeCategoryNumberOfItems().changes(),
+            libraryPreferences.animeShowContinueViewingButton().changes(),
         ) { a, b, c -> arrayOf(a, b, c) }
             .onEach { (showCategoryTabs, showAnimeCount, showAnimeContinueButton) ->
                 mutableState.update { state ->
@@ -340,10 +344,10 @@ class AnimeLibraryScreenModel(
 
     private fun getAnimelibItemPreferencesFlow(): Flow<ItemPreferences> {
         return combine(
-            libraryPreferences.downloadBadge.changes(),
-            libraryPreferences.unreadBadge.changes(),
-            libraryPreferences.localBadge.changes(),
-            libraryPreferences.languageBadge.changes(),
+            libraryPreferences.animeDownloadBadge().changes(),
+            libraryPreferences.animeUnseenBadge().changes(),
+            libraryPreferences.animeLocalBadge().changes(),
+            libraryPreferences.animeLanguageBadge().changes(),
             libraryPreferences.autoUpdateItemRestrictions().changes(),
 
             preferences.downloadedOnly.changes(),
@@ -471,6 +475,7 @@ class AnimeLibraryScreenModel(
             DownloadAction.NEXT_10_ITEMS -> downloadUnseenEpisodes(animes, 10)
             DownloadAction.NEXT_25_ITEMS -> downloadUnseenEpisodes(animes, 25)
             DownloadAction.UNVIEWED_ITEMS -> downloadUnseenEpisodes(animes, null)
+            DownloadAction.BOOKMARKED_ITEMS -> downloadBookmarkedEpisodes(animes)
         }
         clearSelection()
     }
@@ -496,6 +501,25 @@ class AnimeLibraryScreenModel(
                     }
                     .let { if (amount != null) it.take(amount) else it }
 
+                downloadManager.downloadEpisodes(anime, episodes)
+            }
+        }
+    }
+
+    private fun downloadBookmarkedEpisodes(animes: List<Anime>) {
+        screenModelScope.launchNonCancellable {
+            animes.forEach { anime ->
+                val episodes = getEpisodesByAnimeId.await(anime.id)
+                    .fastFilter { it.bookmark }
+                    .fastFilterNot { episode ->
+                        downloadManager.getQueuedDownloadOrNull(episode.id) != null ||
+                            downloadManager.isEpisodeDownloaded(
+                                episode.name,
+                                episode.scanlator,
+                                anime.title,
+                                anime.source,
+                            )
+                    }
                 downloadManager.downloadEpisodes(anime, episodes)
             }
         }
@@ -577,7 +601,7 @@ class AnimeLibraryScreenModel(
     }
 
     fun getDisplayMode(): PreferenceMutableState<LibraryDisplayMode> {
-        return libraryPreferences.displayMode.asState(screenModelScope)
+        return libraryPreferences.animeDisplayMode().asState(screenModelScope)
     }
 
     fun getColumnsPreferenceForCurrentOrientation(isLandscape: Boolean): PreferenceMutableState<Int> {
@@ -593,11 +617,13 @@ class AnimeLibraryScreenModel(
     }
 
     suspend fun getRandomAnimelibItemForCurrentCategory(): AnimeLibraryItem? {
-        if (state.value.categories.isEmpty()) return null
+        val categories = state.value.categories
+        if (categories.isEmpty()) return null
+        val index = activeCategoryIndex.coerceIn(0, categories.lastIndex)
 
         return withIOContext {
             state.value
-                .getAnimelibItemsByCategoryId(state.value.categories[activeCategoryIndex].id)
+                .getAnimelibItemsByCategoryId(categories[index].id)
                 ?.randomOrNull()
         }
     }
@@ -674,8 +700,8 @@ class AnimeLibraryScreenModel(
 
     fun invertSelection(index: Int) {
         mutableState.update { state ->
+            val categoryId = state.categories.getOrNull(index)?.id ?: return@update state
             val newSelection = state.selection.mutate { list ->
-                val categoryId = state.categories[index].id
                 val items = state.getAnimelibItemsByCategoryId(categoryId)?.fastMap { it.libraryAnime }.orEmpty()
                 val selectedIds = list.fastMap { it.id }
                 val (toRemove, toAdd) = items.fastPartition { it.id in selectedIds }

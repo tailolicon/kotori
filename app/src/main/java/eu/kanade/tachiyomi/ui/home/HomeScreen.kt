@@ -36,6 +36,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.theme.kotori.KotoriCircleAction
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriNavBar
@@ -47,10 +49,11 @@ import eu.kanade.presentation.theme.kotori.isKotoriRail
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
+import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
 import eu.kanade.tachiyomi.ui.library.LibraryTab
-import eu.kanade.tachiyomi.ui.library.anime.AnimeLibraryTab
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.AnimeDownloadQueueScreen
 import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.updates.UpdatesTab
@@ -188,9 +191,13 @@ object HomeScreen : Screen() {
                 }
                 launch {
                     openTabEvent.receiveAsFlow().collectLatest {
+                        val uiPreferences = Injekt.get<UiPreferences>()
                         tabNavigator.current = when (it) {
                             is Tab.Library -> LibraryTab
-                            is Tab.AnimeLib -> AnimeLibraryTab
+                            is Tab.AnimeLib -> {
+                                uiPreferences.activeMediaMode.set(MediaType.ANIME)
+                                LibraryTab
+                            }
                             Tab.Updates -> UpdatesTab
                             Tab.History -> HistoryTab
                             is Tab.Browse -> {
@@ -205,8 +212,12 @@ object HomeScreen : Screen() {
                         if (it is Tab.Library && it.mangaIdToOpen != null) {
                             navigator.push(MangaScreen(it.mangaIdToOpen))
                         }
+                        if (it is Tab.AnimeLib && it.animeIdToOpen != null) {
+                            navigator.push(AnimeScreen(it.animeIdToOpen))
+                        }
                         if (it is Tab.More && it.toDownloads) {
-                            navigator.push(DownloadQueueScreen)
+                            val isAnime = uiPreferences.activeMediaMode.get() == MediaType.ANIME
+                            navigator.push(if (isAnime) AnimeDownloadQueueScreen else DownloadQueueScreen)
                         }
                     }
                 }
@@ -274,10 +285,21 @@ object HomeScreen : Screen() {
                     tab is UpdatesTab -> {
                         val count by produceState(initialValue = 0) {
                             val pref = Injekt.get<LibraryPreferences>()
+                            val uiPreferences = Injekt.get<UiPreferences>()
                             combine(
                                 pref.newShowUpdatesCount.changes(),
                                 pref.newUpdatesCount.changes(),
-                            ) { show, count -> if (show) count else 0 }
+                                pref.newAnimeUpdatesCount().changes(),
+                                uiPreferences.activeMediaMode.changes(),
+                            ) { show, mangaCount, animeCount, mode ->
+                                if (!show) {
+                                    0
+                                } else if (mode == MediaType.ANIME) {
+                                    animeCount
+                                } else {
+                                    mangaCount
+                                }
+                            }
                                 .collectLatest { value = it }
                         }
                         if (count > 0) {
@@ -296,7 +318,15 @@ object HomeScreen : Screen() {
                     }
                     BrowseTab::class.isInstance(tab) -> {
                         val count by produceState(initialValue = 0) {
-                            Injekt.get<SourcePreferences>().extensionUpdatesCount.changes()
+                            val sourcePreferences = Injekt.get<SourcePreferences>()
+                            val uiPreferences = Injekt.get<UiPreferences>()
+                            combine(
+                                sourcePreferences.extensionUpdatesCount.changes(),
+                                sourcePreferences.animeExtensionUpdatesCount().changes(),
+                                uiPreferences.activeMediaMode.changes(),
+                            ) { mangaCount, animeCount, mode ->
+                                if (mode == MediaType.ANIME) animeCount else mangaCount
+                            }
                                 .collectLatest { value = it }
                         }
                         if (count > 0) {

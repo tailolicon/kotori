@@ -103,6 +103,14 @@ import tachiyomi.presentation.core.util.secondaryItemAlpha
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.manga.components.MarkdownRender
+import eu.kanade.presentation.manga.components.descriptionAnnotator
+import eu.kanade.presentation.manga.components.getMarkdownLinkStyle
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 private val whitespaceLineRegex = Regex("[\\r\\n]{2,}", setOf(RegexOption.MULTILINE))
 
@@ -620,7 +628,10 @@ private fun AnimeSummary(
     expanded: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val preferences = remember { Injekt.get<UiPreferences>() }
+    val loadImages = remember { preferences.imagesInDescription.get() }
     val animProgress by animateFloatAsState(if (expanded) 1f else 0f)
+    var infoHeight by remember { mutableIntStateOf(0) }
     Layout(
         modifier = modifier.clipToBounds(),
         contents = listOf(
@@ -631,28 +642,26 @@ private fun AnimeSummary(
                 )
             },
             {
-                Text(
-                    text = expandedDescription,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            {
-                SelectionContainer {
-                    Text(
-                        text = if (expanded) expandedDescription else shrunkDescription,
-                        maxLines = Int.MAX_VALUE,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
+                // Same markdown pipeline as the manga description: sources that ship links or
+                // emphasis read as formatted text instead of raw asterisks.
+                SelectionContainer(
+                    modifier = Modifier.onSizeChanged { size -> infoHeight = size.height },
+                ) {
+                    MarkdownRender(
+                        content = if (expanded) expandedDescription else shrunkDescription,
                         modifier = Modifier.secondaryItemAlpha(),
+                        annotator = descriptionAnnotator(
+                            loadImages = loadImages,
+                            linkStyle = getMarkdownLinkStyle().toSpanStyle(),
+                        ),
+                        loadImages = loadImages,
                     )
                 }
             },
             {
-                val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
-                Box(
-                    modifier = Modifier.background(Brush.verticalGradient(colors = colors)),
-                    contentAlignment = Alignment.Center,
-                ) {
+                // No solid scrim: the page is an aurora gradient, so any flat fill lands as a
+                // black band across it. The caret alone carries the affordance.
+                Box(contentAlignment = Alignment.Center) {
                     val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_caret_down)
                     Icon(
                         painter = rememberAnimatedVectorPainter(image, !expanded),
@@ -660,19 +669,15 @@ private fun AnimeSummary(
                             if (expanded) MR.strings.manga_info_collapse else MR.strings.manga_info_expand,
                         ),
                         tint = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.background(Brush.radialGradient(colors = colors.asReversed())),
                     )
                 }
             },
         ),
-    ) { (shrunk, expanded, actual, scrim), constraints ->
+    ) { (shrunk, actual, scrim), constraints ->
         val shrunkHeight = shrunk.single()
             .measure(constraints)
             .height
-        val expandedHeight = expanded.single()
-            .measure(constraints)
-            .height
-        val heightDelta = expandedHeight - shrunkHeight
+        val heightDelta = infoHeight - shrunkHeight
         val scrimHeight = 24.dp.roundToPx()
 
         val actualPlaceable = actual.single()

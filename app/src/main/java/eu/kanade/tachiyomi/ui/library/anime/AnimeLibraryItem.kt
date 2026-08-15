@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.library.anime
 import eu.kanade.tachiyomi.source.anime.getNameForAnimeInfo
 import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.domain.source.anime.service.AnimeSourceManager
+import tachiyomi.source.local.entries.anime.LocalAnimeSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
@@ -25,6 +26,14 @@ data class AnimeLibraryItem(
         if (constraint.startsWith("id:", true)) {
             val id = constraint.substringAfter("id:").toLongOrNull()
             return libraryAnime.id == id
+        } else if (constraint.startsWith("src:", true)) {
+            val querySource = constraint.substringAfter("src:")
+            val source = sourceManager.getOrStub(libraryAnime.anime.source)
+            return if (querySource.equals("local", ignoreCase = true)) {
+                source.id == LocalAnimeSource.ID
+            } else {
+                source.id == querySource.toLongOrNull()
+            }
         }
         return libraryAnime.anime.title.contains(constraint, true) ||
             (libraryAnime.anime.author?.contains(constraint, true) ?: false) ||

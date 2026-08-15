@@ -27,6 +27,7 @@ import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsScreenModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
 import eu.kanade.tachiyomi.ui.browse.anime.migration.sources.migrateAnimeSourceTab
 import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
+import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.sourcesTab
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -55,10 +56,29 @@ data object BrowseTab : Tab {
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        navigator.push(GlobalSearchScreen())
+        // Tablet Browse already has a persistent search field. Pushing the phone
+        // GlobalSearchScreen on a second tap of the rail dropped the rail and looked
+        // like the inline field did nothing.
+        if (tabletHostVisible) {
+            focusInlineSearchChannel.trySend(Unit)
+        } else if (Injekt.get<UiPreferences>().activeMediaMode.get() == MediaType.ANIME) {
+            navigator.push(GlobalAnimeSearchScreen())
+        } else {
+            navigator.push(GlobalSearchScreen())
+        }
     }
 
     private val switchToExtensionTabChannel = Channel<Unit>(1, BufferOverflow.DROP_OLDEST)
+    private val focusInlineSearchChannel = Channel<Unit>(1, BufferOverflow.DROP_OLDEST)
+
+    @Volatile
+    private var tabletHostVisible = false
+
+    fun markTabletHostVisible(visible: Boolean) {
+        tabletHostVisible = visible
+    }
+
+    fun focusInlineSearchFlow() = focusInlineSearchChannel.receiveAsFlow()
 
     fun showExtension() {
         switchToExtensionTabChannel.trySend(Unit)

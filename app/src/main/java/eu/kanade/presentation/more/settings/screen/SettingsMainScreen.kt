@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Storage
@@ -43,6 +44,7 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,12 +72,19 @@ import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
 import eu.kanade.presentation.theme.kotori.KotoriTheme
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.setting.PlayerSettingsScreen
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.collectAsState
 import cafe.adriel.voyager.core.screen.Screen as VoyagerScreen
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 object SettingsMainScreen : Screen() {
 
@@ -113,6 +122,7 @@ object SettingsMainScreen : Screen() {
             return
         }
 
+        val items = settingsItems()
         val containerColor = if (twoPane) getPalerSurface() else MaterialTheme.colorScheme.surface
         val topBarState = rememberTopAppBarState()
 
@@ -204,6 +214,7 @@ object SettingsMainScreen : Screen() {
         navigator: Navigator,
         onNavigateUp: () -> Unit,
     ) {
+        val items = settingsItems()
         val accent = KotoriTheme.accent
         val currentScreen = navigator.items.firstOrNull()
         Column(
@@ -242,7 +253,7 @@ object SettingsMainScreen : Screen() {
                 KotoriCircleAction(
                     icon = Icons.Outlined.Search,
                     contentDescription = stringResource(MR.strings.action_search),
-                    onClick = { navigator.replaceAll(SettingsSearchScreen()) },
+                    onClick = { navigator.push(SettingsSearchScreen()) },
                     size = 38.dp,
                     iconSize = 18.dp,
                 )
@@ -340,7 +351,14 @@ object SettingsMainScreen : Screen() {
         val screen: VoyagerScreen,
     )
 
-    private val items = listOf(
+    @Composable
+    private fun settingsItems(): List<Item> {
+        val uiPreferences = remember { Injekt.get<UiPreferences>() }
+        val mode by uiPreferences.activeMediaMode.collectAsState()
+        return remember(mode) { buildItems(mode) }
+    }
+
+    private fun buildItems(mode: MediaType): List<Item> = listOf(
         Item(
             titleRes = MR.strings.pref_category_appearance,
             subtitleRes = MR.strings.pref_appearance_summary,
@@ -353,12 +371,21 @@ object SettingsMainScreen : Screen() {
             icon = Icons.Outlined.CollectionsBookmark,
             screen = SettingsLibraryScreen,
         ),
-        Item(
-            titleRes = MR.strings.pref_category_reader,
-            subtitleRes = MR.strings.pref_reader_summary,
-            icon = Icons.AutoMirrored.Outlined.ChromeReaderMode,
-            screen = SettingsReaderScreen,
-        ),
+        if (mode == MediaType.ANIME) {
+            Item(
+                titleRes = AYMR.strings.label_player,
+                subtitleRes = AYMR.strings.pref_player_settings_summary,
+                icon = Icons.Outlined.PlayCircleOutline,
+                screen = PlayerSettingsScreen(mainSettings = true),
+            )
+        } else {
+            Item(
+                titleRes = MR.strings.pref_category_reader,
+                subtitleRes = MR.strings.pref_reader_summary,
+                icon = Icons.AutoMirrored.Outlined.ChromeReaderMode,
+                screen = SettingsReaderScreen,
+            )
+        },
         Item(
             titleRes = MR.strings.pref_category_downloads,
             subtitleRes = MR.strings.pref_downloads_summary,

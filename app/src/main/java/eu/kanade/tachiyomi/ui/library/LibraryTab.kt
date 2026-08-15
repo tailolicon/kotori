@@ -119,11 +119,16 @@ import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import androidx.compose.foundation.layout.PaddingValues
+import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 data object LibraryTab : Tab {
 
@@ -140,7 +145,11 @@ data object LibraryTab : Tab {
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        requestOpenSettingsSheet()
+        if (Injekt.get<UiPreferences>().activeMediaMode.get() == MediaType.ANIME) {
+            AnimeLibraryTab.requestOpenSettingsSheet()
+        } else {
+            requestOpenSettingsSheet()
+        }
     }
 
     @Composable
@@ -370,98 +379,167 @@ data object LibraryTab : Tab {
                     val items = activeCategory?.let { state.getItemsForCategory(it) }.orEmpty()
                     val history = lastRead
                     val heroItem = history?.let { state.libraryData.favoritesById[it.mangaId] }
-                    KotoriTabletLibraryLayout(
-                        modifier = Modifier.padding(contentPadding),
-                        activeMode = activeMode,
-                        onSelectMode = { uiPreferences.activeMediaMode.set(it) },
-                        searchQuery = state.searchQuery.orEmpty(),
-                        onSearchChange = screenModel::search,
-                        onClearSearch = { screenModel.search("") },
-                        onOpenFilters = screenModel::showSettingsDialog,
-                        filtersActive = state.hasActiveFilters,
-                        onRefresh = { onClickRefresh(state.activeCategory) },
-                        onCycleDisplayMode = {
-                            val order = listOf(
-                                LibraryDisplayMode.CompactGrid,
-                                LibraryDisplayMode.ComfortableGrid,
-                                LibraryDisplayMode.CoverOnlyGrid,
-                                LibraryDisplayMode.List,
-                            )
-                            displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
-                        },
-                        // A single unnamed system category is not a choice, so the chip row
-                        // would only be showing the word "Default" with nothing to switch to.
-                        categories = state.displayedCategories
-                            .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
-                            .orEmpty()
-                            .map { it.visualName },
-                        categoryCounts = state.displayedCategories.map { state.getItemCountForCategory(it) },
-                        activeCategoryIndex = state.coercedActiveCategoryIndex,
-                        onSelectCategory = screenModel::updateActiveCategoryIndex,
-                        title = stringResource(MR.strings.label_library),
-                        subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
-                        tiles = items.map { item ->
-                            val manga = item.libraryManga.manga
-                            KotoriTabletLibraryTile(
-                                id = manga.id,
-                                title = manga.title,
-                                statusLine = libraryStatusLine(item.libraryManga),
-                                coverData = MangaCover(
-                                    mangaId = manga.id,
-                                    sourceId = manga.source,
-                                    isMangaFavorite = manga.favorite,
-                                    url = manga.thumbnailUrl,
-                                    lastModified = manga.coverLastModified,
-                                ),
-                                unreadCount = item.badges.unreadCount,
-                                downloaded = item.badges.downloadCount > 0,
-                                selected = manga.id in state.selection,
-                            )
-                        },
-                        onClickTile = { id ->
-                            val category = state.activeCategory
-                            val entry = state.libraryData.favoritesById[id]
-                            if (state.selectionMode && category != null && entry != null) {
-                                screenModel.toggleSelection(category, entry.libraryManga)
-                            } else {
-                                navigator.push(MangaScreen(id))
+                    val searching = !state.searchQuery.isNullOrEmpty() || state.hasActiveFilters
+                    var isRefreshing by remember { mutableStateOf(false) }
+                    PullRefresh(
+                        refreshing = isRefreshing,
+                        enabled = !state.selectionMode,
+                        onRefresh = {
+                            if (!onClickRefresh(null)) return@PullRefresh
+                            scope.launch {
+                                // Fake refresh status but hide it after a second as it's a long running task
+                                isRefreshing = true
+                                delay(1.seconds)
+                                isRefreshing = false
                             }
                         },
-                        onLongClickTile = { id ->
-                            val category = state.activeCategory
-                            val entry = state.libraryData.favoritesById[id]
-                            if (category != null && entry != null) {
-                                screenModel.toggleRangeSelection(category, entry.libraryManga)
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                        },
-                        hero = if (history != null && heroItem != null) {
-                            val libraryManga = heroItem.libraryManga
-                            KotoriTabletHero(
-                                title = history.title,
-                                meta = "Chương ${formatChapterNumber(history.chapterNumber)}" +
-                                    " · đã đọc ${libraryManga.readCount}/${libraryManga.totalChapters}",
-                                progress = if (libraryManga.totalChapters > 0) {
-                                    libraryManga.readCount.toFloat() / libraryManga.totalChapters
+                        // Drop the spinner into the grid instead of on top of the search bar.
+                        indicatorPadding = PaddingValues(top = KotoriTabletTokens.pullIndicatorInset),
+                    ) {
+                        KotoriTabletLibraryLayout(
+                            modifier = Modifier.padding(contentPadding),
+                            activeMode = activeMode,
+                            onSelectMode = { uiPreferences.activeMediaMode.set(it) },
+                            searchQuery = state.searchQuery.orEmpty(),
+                            onSearchChange = screenModel::search,
+                            onClearSearch = { screenModel.search("") },
+                            onOpenFilters = screenModel::showSettingsDialog,
+                            filtersActive = state.hasActiveFilters,
+                            onRefresh = { onClickRefresh(null) },
+                            onRefreshAll = { onClickRefresh(null) },
+                            onRefreshCategory = { onClickRefresh(state.activeCategory) },
+                            onOpenRandom = {
+                                scope.launch {
+                                    val randomItem = screenModel.getRandomLibraryItemForCurrentCategory()
+                                    if (randomItem != null) {
+                                        navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                    } else {
+                                        snackbarHostState.showSnackbar(
+                                            context.stringResource(MR.strings.information_no_entries_found),
+                                        )
+                                    }
+                                }
+                            },
+                            displayMode = displayMode.value,
+                            onCycleDisplayMode = {
+                                val order = listOf(
+                                    LibraryDisplayMode.CompactGrid,
+                                    LibraryDisplayMode.ComfortableGrid,
+                                    LibraryDisplayMode.CoverOnlyGrid,
+                                    LibraryDisplayMode.List,
+                                )
+                                displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
+                            },
+                            // A single unnamed system category is not a choice, so the chip row
+                            // would only be showing the word "Default" with nothing to switch to.
+                            categories = state.displayedCategories
+                                .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
+                                .orEmpty()
+                                .map { it.visualName },
+                            categoryCounts = state.displayedCategories.map { state.getItemCountForCategory(it) },
+                            activeCategoryIndex = state.coercedActiveCategoryIndex,
+                            onSelectCategory = screenModel::updateActiveCategoryIndex,
+                            title = stringResource(MR.strings.label_library),
+                            subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
+                            tiles = items.map { item ->
+                                val manga = item.libraryManga.manga
+                                KotoriTabletLibraryTile(
+                                    id = manga.id,
+                                    title = manga.title,
+                                    statusLine = libraryStatusLine(item.libraryManga),
+                                    coverData = MangaCover(
+                                        mangaId = manga.id,
+                                        sourceId = manga.source,
+                                        isMangaFavorite = manga.favorite,
+                                        url = manga.thumbnailUrl,
+                                        lastModified = manga.coverLastModified,
+                                    ),
+                                    unreadCount = item.badges.unreadCount,
+                                    downloaded = item.badges.downloadCount > 0,
+                                    selected = manga.id in state.selection,
+                                    isLocal = item.badges.isLocal,
+                                    language = item.badges.sourceLanguage.takeIf { it.isNotBlank() },
+                                )
+                            },
+                            onClickTile = { id ->
+                                val category = state.activeCategory
+                                val entry = state.libraryData.favoritesById[id]
+                                if (state.selectionMode && category != null && entry != null) {
+                                    screenModel.toggleSelection(category, entry.libraryManga)
                                 } else {
-                                    0f
-                                },
-                                coverData = history.coverData,
-                                onClick = { navigator.push(MangaScreen(history.mangaId)) },
-                                onResume = { onContinueReading(libraryManga) },
-                            )
-                        } else {
-                            null
-                        },
-                        resumeItems = resumeItems,
-                        airingItems = airingItems,
-                        emptyContent = {
-                            KotoriEmptyState(
-                                title = "Thư viện trống",
-                                hint = "Thêm truyện từ tab Duyệt",
-                            )
-                        },
-                    )
+                                    navigator.push(MangaScreen(id))
+                                }
+                            },
+                            onLongClickTile = { id ->
+                                val category = state.activeCategory
+                                val entry = state.libraryData.favoritesById[id]
+                                if (category != null && entry != null) {
+                                    screenModel.toggleRangeSelection(category, entry.libraryManga)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            hero = if (history != null && heroItem != null) {
+                                val libraryManga = heroItem.libraryManga
+                                KotoriTabletHero(
+                                    title = history.title,
+                                    meta = "Chương ${formatChapterNumber(history.chapterNumber)}" +
+                                        " · đã đọc ${libraryManga.readCount}/${libraryManga.totalChapters}",
+                                    progress = if (libraryManga.totalChapters > 0) {
+                                        libraryManga.readCount.toFloat() / libraryManga.totalChapters
+                                    } else {
+                                        0f
+                                    },
+                                    coverData = history.coverData,
+                                    onClick = { navigator.push(MangaScreen(history.mangaId)) },
+                                    onResume = { onContinueReading(libraryManga) },
+                                )
+                            } else {
+                                null
+                            },
+                            resumeItems = resumeItems,
+                            airingItems = airingItems,
+                            emptyContent = {
+                                if (searching) {
+                                    KotoriEmptyState(
+                                        title = "Không có kết quả",
+                                        hint = "Thử từ khóa khác hoặc tìm trên mọi nguồn",
+                                        actions = {
+                                            GradientButton(
+                                                onClick = {
+                                                    navigator.push(
+                                                        GlobalSearchScreen(state.searchQuery.orEmpty()),
+                                                    )
+                                                },
+                                            ) {
+                                                Text(
+                                                    text = "Tìm trên mọi nguồn",
+                                                    color = KotoriTheme.accent.onAccent,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                )
+                                            }
+                                        },
+                                    )
+                                } else {
+                                    val handler = LocalUriHandler.current
+                                    KotoriEmptyState(
+                                        title = "Thư viện trống",
+                                        hint = "Thêm truyện từ tab Duyệt",
+                                        actions = {
+                                            GradientButton(onClick = { handler.openUri(GETTING_STARTED_URL) }) {
+                                                Text(
+                                                    text = stringResource(MR.strings.getting_started_guide),
+                                                    color = KotoriTheme.accent.onAccent,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
                 state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
                     val handler = LocalUriHandler.current
@@ -624,7 +702,13 @@ data object LibraryTab : Tab {
 
     // For invoking search from other screen
     private val queryEvent = Channel<String>()
-    suspend fun search(query: String) = queryEvent.send(query)
+    suspend fun search(query: String) {
+        if (Injekt.get<UiPreferences>().activeMediaMode.get() == MediaType.ANIME) {
+            AnimeLibraryTab.search(query)
+        } else {
+            queryEvent.send(query)
+        }
+    }
 
     // For opening settings sheet in LibraryController
     private val requestSettingsSheetEvent = Channel<Unit>()

@@ -24,8 +24,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
@@ -38,6 +36,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallExtendedFloatingActionButton
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -82,7 +82,9 @@ import eu.kanade.presentation.entries.anime.components.ExpandableAnimeDescriptio
 import eu.kanade.presentation.entries.anime.components.NextEpisodeAiringListItem
 import eu.kanade.presentation.entries.components.EntryBottomActionMenu
 import eu.kanade.presentation.entries.components.EntryToolbar
+import eu.kanade.presentation.components.EntryDownloadDropdownMenu
 import eu.kanade.presentation.entries.components.KotoriDetailChip
+import eu.kanade.presentation.entries.components.KotoriDetailMenuAction
 import eu.kanade.presentation.entries.components.KotoriTabletDetailItem
 import eu.kanade.presentation.entries.components.KotoriTabletDetailLayout
 import eu.kanade.presentation.entries.components.ItemHeader
@@ -112,7 +114,6 @@ import tachiyomi.domain.source.anime.model.StubAnimeSource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.FastScrollLazyVerticalGrid
-import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.material.ExtendedFloatingActionButton
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -121,6 +122,7 @@ import tachiyomi.presentation.core.util.shouldExpandFAB
 import tachiyomi.source.local.entries.anime.isLocal
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.layout.Arrangement
 
 @Composable
 fun AnimeScreen(
@@ -370,7 +372,10 @@ private fun AnimeScreenSmallImpl(
     BoxWithConstraints {
         val density = LocalDensity.current
         val containerHeightPx = with(density) { this@BoxWithConstraints.maxHeight.roundToPx() }
+        // Same aurora the manga detail sits on, so switching mode keeps one surface.
+        AuroraBackground {
         Scaffold(
+            containerColor = Color.Transparent,
             topBar = {
                 val selectedEpisodeCount: Int = remember(episodes) {
                     episodes.count { it.selected }
@@ -433,34 +438,25 @@ private fun AnimeScreenSmallImpl(
                 val isFABVisible = remember(episodes) {
                     episodes.fastAny { !it.episode.seen } && !isAnySelected
                 }
-                AnimatedVisibility(
-                    visible = isFABVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    ExtendedFloatingActionButton(
-                        text = {
-                            val isWatching = remember(state.episodes) {
-                                state.episodes.fastAny { it.episode.seen }
-                            }
-                            Text(
-                                text = stringResource(
-                                    if (isWatching) MR.strings.action_resume else MR.strings.action_start,
-                                ),
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = onContinueWatching,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        expanded = itemListState.shouldExpandFAB(),
-                    )
-                }
+                SmallExtendedFloatingActionButton(
+                    text = {
+                        val isWatching = remember(state.episodes) {
+                            state.episodes.fastAny { it.episode.seen }
+                        }
+                        Text(
+                            text = stringResource(
+                                if (isWatching) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
+                    },
+                    icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueWatching,
+                    expanded = itemListState.shouldExpandFAB(),
+                    modifier = Modifier.animateFloatingActionButton(
+                        visible = isFABVisible,
+                        alignment = Alignment.BottomEnd,
+                    ),
+                )
             },
         ) { contentPadding ->
             val topPadding = contentPadding.calculateTopPadding()
@@ -631,6 +627,7 @@ private fun AnimeScreenSmallImpl(
                 }
             }
         }
+        }
     }
 }
 
@@ -746,6 +743,14 @@ fun AnimeScreenLargeImpl(
             onCoverClicked = onCoverClicked,
             onDownloadActionClicked = onDownloadActionClicked,
             onSettingsClicked = onSettingsClicked,
+            onShareClicked = onShareClicked,
+            onEditCategoryClicked = onEditCategoryClicked,
+            onMigrateClicked = onMigrateClicked,
+            onEditIntervalClicked = onEditIntervalClicked,
+            changeAnimeSkipIntro = changeAnimeSkipIntro,
+            onTagSearch = onTagSearch,
+            onAllEpisodeSelected = onAllEpisodeSelected,
+            onInvertSelection = onInvertSelection,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
             onMultiFillermarkClicked = onMultiFillermarkClicked,
             onMultiMarkAsSeenClicked = onMultiMarkAsSeenClicked,
@@ -756,246 +761,172 @@ fun AnimeScreenLargeImpl(
         return
     }
 
+    KotoriTabletSeasonDetail(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        seasons = seasons,
+        navigateUp = navigateUp,
+        onAddToLibraryClicked = onAddToLibraryClicked,
+        onWebViewClicked = onWebViewClicked,
+        onTrackingClicked = onTrackingClicked,
+        onFilterButtonClicked = onFilterButtonClicked,
+        onRefresh = onRefresh,
+        onContinueWatching = onContinueWatching,
+        onCoverClicked = onCoverClicked,
+        onSettingsClicked = onSettingsClicked,
+        onShareClicked = onShareClicked,
+        onEditCategoryClicked = onEditCategoryClicked,
+        onMigrateClicked = onMigrateClicked,
+        onEditIntervalClicked = onEditIntervalClicked,
+        onTagSearch = onTagSearch,
+        onSeasonClicked = onSeasonClicked,
+        onClickContinueWatching = onClickContinueWatching,
+        isWatching = state.episodes.fastAny { it.episode.seen },
+    )
+}
+
+/**
+ * T2 · Chi tiết anime theo mùa — the same tablet composition as the episode detail: the key
+ * visual and every action on the left, the season grid filling the right pane. Seasons keep
+ * their own poster grid instead of the two-column row list, so the tab body is that grid.
+ */
+@Composable
+private fun KotoriTabletSeasonDetail(
+    state: AnimeScreenModel.State.Success,
+    snackbarHostState: SnackbarHostState,
+    seasons: List<AnimeSeasonItem>,
+    navigateUp: () -> Unit,
+    onAddToLibraryClicked: () -> Unit,
+    onWebViewClicked: (() -> Unit)?,
+    onTrackingClicked: (() -> Unit)?,
+    onFilterButtonClicked: () -> Unit,
+    onRefresh: () -> Unit,
+    onContinueWatching: () -> Unit,
+    onCoverClicked: () -> Unit,
+    onSettingsClicked: (() -> Unit)?,
+    onShareClicked: (() -> Unit)?,
+    onEditCategoryClicked: (() -> Unit)?,
+    onMigrateClicked: (() -> Unit)?,
+    onEditIntervalClicked: (() -> Unit)?,
+    onTagSearch: (String) -> Unit,
+    onSeasonClicked: (SeasonAnime) -> Unit,
+    onClickContinueWatching: ((SeasonAnime) -> Unit)?,
+    isWatching: Boolean,
+) {
+    val accent = AnimeAccent
+    val anime = state.anime
+    val sourceName = remember(state) { state.source.getNameForAnimeInfo() }
+    val cover = remember(anime) {
+        AnimeCover(
+            animeId = anime.id,
+            sourceId = anime.source,
+            isAnimeFavorite = anime.favorite,
+            url = anime.thumbnailUrl,
+            lastModified = anime.coverLastModified,
+        )
+    }
+    val gridSize = remember(anime) { anime.seasonDisplayGridSize }
+    val seasonListState = rememberLazyGridState()
+
     BoxWithConstraints {
         val density = LocalDensity.current
         val containerHeightPx = with(density) { this@BoxWithConstraints.maxHeight.roundToPx() }
-        Scaffold(
-            topBar = {
-                val selectedChapterCount = remember(episodes) {
-                    episodes.count { it.selected }
-                }
-                EntryToolbar(
-                    modifier = Modifier.onSizeChanged { topBarHeight = it.height },
-                    title = state.anime.title,
-                    hasFilters = hasFilters,
-                    navigateUp = navigateUp,
-                    onClickFilter = onFilterButtonClicked,
-                    onClickShare = onShareClicked,
-                    onClickDownload = onDownloadActionClicked,
-                    onClickEditCategory = onEditCategoryClicked,
-                    onClickRefresh = onRefresh,
-                    onClickMigrate = onMigrateClicked,
-                    onCancelActionMode = { onAllEpisodeSelected(false) },
-                    onClickSettings = onSettingsClicked,
-                    changeAnimeSkipIntro = changeAnimeSkipIntro,
-                    actionModeCounter = selectedChapterCount,
-                    onSelectAll = { onAllEpisodeSelected(true) },
-                    onInvertSelection = { onInvertSelection() },
-                    titleAlphaProvider = { 1f },
-                    backgroundAlphaProvider = { 1f },
-                    isManga = false,
-                )
-            },
-            bottomBar = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.BottomEnd,
+        AuroraBackground {
+            Scaffold(
+                containerColor = Color.Transparent,
+                contentWindowInsets = WindowInsets(0),
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            ) { contentPadding ->
+                PullRefresh(
+                    refreshing = state.isRefreshingData,
+                    onRefresh = onRefresh,
+                    enabled = true,
                 ) {
-                    val selectedEpisodes = remember(episodes) {
-                        episodes.filter { it.selected }
-                    }
-                    SharedAnimeBottomActionMenu(
-                        selected = selectedEpisodes,
-                        onEpisodeClicked = onEpisodeClicked,
-                        onMultiBookmarkClicked = onMultiBookmarkClicked,
-                        onMultiFillermarkClicked = onMultiFillermarkClicked,
-                        onMultiMarkAsSeenClicked = onMultiMarkAsSeenClicked,
-                        onMarkPreviousAsSeenClicked = onMarkPreviousAsSeenClicked,
-                        onDownloadEpisode = onDownloadEpisode,
-                        onMultiDeleteClicked = onMultiDeleteClicked,
-                        fillFraction = 0.5f,
-                        alwaysUseExternalPlayer = alwaysUseExternalPlayer,
-                    )
-                }
-            },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            floatingActionButton = {
-                val isFABVisible = remember(episodes) {
-                    episodes.fastAny { !it.episode.seen } && !isAnySelected
-                }
-                AnimatedVisibility(
-                    visible = isFABVisible,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    ExtendedFloatingActionButton(
-                        text = {
-                            val isWatching = remember(state.episodes) {
-                                state.episodes.fastAny { it.episode.seen }
-                            }
-                            Text(
-                                text = stringResource(
-                                    if (isWatching) MR.strings.action_resume else MR.strings.action_start,
-                                ),
-                            )
+                    KotoriTabletDetailLayout(
+                        modifier = Modifier.padding(contentPadding),
+                        accent = accent,
+                        title = anime.title,
+                        coverData = cover,
+                        chips = buildList {
+                            add(KotoriDetailChip(animeStatusLabel(anime.status), highlighted = true))
+                            add(KotoriDetailChip(sourceName))
+                            add(KotoriDetailChip("${seasons.size} mùa"))
                         },
-                        icon = { Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null) },
-                        onClick = onContinueWatching,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        expanded = itemListState.shouldExpandFAB(),
+                        metaLine = listOfNotNull(
+                            anime.author?.takeIf { it.isNotBlank() },
+                            anime.artist?.takeIf { it.isNotBlank() && it != anime.author },
+                        ).joinToString(" · "),
+                        genres = remember(anime.genre) {
+                            anime.genre.orEmpty().filter { it.isNotBlank() }
+                        },
+                        onGenreClick = onTagSearch,
+                        rating = null,
+                        trackerLine = state.trackingCount.takeIf { it > 0 }?.let { "Đã liên kết · $it dịch vụ" },
+                        description = anime.description,
+                        favorite = anime.favorite,
+                        trackingCount = state.trackingCount,
+                        ctaLabel = stringResource(
+                            if (isWatching) MR.strings.action_resume else MR.strings.action_start,
+                        ),
+                        ctaIcon = Icons.Filled.PlayArrow,
+                        onNavigateUp = navigateUp,
+                        onCta = onContinueWatching,
+                        onFavorite = onAddToLibraryClicked,
+                        onTracking = { onTrackingClicked?.invoke() },
+                        onDownload = null,
+                        moreActions = buildList {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_webview_refresh), onRefresh))
+                            onEditCategoryClicked?.let {
+                                add(KotoriDetailMenuAction(stringResource(MR.strings.action_edit_categories), it))
+                            }
+                            onMigrateClicked?.let {
+                                add(KotoriDetailMenuAction(stringResource(MR.strings.action_migrate), it))
+                            }
+                            onShareClicked?.let {
+                                add(KotoriDetailMenuAction(stringResource(MR.strings.action_share), it))
+                            }
+                            onEditIntervalClicked?.let {
+                                add(KotoriDetailMenuAction(stringResource(MR.strings.action_set_interval), it))
+                            }
+                            onSettingsClicked?.let {
+                                add(KotoriDetailMenuAction(stringResource(AYMR.strings.settings), it))
+                            }
+                        },
+                        onMore = { onSettingsClicked?.invoke() ?: onFilterButtonClicked() },
+                        onCoverClick = onCoverClicked,
+                        tabs = listOf("${seasons.size} mùa", stringResource(MR.strings.action_web_view)),
+                        activeTab = 0,
+                        onSelectTab = { if (it == 1) onWebViewClicked?.invoke() },
+                        onFilter = onFilterButtonClicked,
+                        quickDownloadLabel = null,
+                        onQuickDownload = null,
+                        items = emptyList(),
+                        tabContent = {
+                            FastScrollLazyVerticalGrid(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(top = 14.dp),
+                                state = seasonListState,
+                                columns = if (gridSize == 0) {
+                                    GridCells.Adaptive(128.dp)
+                                } else {
+                                    GridCells.Fixed(gridSize)
+                                },
+                                horizontalArrangement = Arrangement.spacedBy(11.dp),
+                                verticalArrangement = Arrangement.spacedBy(11.dp),
+                                contentPadding = PaddingValues(bottom = 8.dp),
+                            ) {
+                                sharedSeasons(
+                                    anime = anime,
+                                    seasons = seasons,
+                                    containerHeight = containerHeightPx,
+                                    onSeasonClicked = onSeasonClicked,
+                                    onClickContinueWatching = onClickContinueWatching,
+                                )
+                            }
+                        },
                     )
                 }
-            },
-        ) { contentPadding ->
-            PullRefresh(
-                refreshing = state.isRefreshingData,
-                onRefresh = onRefresh,
-                enabled = !isAnySelected,
-                indicatorPadding = PaddingValues(
-                    start = insetPadding.calculateStartPadding(layoutDirection),
-                    top = with(density) { topBarHeight.toDp() },
-                    end = insetPadding.calculateEndPadding(layoutDirection),
-                ),
-            ) {
-                TwoPanelBox(
-                    modifier = Modifier.padding(
-                        start = contentPadding.calculateStartPadding(layoutDirection),
-                        end = contentPadding.calculateEndPadding(layoutDirection),
-                    ),
-                    startContent = {
-                        Column(
-                            modifier = Modifier
-                                .verticalScroll(rememberScrollState())
-                                .padding(bottom = contentPadding.calculateBottomPadding()),
-                        ) {
-                            AnimeInfoBox(
-                                isTabletUi = true,
-                                appBarPadding = contentPadding.calculateTopPadding(),
-                                anime = state.anime,
-                                sourceName = remember { state.source.getNameForAnimeInfo() },
-                                isStubSource = remember { state.source is StubAnimeSource },
-                                onCoverClick = onCoverClicked,
-                                doSearch = onSearch,
-                            )
-                            if (episodes.isNotEmpty()) {
-                                val isWatching = remember(state.episodes) {
-                                    state.episodes.fastAny { it.episode.seen }
-                                }
-                                AnimeWatchButton(
-                                    isWatching = isWatching,
-                                    onContinueWatching = onContinueWatching,
-                                )
-                            }
-                            AnimeActionRow(
-                                favorite = state.anime.favorite,
-                                trackingCount = state.trackingCount,
-                                nextUpdate = nextUpdate,
-                                isUserIntervalMode = state.anime.fetchInterval < 0,
-                                onAddToLibraryClicked = onAddToLibraryClicked,
-                                onWebViewClicked = onWebViewClicked,
-                                onWebViewLongClicked = onWebViewLongClicked,
-                                onTrackingClicked = onTrackingClicked,
-                                onEditIntervalClicked = onEditIntervalClicked,
-                                onEditCategory = onEditCategoryClicked,
-                            )
-                            ExpandableAnimeDescription(
-                                defaultExpandState = true,
-                                description = state.anime.description,
-                                tagsProvider = { state.anime.genre },
-                                onTagSearch = onTagSearch,
-                                onCopyTagToClipboard = onCopyTagToClipboard,
-                            )
-                        }
-                    },
-                    endContent = {
-                        FastScrollLazyVerticalGrid(
-                            modifier = Modifier.fillMaxHeight(),
-                            state = itemListState,
-                            columns = if (gridSize == 0) GridCells.Adaptive(128.dp) else GridCells.Fixed(gridSize),
-                            contentPadding = PaddingValues(
-                                start = GRID_PADDING,
-                                end = GRID_PADDING,
-                                top = contentPadding.calculateTopPadding(),
-                                bottom = contentPadding.calculateBottomPadding(),
-                            ),
-                        ) {
-                            item(
-                                key = EntryScreenItem.ITEM_HEADER,
-                                contentType = EntryScreenItem.ITEM_HEADER,
-                                span = { GridItemSpan(maxLineSpan) },
-                            ) {
-                                val missingEpisodesCount = remember(episodes) {
-                                    episodes.map { it.episode.episodeNumber }.missingEntriesCount()
-                                }
-                                val missingSeasonsCount = remember(seasons) {
-                                    seasons.map { it.seasonAnime.anime.seasonNumber }.missingEntriesCount()
-                                }
-                                ItemHeader(
-                                    enabled = !isAnySelected,
-                                    itemCount = when (state.anime.fetchType) {
-                                        FetchType.Seasons -> seasons.size
-                                        FetchType.Episodes -> episodes.size
-                                    },
-                                    missingItemsCount = maxOf(missingEpisodesCount, missingSeasonsCount),
-                                    onClick = onFilterButtonClicked,
-                                    isManga = false,
-                                    fetchType = state.anime.fetchType,
-                                    modifier = Modifier.ignorePadding(offsetGridPaddingPx),
-                                )
-                            }
-
-                            when (state.anime.fetchType) {
-                                FetchType.Seasons -> {
-                                    sharedSeasons(
-                                        anime = state.anime,
-                                        seasons = seasons,
-                                        containerHeight = containerHeightPx - topBarHeight,
-                                        onSeasonClicked = onSeasonClicked,
-                                        onClickContinueWatching = onClickContinueWatching,
-                                        listItemModifier = Modifier.ignorePadding(offsetGridPaddingPx),
-                                    )
-                                }
-
-                                FetchType.Episodes -> {
-                                    if (state.airingTime > 0L) {
-                                        item(
-                                            key = EntryScreenItem.AIRING_TIME,
-                                            contentType = EntryScreenItem.AIRING_TIME,
-                                        ) {
-                                            // Handles the second by second countdown reseting
-                                            var timer by remember { mutableLongStateOf(state.airingTime) }
-                                            LaunchedEffect(key1 = timer) {
-                                                if (timer > 0L) {
-                                                    delay(1000L)
-                                                    timer -= 1000L
-                                                }
-                                            }
-                                            if (timer > 0L &&
-                                                showNextEpisodeAirTime &&
-                                                state.anime.status.toInt() != SAnime.COMPLETED
-                                            ) {
-                                                NextEpisodeAiringListItem(
-                                                    title = stringResource(
-                                                        AYMR.strings.display_mode_episode,
-                                                        formatEpisodeNumber(state.airingEpisodeNumber),
-                                                    ),
-                                                    date = formatTime(state.airingTime, useDayFormat = true),
-                                                    modifier = Modifier.ignorePadding(offsetGridPaddingPx),
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    sharedEpisodeItems(
-                                        anime = state.anime,
-                                        episodes = listItem,
-                                        isAnyEpisodeSelected = episodes.fastAny { it.selected },
-                                        showSummaries = state.showSummaries,
-                                        showPreviews = state.showPreviews,
-                                        episodeSwipeStartAction = episodeSwipeStartAction,
-                                        episodeSwipeEndAction = episodeSwipeEndAction,
-                                        onEpisodeClicked = onEpisodeClicked,
-                                        onDownloadEpisode = onDownloadEpisode,
-                                        onEpisodeSelected = onEpisodeSelected,
-                                        onEpisodeSwipe = onEpisodeSwipe,
-                                        itemModifier = Modifier.ignorePadding(offsetGridPaddingPx),
-                                    )
-                                }
-                            }
-                        }
-                    },
-                )
             }
         }
     }
@@ -1025,6 +956,14 @@ private fun KotoriTabletAnimeDetail(
     onCoverClicked: () -> Unit,
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
     onSettingsClicked: (() -> Unit)?,
+    onShareClicked: (() -> Unit)? = null,
+    onEditCategoryClicked: (() -> Unit)? = null,
+    onMigrateClicked: (() -> Unit)? = null,
+    onEditIntervalClicked: (() -> Unit)? = null,
+    changeAnimeSkipIntro: (() -> Unit)? = null,
+    onTagSearch: (String) -> Unit = {},
+    onAllEpisodeSelected: (Boolean) -> Unit = {},
+    onInvertSelection: () -> Unit = {},
     onMultiBookmarkClicked: (List<Episode>, bookmarked: Boolean) -> Unit,
     onMultiFillermarkClicked: (List<Episode>, fillermarked: Boolean) -> Unit,
     onMultiMarkAsSeenClicked: (List<Episode>, markAsSeen: Boolean) -> Unit,
@@ -1046,6 +985,7 @@ private fun KotoriTabletAnimeDetail(
         )
     }
     val isWatching = remember(state.episodes) { state.episodes.fastAny { it.episode.seen } }
+    val selectedEpisodeCount = remember(episodes) { episodes.count { it.selected } }
     val detailItems = remember(listItem, isAnySelected) {
         listItem.filterIsInstance<EpisodeList.Item>().map { item ->
             val episode = item.episode
@@ -1101,7 +1041,7 @@ private fun KotoriTabletAnimeDetail(
                     onEpisodeItemClick(
                         episodeItem = item,
                         isAnyEpisodeSelected = isAnySelected,
-                        onToggleSelection = { onEpisodeSelected(item, !item.selected, true, it) },
+                        onToggleSelection = { onEpisodeSelected(item, !item.selected, true, false) },
                         onEpisodeClicked = onEpisodeClicked,
                     )
                 },
@@ -1169,8 +1109,11 @@ private fun KotoriTabletAnimeDetail(
                     metaLine = listOfNotNull(
                         anime.author?.takeIf { it.isNotBlank() },
                         anime.artist?.takeIf { it.isNotBlank() && it != anime.author },
-                        anime.genre?.take(3)?.joinToString(", ")?.takeIf { it.isNotBlank() },
                     ).joinToString(" · "),
+                    genres = remember(anime.genre) {
+                        anime.genre.orEmpty().filter { it.isNotBlank() }
+                    },
+                    onGenreClick = onTagSearch,
                     rating = null,
                     trackerLine = state.trackingCount.takeIf { it > 0 }?.let { "Đã liên kết · $it dịch vụ" },
                     description = anime.description,
@@ -1184,7 +1127,38 @@ private fun KotoriTabletAnimeDetail(
                     onCta = onContinueWatching,
                     onFavorite = onAddToLibraryClicked,
                     onTracking = { onTrackingClicked?.invoke() },
-                    onDownload = onDownloadActionClicked?.let { { it(DownloadAction.NEXT_5_ITEMS) } },
+                    onDownload = null,
+                    downloadMenu = onDownloadActionClicked?.let { downloadAction ->
+                        { expanded, onDismiss ->
+                            EntryDownloadDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = onDismiss,
+                                onDownloadClicked = downloadAction,
+                                isManga = false,
+                            )
+                        }
+                    },
+                    moreActions = buildList {
+                        add(KotoriDetailMenuAction(stringResource(MR.strings.action_webview_refresh), onRefresh))
+                        onEditCategoryClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_edit_categories), it))
+                        }
+                        onMigrateClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_migrate), it))
+                        }
+                        onShareClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_share), it))
+                        }
+                        changeAnimeSkipIntro?.let {
+                            add(KotoriDetailMenuAction(stringResource(AYMR.strings.action_change_intro_length), it))
+                        }
+                        onEditIntervalClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_set_interval), it))
+                        }
+                        onSettingsClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(AYMR.strings.settings), it))
+                        }
+                    },
                     onMore = { onSettingsClicked?.invoke() ?: onFilterButtonClicked() },
                     onCoverClick = onCoverClicked,
                     tabs = listOf("${episodes.size} tập", stringResource(MR.strings.action_web_view)),
@@ -1193,6 +1167,9 @@ private fun KotoriTabletAnimeDetail(
                     onFilter = onFilterButtonClicked,
                     quickDownloadLabel = "Tải 5 tập kế".takeIf { onDownloadActionClicked != null },
                     onQuickDownload = onDownloadActionClicked?.let { { it(DownloadAction.NEXT_5_ITEMS) } },
+                    selectionCount = selectedEpisodeCount,
+                    onSelectAll = { onAllEpisodeSelected(true) },
+                    onInvertSelection = onInvertSelection,
                     items = detailItems,
                 )
             }

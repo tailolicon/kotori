@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +81,7 @@ fun EntryCompactGridItem(
     isSelected: Boolean = false,
     title: String? = null,
     subtitle: String? = null,
+    coverShape: Shape = MaterialTheme.shapes.medium,
     onClickContinueViewing: (() -> Unit)? = null,
     coverAlpha: Float = 1f,
     coverBadgeStart: @Composable (RowScope.() -> Unit)? = null,
@@ -91,12 +93,14 @@ fun EntryCompactGridItem(
         onLongClick = onLongClick,
     ) {
         EntryGridCover(
+            modifier = Modifier.clip(coverShape),
             cover = {
                 ItemCover.Book(
                     modifier = Modifier
                         .fillMaxWidth()
                         .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
                     data = coverData,
+                    shape = coverShape,
                 )
             },
             badgesStart = coverBadgeStart,

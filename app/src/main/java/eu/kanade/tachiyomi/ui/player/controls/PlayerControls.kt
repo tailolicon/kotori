@@ -30,15 +30,25 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -49,8 +59,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +72,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import eu.kanade.presentation.more.settings.screen.player.custombutton.getButtons
+import eu.kanade.presentation.theme.kotori.AnimeAccent
+import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
+import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.presentation.theme.playerRippleConfiguration
 import eu.kanade.tachiyomi.ui.player.Dialogs
@@ -193,6 +209,7 @@ fun PlayerControls(
                 val seekbar = createRef()
                 val (playerUpdates) = createRefs()
                 val episodeDrawer = createRef()
+                val episodeDrawerToggle = createRef()
 
                 // T3: on tablet the episode list is docked, not a sheet — so the transport
                 // cluster centres in what is left of the canvas instead of the whole width.
@@ -458,7 +475,13 @@ fun PlayerControls(
                     TopLeftPlayerControls(
                         animeTitle = animeTitle,
                         mediaTitle = mediaTitle,
-                        onTitleClick = { viewModel.showEpisodeListDialog() },
+                        onTitleClick = {
+                            if (tabletDrawer) {
+                                drawerVisible = true
+                            } else {
+                                viewModel.showEpisodeListDialog()
+                            }
+                        },
                         onBackClick = onBackPress,
                     )
                 }
@@ -481,7 +504,7 @@ fun PlayerControls(
                     },
                     modifier = Modifier.constrainAs(topRightControls) {
                         top.linkTo(parent.top, spacing.medium)
-                        end.linkTo(parent.end)
+                        end.linkTo(parent.end, if (drawerShown) 340.dp else 0.dp)
                     },
                 ) {
                     TopRightPlayerControls(
@@ -516,7 +539,7 @@ fun PlayerControls(
                     },
                     modifier = Modifier.constrainAs(bottomRightControls) {
                         bottom.linkTo(seekbar.top)
-                        end.linkTo(seekbar.end)
+                        end.linkTo(seekbar.end, if (drawerShown) 340.dp else 0.dp)
                     },
                 ) {
                     val activity = LocalContext.current as PlayerActivity
@@ -590,7 +613,7 @@ fun PlayerControls(
                 )
 
                 AnimatedVisibility(
-                    visible = drawerShown && controlsShown && !areControlsLocked,
+                    visible = drawerShown,
                     enter = fadeIn(playerControlsEnterAnimationSpec()),
                     exit = fadeOut(playerControlsExitAnimationSpec()),
                     modifier = Modifier.constrainAs(episodeDrawer) {
@@ -606,6 +629,46 @@ fun PlayerControls(
                         onSwitchEpisode = { activity?.changeEpisode(it) },
                         onDismiss = { drawerVisible = false },
                     )
+                }
+                // Handle for the docked list: the same glass the drawer is cut from, parked on
+                // the drawer's own top edge so reopening feels like pulling the panel back out.
+                AnimatedVisibility(
+                    visible = tabletDrawer && !drawerVisible && controlsShown && !areControlsLocked,
+                    enter = fadeIn(playerControlsEnterAnimationSpec()),
+                    exit = fadeOut(playerControlsExitAnimationSpec()),
+                    modifier = Modifier.constrainAs(episodeDrawerToggle) {
+                        end.linkTo(parent.absoluteRight, spacing.medium)
+                        top.linkTo(parent.top, 88.dp)
+                    },
+                ) {
+                    val toggleShape = RoundedCornerShape(14.dp)
+                    Row(
+                        modifier = Modifier
+                            .clip(toggleShape)
+                            .background(Color(0xB8100C18))
+                            .border(1.dp, Color(0x1FFFFFFF), toggleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { drawerVisible = true }
+                            .padding(horizontal = 13.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
+                            contentDescription = null,
+                            tint = AnimeAccent.light,
+                            modifier = Modifier.size(17.dp),
+                        )
+                        Text(
+                            text = "Tập",
+                            fontFamily = BeVietnamProFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp,
+                            color = KotoriColors.textPrimary,
+                        )
+                    }
                 }
             }
         }

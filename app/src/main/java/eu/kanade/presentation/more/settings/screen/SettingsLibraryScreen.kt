@@ -15,16 +15,23 @@ import androidx.core.content.ContextCompat
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TriStateListDialog
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
+import eu.kanade.tachiyomi.ui.category.anime.AnimeCategoryScreen
 import kotlinx.coroutines.launch
+import tachiyomi.domain.category.anime.interactor.GetAnimeCategories
+import tachiyomi.domain.category.anime.interactor.ResetAnimeCategoryFlags
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.ResetCategoryFlags
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_CHARGING
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_NETWORK_NOT_METERED
 import tachiyomi.domain.library.service.LibraryPreferences.Companion.DEVICE_ONLY_ON_WIFI
@@ -49,14 +56,19 @@ object SettingsLibraryScreen : SearchableSettings {
 
     @Composable
     override fun getPreferences(): List<Preference> {
-        val getCategories = remember { Injekt.get<GetCategories>() }
         val libraryPreferences = remember { Injekt.get<LibraryPreferences>() }
-        val allCategories by getCategories.subscribe().collectAsState(initial = emptyList())
+        val isAnime = remember { Injekt.get<UiPreferences>() }.activeMediaMode.collectAsState().value ==
+            MediaType.ANIME
+        val mangaCategories by remember { Injekt.get<GetCategories>() }
+            .subscribe().collectAsState(initial = emptyList())
+        val animeCategories by remember { Injekt.get<GetAnimeCategories>() }
+            .subscribe().collectAsState(initial = emptyList())
+        val allCategories = if (isAnime) animeCategories else mangaCategories
 
         return listOf(
-            getCategoriesGroup(LocalNavigator.currentOrThrow, allCategories, libraryPreferences),
-            getGlobalUpdateGroup(allCategories, libraryPreferences),
-            getBehaviorGroup(libraryPreferences),
+            getCategoriesGroup(LocalNavigator.currentOrThrow, allCategories, libraryPreferences, isAnime),
+            getGlobalUpdateGroup(allCategories, libraryPreferences, isAnime),
+            getBehaviorGroup(libraryPreferences, isAnime),
         )
     }
 
@@ -65,12 +77,18 @@ object SettingsLibraryScreen : SearchableSettings {
         navigator: Navigator,
         allCategories: List<Category>,
         libraryPreferences: LibraryPreferences,
+        isAnime: Boolean,
     ): Preference.PreferenceGroup {
         val scope = rememberCoroutineScope()
         val userCategoriesCount = allCategories.filterNot(Category::isSystemCategory).size
+        val defaultPref = if (isAnime) {
+            libraryPreferences.defaultAnimeCategory()
+        } else {
+            libraryPreferences.defaultCategory
+        }
 
         // For default category
-        val ids = listOf(libraryPreferences.defaultCategory.defaultValue()) +
+        val ids = listOf(defaultPref.defaultValue()) +
             allCategories.fastMap { it.id.toInt() }
         val labels = listOf(stringResource(MR.strings.default_category_summary)) +
             allCategories.fastMap { it.visualName }
@@ -85,10 +103,12 @@ object SettingsLibraryScreen : SearchableSettings {
                         count = userCategoriesCount,
                         userCategoriesCount,
                     ),
-                    onClick = { navigator.push(CategoryScreen()) },
+                    onClick = {
+                        navigator.push(if (isAnime) AnimeCategoryScreen() else CategoryScreen())
+                    },
                 ),
                 Preference.PreferenceItem.ListPreference(
-                    preference = libraryPreferences.defaultCategory,
+                    preference = defaultPref,
                     entries = ids.zip(labels).toMap(),
                     title = stringResource(MR.strings.default_category),
                 ),
@@ -98,7 +118,11 @@ object SettingsLibraryScreen : SearchableSettings {
                     onValueChanged = {
                         if (!it) {
                             scope.launch {
-                                Injekt.get<ResetCategoryFlags>().await()
+                                if (isAnime) {
+                                    Injekt.get<ResetAnimeCategoryFlags>().await()
+                                } else {
+                                    Injekt.get<ResetCategoryFlags>().await()
+                                }
                             }
                         }
                         true
@@ -112,12 +136,21 @@ object SettingsLibraryScreen : SearchableSettings {
     private fun getGlobalUpdateGroup(
         allCategories: List<Category>,
         libraryPreferences: LibraryPreferences,
+        isAnime: Boolean,
     ): Preference.PreferenceGroup {
         val context = LocalContext.current
 
         val autoUpdateIntervalPref = libraryPreferences.autoUpdateInterval
-        val autoUpdateCategoriesPref = libraryPreferences.updateCategories
-        val autoUpdateCategoriesExcludePref = libraryPreferences.updateCategoriesExclude
+        val autoUpdateCategoriesPref = if (isAnime) {
+            libraryPreferences.animeUpdateCategories()
+        } else {
+            libraryPreferences.updateCategories
+        }
+        val autoUpdateCategoriesExcludePref = if (isAnime) {
+            libraryPreferences.animeUpdateCategoriesExclude()
+        } else {
+            libraryPreferences.updateCategoriesExclude
+        }
 
         val autoUpdateInterval by autoUpdateIntervalPref.collectAsState()
 
@@ -157,6 +190,7 @@ object SettingsLibraryScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_library_update_interval),
                     onValueChanged = {
                         LibraryUpdateJob.setupTask(context, it)
+                        AnimeLibraryUpdateJob.setupTask(context, it)
                         true
                     },
                 ),
@@ -172,7 +206,10 @@ object SettingsLibraryScreen : SearchableSettings {
                     enabled = autoUpdateInterval > 0,
                     onValueChanged = {
                         // Post to event looper to allow the preference to be updated.
-                        ContextCompat.getMainExecutor(context).execute { LibraryUpdateJob.setupTask(context) }
+                        ContextCompat.getMainExecutor(context).execute {
+                            LibraryUpdateJob.setupTask(context)
+                            AnimeLibraryUpdateJob.setupTask(context)
+                        }
                         true
                     },
                 ),
@@ -191,13 +228,31 @@ object SettingsLibraryScreen : SearchableSettings {
                     subtitle = stringResource(MR.strings.pref_library_update_refresh_metadata_summary),
                 ),
                 Preference.PreferenceItem.MultiSelectListPreference(
-                    preference = libraryPreferences.autoUpdateMangaRestrictions,
-                    entries = mapOf(
-                        MANGA_HAS_UNREAD to stringResource(MR.strings.pref_update_only_completely_read),
-                        MANGA_NON_READ to stringResource(MR.strings.pref_update_only_started),
-                        MANGA_NON_COMPLETED to stringResource(MR.strings.pref_update_only_non_completed),
-                        MANGA_OUTSIDE_RELEASE_PERIOD to stringResource(MR.strings.pref_update_only_in_release_period),
-                    ),
+                    preference = if (isAnime) {
+                        libraryPreferences.autoUpdateItemRestrictions()
+                    } else {
+                        libraryPreferences.autoUpdateMangaRestrictions
+                    },
+                    entries = if (isAnime) {
+                        mapOf(
+                            LibraryPreferences.ENTRY_HAS_UNVIEWED to
+                                stringResource(MR.strings.pref_update_only_completely_read),
+                            LibraryPreferences.ENTRY_NON_VIEWED to
+                                stringResource(MR.strings.pref_update_only_started),
+                            LibraryPreferences.ENTRY_NON_COMPLETED to
+                                stringResource(MR.strings.pref_update_only_non_completed),
+                            LibraryPreferences.ENTRY_OUTSIDE_RELEASE_PERIOD to
+                                stringResource(MR.strings.pref_update_only_in_release_period),
+                        )
+                    } else {
+                        mapOf(
+                            MANGA_HAS_UNREAD to stringResource(MR.strings.pref_update_only_completely_read),
+                            MANGA_NON_READ to stringResource(MR.strings.pref_update_only_started),
+                            MANGA_NON_COMPLETED to stringResource(MR.strings.pref_update_only_non_completed),
+                            MANGA_OUTSIDE_RELEASE_PERIOD to
+                                stringResource(MR.strings.pref_update_only_in_release_period),
+                        )
+                    },
                     title = stringResource(MR.strings.pref_library_update_smart_update),
                 ),
                 Preference.PreferenceItem.SwitchPreference(
@@ -211,10 +266,45 @@ object SettingsLibraryScreen : SearchableSettings {
     @Composable
     private fun getBehaviorGroup(
         libraryPreferences: LibraryPreferences,
+        isAnime: Boolean,
     ): Preference.PreferenceGroup {
-        return Preference.PreferenceGroup(
-            title = stringResource(MR.strings.pref_behavior),
-            preferenceItems = listOf(
+        val swipeItems = if (isAnime) {
+            listOf(
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.swipeEpisodeStartAction(),
+                    entries = mapOf(
+                        LibraryPreferences.EpisodeSwipeAction.Disabled to
+                            stringResource(MR.strings.disabled),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleBookmark to
+                            stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleSeen to
+                            stringResource(AYMR.strings.action_mark_as_seen),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleFillermark to
+                            stringResource(AYMR.strings.action_fillermark_episode),
+                        LibraryPreferences.EpisodeSwipeAction.Download to
+                            stringResource(MR.strings.action_download),
+                    ),
+                    title = stringResource(AYMR.strings.pref_episode_swipe_start),
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.swipeEpisodeEndAction(),
+                    entries = mapOf(
+                        LibraryPreferences.EpisodeSwipeAction.Disabled to
+                            stringResource(MR.strings.disabled),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleBookmark to
+                            stringResource(MR.strings.action_bookmark),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleSeen to
+                            stringResource(AYMR.strings.action_mark_as_seen),
+                        LibraryPreferences.EpisodeSwipeAction.ToggleFillermark to
+                            stringResource(AYMR.strings.action_fillermark_episode),
+                        LibraryPreferences.EpisodeSwipeAction.Download to
+                            stringResource(MR.strings.action_download),
+                    ),
+                    title = stringResource(AYMR.strings.pref_episode_swipe_end),
+                ),
+            )
+        } else {
+            listOf(
                 Preference.PreferenceItem.ListPreference(
                     preference = libraryPreferences.swipeToStartAction,
                     entries = mapOf(
@@ -257,7 +347,11 @@ object SettingsLibraryScreen : SearchableSettings {
                     preference = libraryPreferences.hideMissingChapters,
                     title = stringResource(MR.strings.pref_hide_missing_chapter_indicators),
                 ),
-            ),
+            )
+        }
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.pref_behavior),
+            preferenceItems = swipeItems,
         )
     }
 }

@@ -28,6 +28,7 @@ import eu.kanade.presentation.more.MoreScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
+import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.category.anime.AnimeCategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
@@ -106,6 +107,8 @@ data object MoreTab : Tab {
 
 private class MoreScreenModel(
     private val downloadManager: DownloadManager = Injekt.get(),
+    private val animeDownloadManager: AnimeDownloadManager = Injekt.get(),
+    private val uiPreferences: UiPreferences = Injekt.get(),
     preferences: BasePreferences = Injekt.get(),
 ) : ScreenModel {
 
@@ -119,9 +122,18 @@ private class MoreScreenModel(
         // Handle running/paused status change and queue progress updating
         screenModelScope.launchIO {
             combine(
+                uiPreferences.activeMediaMode.changes(),
                 downloadManager.isDownloaderRunning,
                 downloadManager.queueState,
-            ) { isRunning, downloadQueue -> Pair(isRunning, downloadQueue.size) }
+                animeDownloadManager.isDownloaderRunning,
+                animeDownloadManager.queueState,
+            ) { mode, mangaRunning, mangaQueue, animeRunning, animeQueue ->
+                if (mode == MediaType.ANIME) {
+                    Pair(animeRunning, animeQueue.size)
+                } else {
+                    Pair(mangaRunning, mangaQueue.size)
+                }
+            }
                 .collectLatest { (isDownloading, downloadQueueSize) ->
                     val pendingDownloadExists = downloadQueueSize != 0
                     _downloadQueueState.value = when {

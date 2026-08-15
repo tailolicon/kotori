@@ -17,6 +17,7 @@ import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
 import eu.kanade.presentation.updates.UpdatesFilterDialog
 import eu.kanade.presentation.updates.anime.AnimeUpdateScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
+import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
 import eu.kanade.tachiyomi.ui.updates.UpdatesSettingsScreenModel
@@ -79,6 +80,7 @@ fun Screen.AnimeUpdatesHome() {
             UpdatesFilterDialog(
                 onDismissRequest = onDismissDialog,
                 screenModel = settingsScreenModel,
+                isAnime = true,
             )
         }
         is AnimeUpdatesScreenModel.Dialog.ShowQualities -> {
@@ -95,6 +97,16 @@ fun Screen.AnimeUpdatesHome() {
             )
         }
         null -> {}
+    }
+
+    LaunchedEffect(state.selectionMode) {
+        HomeScreen.showBottomNav(!state.selectionMode)
+    }
+
+    LaunchedEffect(state.isLoading) {
+        if (!state.isLoading) {
+            (context as? MainActivity)?.ready = true
+        }
     }
 
     LaunchedEffect(Unit) {

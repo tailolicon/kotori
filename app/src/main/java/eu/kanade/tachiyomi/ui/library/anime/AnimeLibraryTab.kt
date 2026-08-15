@@ -103,12 +103,19 @@ import tachiyomi.domain.items.episode.model.Episode
 import tachiyomi.domain.library.anime.LibraryAnime
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.LoadingScreen
+import eu.kanade.tachiyomi.animesource.model.SAnime
 import tachiyomi.source.local.entries.anime.isLocal
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import androidx.compose.foundation.layout.PaddingValues
+import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 data object AnimeLibraryTab : Tab {
 
@@ -125,7 +132,7 @@ data object AnimeLibraryTab : Tab {
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        requestSettingsSheet()
+        requestOpenSettingsSheet()
     }
 
     @Composable
@@ -151,7 +158,11 @@ data object AnimeLibraryTab : Tab {
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = AnimeLibraryUpdateJob.startNow(context, category)
             scope.launch {
-                val msgRes = if (started) MR.strings.updating_category else MR.strings.update_already_running
+                val msgRes = when {
+                    !started -> MR.strings.update_already_running
+                    category != null -> MR.strings.updating_category
+                    else -> MR.strings.updating_library
+                }
                 snackbarHostState.showSnackbar(context.stringResource(msgRes))
             }
             started
@@ -166,7 +177,11 @@ data object AnimeLibraryTab : Tab {
         val onContinueWatching: (LibraryAnime) -> Unit = {
             scope.launchIO {
                 val episode = screenModel.getNextUnseenEpisode(it.anime)
-                if (episode != null) openEpisode(episode)
+                if (episode != null) {
+                    openEpisode(episode)
+                } else {
+                    snackbarHostState.showSnackbar(context.stringResource(AYMR.strings.no_next_episode))
+                }
             }
         }
 
@@ -338,95 +353,166 @@ data object AnimeLibraryTab : Tab {
                         state.library.values.flatten().firstOrNull { it.libraryAnime.anime.id == h.animeId }
                     }
                     val selectedIds = state.selection.map { it.id }.toSet()
-                    KotoriTabletLibraryLayout(
-                        modifier = Modifier.padding(contentPadding),
-                        activeMode = activeMode,
-                        onSelectMode = { uiPreferences.activeMediaMode.set(it) },
-                        searchQuery = state.searchQuery.orEmpty(),
-                        onSearchChange = screenModel::search,
-                        onClearSearch = { screenModel.search("") },
-                        onOpenFilters = screenModel::showSettingsDialog,
-                        filtersActive = state.hasActiveFilters,
-                        onRefresh = { onClickRefresh(activeCategory) },
-                        onCycleDisplayMode = {
-                            val order = listOf(
-                                LibraryDisplayMode.CompactGrid,
-                                LibraryDisplayMode.ComfortableGrid,
-                                LibraryDisplayMode.CoverOnlyGrid,
-                                LibraryDisplayMode.List,
-                            )
-                            displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
-                        },
-                        // A single unnamed system category is not a choice, so the chip row
-                        // would only be showing the word "Default" with nothing to switch to.
-                        categories = state.categories
-                            .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
-                            .orEmpty()
-                            .map { it.visualName },
-                        categoryCounts = state.categories.map { state.getAnimeCountForCategory(it) },
-                        activeCategoryIndex = screenModel.activeCategoryIndex,
-                        onSelectCategory = { screenModel.activeCategoryIndex = it },
-                        title = stringResource(MR.strings.label_library),
-                        subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
-                        tiles = items.map { item ->
-                            val anime = item.libraryAnime.anime
-                            KotoriTabletLibraryTile(
-                                id = anime.id,
-                                title = anime.title,
-                                statusLine = "Tập ${item.libraryAnime.totalCount}",
-                                coverData = AnimeCover(
-                                    animeId = anime.id,
-                                    sourceId = anime.source,
-                                    isAnimeFavorite = anime.favorite,
-                                    url = anime.thumbnailUrl,
-                                    lastModified = anime.coverLastModified,
-                                ),
-                                unreadCount = item.unseenCount.coerceAtLeast(0),
-                                downloaded = item.downloadCount > 0,
-                                selected = anime.id in selectedIds,
-                            )
-                        },
-                        onClickTile = { id ->
-                            val entry = items.firstOrNull { it.libraryAnime.anime.id == id }
-                            if (state.selectionMode && entry != null) {
-                                screenModel.toggleSelection(entry.libraryAnime)
-                            } else {
-                                navigator.push(AnimeScreen(id))
+                    val searching = !state.searchQuery.isNullOrEmpty() || state.hasActiveFilters
+                    var isRefreshing by remember { mutableStateOf(false) }
+                    PullRefresh(
+                        refreshing = isRefreshing,
+                        enabled = !state.selectionMode,
+                        onRefresh = {
+                            if (!onClickRefresh(null)) return@PullRefresh
+                            scope.launch {
+                                // Fake refresh status but hide it after a second as it's a long running task
+                                isRefreshing = true
+                                delay(1.seconds)
+                                isRefreshing = false
                             }
                         },
-                        onLongClickTile = { id ->
-                            items.firstOrNull { it.libraryAnime.anime.id == id }?.let {
-                                screenModel.toggleRangeSelection(it.libraryAnime)
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                        },
-                        hero = if (history != null && heroItem != null) {
-                            val libraryAnime = heroItem.libraryAnime
-                            KotoriTabletHero(
-                                title = history.title,
-                                meta = "Tập ${formatEpisodeNumber(history.episodeNumber)}" +
-                                    " · đã xem ${libraryAnime.seenCount}/${libraryAnime.totalCount}",
-                                progress = if (libraryAnime.totalCount > 0) {
-                                    libraryAnime.seenCount.toFloat() / libraryAnime.totalCount
+                        // Drop the spinner into the grid instead of on top of the search bar.
+                        indicatorPadding = PaddingValues(top = KotoriTabletTokens.pullIndicatorInset),
+                    ) {
+                        KotoriTabletLibraryLayout(
+                            modifier = Modifier.padding(contentPadding),
+                            activeMode = activeMode,
+                            onSelectMode = { uiPreferences.activeMediaMode.set(it) },
+                            searchQuery = state.searchQuery.orEmpty(),
+                            onSearchChange = screenModel::search,
+                            onClearSearch = { screenModel.search("") },
+                            onOpenFilters = screenModel::showSettingsDialog,
+                            filtersActive = state.hasActiveFilters,
+                            onRefresh = { onClickRefresh(null) },
+                            onRefreshAll = { onClickRefresh(null) },
+                            onRefreshCategory = { onClickRefresh(activeCategory) },
+                            onOpenRandom = {
+                                scope.launch {
+                                    val randomItem = screenModel.getRandomAnimelibItemForCurrentCategory()
+                                    if (randomItem != null) {
+                                        navigator.push(AnimeScreen(randomItem.libraryAnime.anime.id))
+                                    } else {
+                                        snackbarHostState.showSnackbar(
+                                            context.stringResource(MR.strings.information_no_entries_found),
+                                        )
+                                    }
+                                }
+                            },
+                            displayMode = displayMode.value,
+                            onCycleDisplayMode = {
+                                val order = listOf(
+                                    LibraryDisplayMode.CompactGrid,
+                                    LibraryDisplayMode.ComfortableGrid,
+                                    LibraryDisplayMode.CoverOnlyGrid,
+                                    LibraryDisplayMode.List,
+                                )
+                                displayMode.value = order[(order.indexOf(displayMode.value) + 1) % order.size]
+                            },
+                            // A single unnamed system category is not a choice, so the chip row
+                            // would only be showing the word "Default" with nothing to switch to.
+                            categories = state.categories
+                                .takeIf { it.size > 1 || it.none(Category::isSystemCategory) }
+                                .orEmpty()
+                                .map { it.visualName },
+                            categoryCounts = state.categories.map { state.getAnimeCountForCategory(it) },
+                            activeCategoryIndex = screenModel.activeCategoryIndex,
+                            onSelectCategory = { screenModel.activeCategoryIndex = it },
+                            title = stringResource(MR.strings.label_library),
+                            subtitle = "${items.size} bộ · sắp theo cập nhật gần nhất",
+                            tiles = items.map { item ->
+                                val anime = item.libraryAnime.anime
+                                KotoriTabletLibraryTile(
+                                    id = anime.id,
+                                    title = anime.title,
+                                    statusLine = "Tập ${item.libraryAnime.totalCount} · ${
+                                        animeLibraryStatusLabel(anime.status)
+                                    }",
+                                    coverData = AnimeCover(
+                                        animeId = anime.id,
+                                        sourceId = anime.source,
+                                        isAnimeFavorite = anime.favorite,
+                                        url = anime.thumbnailUrl,
+                                        lastModified = anime.coverLastModified,
+                                    ),
+                                    unreadCount = item.unseenCount.coerceAtLeast(0),
+                                    downloaded = item.downloadCount > 0,
+                                    selected = anime.id in selectedIds,
+                                    isLocal = item.isLocal,
+                                    language = item.sourceLanguage.takeIf { it.isNotBlank() },
+                                )
+                            },
+                            onClickTile = { id ->
+                                val entry = items.firstOrNull { it.libraryAnime.anime.id == id }
+                                if (state.selectionMode && entry != null) {
+                                    screenModel.toggleSelection(entry.libraryAnime)
                                 } else {
-                                    0f
-                                },
-                                coverData = history.coverData,
-                                onClick = { navigator.push(AnimeScreen(history.animeId)) },
-                                onResume = { onContinueWatching(libraryAnime) },
-                            )
-                        } else {
-                            null
-                        },
-                        resumeItems = resumeItems,
-                        airingItems = airingItems,
-                        emptyContent = {
-                            KotoriEmptyState(
-                                title = "Thư viện trống",
-                                hint = "Thêm anime từ tab Duyệt",
-                            )
-                        },
-                    )
+                                    navigator.push(AnimeScreen(id))
+                                }
+                            },
+                            onLongClickTile = { id ->
+                                items.firstOrNull { it.libraryAnime.anime.id == id }?.let {
+                                    screenModel.toggleRangeSelection(it.libraryAnime)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            hero = if (history != null && heroItem != null) {
+                                val libraryAnime = heroItem.libraryAnime
+                                KotoriTabletHero(
+                                    title = history.title,
+                                    meta = "Tập ${formatEpisodeNumber(history.episodeNumber)}" +
+                                        " · đã xem ${libraryAnime.seenCount}/${libraryAnime.totalCount}",
+                                    progress = if (libraryAnime.totalCount > 0) {
+                                        libraryAnime.seenCount.toFloat() / libraryAnime.totalCount
+                                    } else {
+                                        0f
+                                    },
+                                    coverData = history.coverData,
+                                    onClick = { navigator.push(AnimeScreen(history.animeId)) },
+                                    onResume = { onContinueWatching(libraryAnime) },
+                                )
+                            } else {
+                                null
+                            },
+                            resumeItems = resumeItems,
+                            airingItems = airingItems,
+                            emptyContent = {
+                                if (searching) {
+                                    KotoriEmptyState(
+                                        title = "Không có kết quả",
+                                        hint = "Thử từ khóa khác hoặc tìm trên mọi nguồn",
+                                        actions = {
+                                            GradientButton(
+                                                onClick = {
+                                                    navigator.push(
+                                                        GlobalAnimeSearchScreen(state.searchQuery.orEmpty()),
+                                                    )
+                                                },
+                                            ) {
+                                                Text(
+                                                    text = "Tìm trên mọi nguồn",
+                                                    color = KotoriTheme.accent.onAccent,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                )
+                                            }
+                                        },
+                                    )
+                                } else {
+                                    val handler = LocalUriHandler.current
+                                    KotoriEmptyState(
+                                        title = "Thư viện trống",
+                                        hint = "Thêm anime từ tab Duyệt",
+                                        actions = {
+                                            GradientButton(onClick = { handler.openUri(GETTING_STARTED_URL) }) {
+                                                Text(
+                                                    text = stringResource(MR.strings.getting_started_guide),
+                                                    color = KotoriTheme.accent.onAccent,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
                 state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
                     val handler = LocalUriHandler.current
@@ -591,5 +677,16 @@ data object AnimeLibraryTab : Tab {
     suspend fun search(query: String) = queryEvent.send(query)
 
     private val requestSettingsSheetEvent = Channel<Unit>()
-    private suspend fun requestSettingsSheet() = requestSettingsSheetEvent.send(Unit)
+    suspend fun requestOpenSettingsSheet() = requestSettingsSheetEvent.send(Unit)
+}
+
+@Composable
+private fun animeLibraryStatusLabel(status: Long): String = when (status) {
+    SAnime.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
+    SAnime.COMPLETED.toLong() -> stringResource(MR.strings.completed)
+    SAnime.LICENSED.toLong() -> stringResource(MR.strings.licensed)
+    SAnime.PUBLISHING_FINISHED.toLong() -> stringResource(MR.strings.publishing_finished)
+    SAnime.CANCELLED.toLong() -> stringResource(MR.strings.cancelled)
+    SAnime.ON_HIATUS.toLong() -> stringResource(MR.strings.on_hiatus)
+    else -> stringResource(MR.strings.unknown)
 }

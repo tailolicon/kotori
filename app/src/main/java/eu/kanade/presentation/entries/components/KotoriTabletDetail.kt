@@ -35,8 +35,12 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.FlipToBack
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import eu.kanade.presentation.components.DropdownMenu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -51,24 +55,39 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriAccent
 import eu.kanade.presentation.theme.kotori.KotoriColors
+import eu.kanade.presentation.theme.kotori.KotoriHeaderAction
 import eu.kanade.presentation.theme.kotori.KotoriShapes
 import eu.kanade.presentation.theme.kotori.KotoriTabletShapes
 import eu.kanade.presentation.theme.kotori.KotoriTabletTokens
 import eu.kanade.presentation.theme.kotori.UnboundedFamily
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 
 /** A status chip over the key visual: `Đang chiếu`, `2026`, `12 tập · 24 phút`. */
 @Immutable
 data class KotoriDetailChip(
     val label: String,
     val highlighted: Boolean = false,
+)
+
+/** One item of the ⋯ overflow on the T2 action cluster. */
+@Immutable
+data class KotoriDetailMenuAction(
+    val label: String,
+    val onClick: () -> Unit,
 )
 
 /** One row of the two-column episode/chapter grid on the right pane. */
@@ -104,6 +123,8 @@ fun KotoriTabletDetailLayout(
     coverData: Any?,
     chips: List<KotoriDetailChip>,
     metaLine: String,
+    genres: List<String>,
+    onGenreClick: ((String) -> Unit)?,
     rating: String?,
     trackerLine: String?,
     description: String?,
@@ -117,6 +138,8 @@ fun KotoriTabletDetailLayout(
     onTracking: () -> Unit,
     onDownload: (() -> Unit)?,
     onMore: () -> Unit,
+    moreActions: List<KotoriDetailMenuAction> = emptyList(),
+    downloadMenu: (@Composable (expanded: Boolean, onDismiss: () -> Unit) -> Unit)? = null,
     onCoverClick: () -> Unit,
     tabs: List<String>,
     activeTab: Int,
@@ -124,6 +147,9 @@ fun KotoriTabletDetailLayout(
     onFilter: () -> Unit,
     quickDownloadLabel: String?,
     onQuickDownload: (() -> Unit)?,
+    selectionCount: Int = 0,
+    onSelectAll: (() -> Unit)? = null,
+    onInvertSelection: (() -> Unit)? = null,
     items: List<KotoriTabletDetailItem>,
     modifier: Modifier = Modifier,
     listHeader: (@Composable () -> Unit)? = null,
@@ -224,13 +250,38 @@ fun KotoriTabletDetailLayout(
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (metaLine.isNotBlank()) {
+                // Credits and genres share one line: the genres are the same words the metadata
+                // line always showed, only now each one is its own link into the source's search.
+                if (metaLine.isNotBlank() || genres.isNotEmpty()) {
+                    val genreStyle = remember(accent) {
+                        TextLinkStyles(
+                            style = SpanStyle(color = accent.light, fontWeight = FontWeight.SemiBold),
+                        )
+                    }
                     Text(
-                        text = metaLine,
+                        text = buildAnnotatedString {
+                            if (metaLine.isNotBlank()) {
+                                append(metaLine)
+                                if (genres.isNotEmpty()) append(" · ")
+                            }
+                            genres.forEachIndexed { index, genre ->
+                                if (index > 0) append(", ")
+                                if (onGenreClick == null) {
+                                    append(genre)
+                                } else {
+                                    val link = LinkAnnotation.Clickable(
+                                        tag = genre,
+                                        styles = genreStyle,
+                                    ) { onGenreClick(genre) }
+                                    withLink(link) { append(genre) }
+                                }
+                            }
+                        },
                         fontFamily = BeVietnamProFamily,
                         fontSize = 13.sp,
+                        lineHeight = 19.sp,
                         color = Color(0xFFC9C1E2),
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -352,18 +403,46 @@ fun KotoriTabletDetailLayout(
                         badge = trackingCount.takeIf { it > 0 },
                         badgeBrush = accent.gradient,
                     )
-                    if (onDownload != null) {
+                    if (downloadMenu != null) {
+                        Box {
+                            var downloadOpen by remember { mutableStateOf(false) }
+                            KotoriDetailCircleAction(
+                                icon = Icons.Filled.Download,
+                                tint = accent.light,
+                                onClick = { downloadOpen = true },
+                            )
+                            downloadMenu(downloadOpen) { downloadOpen = false }
+                        }
+                    } else if (onDownload != null) {
                         KotoriDetailCircleAction(
                             icon = Icons.Filled.Download,
                             tint = accent.light,
                             onClick = onDownload,
                         )
                     }
-                    KotoriDetailCircleAction(
-                        icon = Icons.Filled.MoreHoriz,
-                        tint = Color(0xFFCFC7E8),
-                        onClick = onMore,
-                    )
+                    Box {
+                        var moreOpen by remember { mutableStateOf(false) }
+                        KotoriDetailCircleAction(
+                            icon = Icons.Filled.MoreHoriz,
+                            tint = Color(0xFFCFC7E8),
+                            onClick = {
+                                if (moreActions.isEmpty()) onMore() else moreOpen = true
+                            },
+                        )
+                        if (moreActions.isNotEmpty()) {
+                            DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
+                                moreActions.forEach { action ->
+                                    DropdownMenuItem(
+                                        text = { Text(action.label) },
+                                        onClick = {
+                                            moreOpen = false
+                                            action.onClick()
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -412,49 +491,77 @@ fun KotoriTabletDetailLayout(
                     }
                 }
                 Box(modifier = Modifier.weight(1f))
-                if (quickDownloadLabel != null && onQuickDownload != null) {
+                // Selection borrows this row rather than pushing a second bar into the grid:
+                // the quick-download chip and the filter step aside while a selection is live,
+                // the same swap the phone toolbar makes.
+                if (selectionCount > 0 && onSelectAll != null && onInvertSelection != null) {
                     Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = selectionCount.toString(),
+                            fontFamily = UnboundedFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = accent.light,
+                        )
+                        KotoriHeaderAction(
+                            icon = Icons.Outlined.SelectAll,
+                            contentDescription = stringResource(MR.strings.action_select_all),
+                            onClick = onSelectAll,
+                        )
+                        KotoriHeaderAction(
+                            icon = Icons.Outlined.FlipToBack,
+                            contentDescription = stringResource(MR.strings.action_select_inverse),
+                            onClick = onInvertSelection,
+                        )
+                    }
+                } else {
+                    if (quickDownloadLabel != null && onQuickDownload != null) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(Color(0x0FFFFFFF))
+                                .border(1.dp, Color(0x1CFFFFFF), RoundedCornerShape(15.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onQuickDownload,
+                                )
+                                .padding(horizontal = 13.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Download,
+                                contentDescription = null,
+                                tint = accent.light,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = quickDownloadLabel,
+                                fontFamily = BeVietnamProFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.5.sp,
+                                color = KotoriColors.textPrimary,
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.FilterList,
+                        contentDescription = null,
+                        tint = KotoriColors.textMuted,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(Color(0x0FFFFFFF))
-                            .border(1.dp, Color(0x1CFFFFFF), RoundedCornerShape(15.dp))
+                            .padding(bottom = 2.dp)
+                            .size(21.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
-                                onClick = onQuickDownload,
-                            )
-                            .padding(horizontal = 13.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Download,
-                            contentDescription = null,
-                            tint = accent.light,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            text = quickDownloadLabel,
-                            fontFamily = BeVietnamProFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.5.sp,
-                            color = KotoriColors.textPrimary,
-                        )
-                    }
+                                onClick = onFilter,
+                            ),
+                    )
                 }
-                Icon(
-                    imageVector = Icons.Filled.FilterList,
-                    contentDescription = null,
-                    tint = KotoriColors.textMuted,
-                    modifier = Modifier
-                        .padding(bottom = 2.dp)
-                        .size(21.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onFilter,
-                        ),
-                )
             }
             Box(
                 modifier = Modifier

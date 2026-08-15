@@ -30,13 +30,22 @@ import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import eu.kanade.presentation.components.DropdownMenu
+import tachiyomi.domain.library.model.LibraryDisplayMode
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
@@ -78,6 +87,8 @@ data class KotoriTabletLibraryTile(
     val unreadCount: Long,
     val downloaded: Boolean,
     val selected: Boolean,
+    val isLocal: Boolean = false,
+    val language: String? = null,
 )
 
 /** `ĐANG XEM DỞ` / `ĐANG ĐỌC DỞ` hero card at the top of the right column. */
@@ -131,6 +142,10 @@ fun KotoriTabletLibraryLayout(
     onOpenFilters: () -> Unit,
     filtersActive: Boolean,
     onRefresh: () -> Unit,
+    onRefreshAll: () -> Unit = onRefresh,
+    onRefreshCategory: () -> Unit = onRefresh,
+    onOpenRandom: (() -> Unit)? = null,
+    displayMode: LibraryDisplayMode = LibraryDisplayMode.CompactGrid,
     onCycleDisplayMode: () -> Unit,
     categories: List<String>,
     categoryCounts: List<Int?>,
@@ -180,13 +195,46 @@ fun KotoriTabletLibraryLayout(
                 KotoriCircleAction(
                     icon = Icons.Filled.Sync,
                     contentDescription = "Cập nhật thư viện",
-                    onClick = onRefresh,
+                    onClick = onRefreshAll,
                 )
                 KotoriCircleAction(
                     icon = Icons.Filled.GridView,
                     contentDescription = "Kiểu hiển thị",
                     onClick = onCycleDisplayMode,
                 )
+                Box {
+                    var menuOpen by remember { mutableStateOf(false) }
+                    KotoriCircleAction(
+                        icon = Icons.Filled.MoreVert,
+                        contentDescription = null,
+                        onClick = { menuOpen = true },
+                    )
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(MR.strings.action_update_library)) },
+                            onClick = {
+                                menuOpen = false
+                                onRefreshAll()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(MR.strings.action_update_category)) },
+                            onClick = {
+                                menuOpen = false
+                                onRefreshCategory()
+                            },
+                        )
+                        if (onOpenRandom != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(MR.strings.action_open_random_manga)) },
+                                onClick = {
+                                    menuOpen = false
+                                    onOpenRandom()
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -246,9 +294,30 @@ fun KotoriTabletLibraryLayout(
                 }
                 if (tiles.isEmpty() && emptyContent != null) {
                     Box(modifier = Modifier.fillMaxSize()) { emptyContent() }
+                } else if (displayMode == LibraryDisplayMode.List) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(tiles, key = { it.id }) { tile ->
+                            KotoriTabletLibraryListRow(
+                                tile = tile,
+                                accentLight = accent.light,
+                                onClick = { onClickTile(tile.id) },
+                                onLongClick = { onLongClickTile(tile.id) },
+                                unreadBrush = accent.ctaGradient,
+                                selectionColor = accent.start,
+                            )
+                        }
+                    }
                 } else {
+                    val columns = when (displayMode) {
+                        LibraryDisplayMode.ComfortableGrid -> 5
+                        else -> 6
+                    }
+                    val showTitle = displayMode != LibraryDisplayMode.CoverOnlyGrid
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(6),
+                        columns = GridCells.Fixed(columns),
                         modifier = Modifier.fillMaxSize(),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -266,6 +335,7 @@ fun KotoriTabletLibraryLayout(
                                 onLongClick = { onLongClickTile(tile.id) },
                                 unreadBrush = accent.ctaGradient,
                                 selectionColor = accent.start,
+                                showTitle = showTitle,
                             )
                         }
                     }
@@ -301,6 +371,7 @@ private fun KotoriTabletLibraryTileItem(
     onLongClick: () -> Unit,
     unreadBrush: Brush,
     selectionColor: Color,
+    showTitle: Boolean = true,
 ) {
     val shape = KotoriShapes.libraryTile(index)
     Box(
@@ -335,34 +406,36 @@ private fun KotoriTabletLibraryTileItem(
                     ),
                 ),
         )
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(listOf(Color.Transparent, Color(0xE00B0812))),
+        if (showTitle) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(listOf(Color.Transparent, Color(0xE00B0812))),
+                    )
+                    .padding(start = 10.dp, end = 10.dp, top = 26.dp, bottom = 9.dp),
+            ) {
+                Text(
+                    text = tile.title,
+                    fontFamily = UnboundedFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.5.sp,
+                    lineHeight = 14.4.sp,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                .padding(start = 10.dp, end = 10.dp, top = 26.dp, bottom = 9.dp),
-        ) {
-            Text(
-                text = tile.title,
-                fontFamily = UnboundedFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 11.5.sp,
-                lineHeight = 14.4.sp,
-                color = Color.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = tile.statusLine,
-                fontFamily = BeVietnamProFamily,
-                fontSize = 9.5.sp,
-                color = Color(0xB3FFFFFF),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 3.dp),
-            )
+                Text(
+                    text = tile.statusLine,
+                    fontFamily = BeVietnamProFamily,
+                    fontSize = 9.5.sp,
+                    color = Color(0xB3FFFFFF),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+            }
         }
         if (tile.unreadCount > 0) {
             Box(
@@ -382,22 +455,33 @@ private fun KotoriTabletLibraryTileItem(
                 )
             }
         }
-        if (tile.downloaded) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .size(20.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xA614101F)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.DownloadDone,
-                    contentDescription = null,
-                    tint = KotoriColors.success,
-                    modifier = Modifier.size(12.dp),
-                )
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (tile.downloaded) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xA614101F)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DownloadDone,
+                        contentDescription = null,
+                        tint = KotoriColors.success,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
+            if (tile.isLocal) {
+                KotoriLibraryBadge(text = "Local")
+            }
+            tile.language?.takeIf { it.isNotBlank() }?.let { language ->
+                KotoriLibraryBadge(text = language.uppercase())
             }
         }
         if (tile.selected) {
@@ -420,6 +504,104 @@ private fun KotoriTabletLibraryTileItem(
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(17.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun KotoriLibraryBadge(text: String) {
+    Box(
+        modifier = Modifier
+            .height(20.dp)
+            .clip(RoundedCornerShape(7.dp))
+            .background(Color(0xA614101F))
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            fontFamily = BeVietnamProFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 9.sp,
+            color = Color.White,
+        )
+    }
+}
+
+@Composable
+private fun KotoriTabletLibraryListRow(
+    tile: KotoriTabletLibraryTile,
+    accentLight: Color,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    unreadBrush: Brush,
+    selectionColor: Color,
+) {
+    val shape = KotoriTabletShapes.listRow
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(if (tile.selected) selectionColor.copy(alpha = 0.16f) else Color(0x0DFFFFFF))
+            .border(1.dp, if (tile.selected) accentLight else Color(0x17FFFFFF), shape)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = tile.coverData,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .width(44.dp)
+                .height(62.dp)
+                .clip(RoundedCornerShape(8.dp)),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = tile.title,
+                fontFamily = UnboundedFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = KotoriColors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildString {
+                    append(tile.statusLine)
+                    if (tile.isLocal) append(" · Local")
+                    tile.language?.takeIf { it.isNotBlank() }?.let { append(" · ${it.uppercase()}") }
+                },
+                fontFamily = BeVietnamProFamily,
+                fontSize = 11.sp,
+                color = KotoriColors.textMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 3.dp),
+            )
+        }
+        if (tile.unreadCount > 0) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(unreadBrush)
+                    .padding(horizontal = 7.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    text = "${tile.unreadCount}",
+                    fontFamily = BeVietnamProFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.5.sp,
+                    color = Color.White,
                 )
             }
         }

@@ -56,6 +56,8 @@ import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.entries.components.KotoriDetailChip
+import eu.kanade.presentation.components.DownloadDropdownMenu
+import eu.kanade.presentation.entries.components.KotoriDetailMenuAction
 import eu.kanade.presentation.entries.components.KotoriTabletDetailItem
 import eu.kanade.presentation.entries.components.KotoriTabletDetailLayout
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
@@ -542,6 +544,7 @@ fun MangaScreenLargeImpl(
         onAllChapterSelected(false)
     }
 
+    val selectedChapterCount = remember(chapters) { chapters.count { it.selected } }
     val accent = KotoriTheme.accent
     val haptic = LocalHapticFeedback.current
     val manga = state.manga
@@ -661,8 +664,11 @@ fun MangaScreenLargeImpl(
                     metaLine = listOfNotNull(
                         manga.author?.takeIf { it.isNotBlank() },
                         manga.artist?.takeIf { it.isNotBlank() && it != manga.author },
-                        manga.genre?.take(3)?.joinToString(", ")?.takeIf { it.isNotBlank() },
                     ).joinToString(" · "),
+                    genres = remember(manga.genre) {
+                        manga.genre.orEmpty().filter { it.isNotBlank() }
+                    },
+                    onGenreClick = onTagSearch,
                     rating = null,
                     trackerLine = state.trackingCount.takeIf { it > 0 }?.let { "Đã liên kết · $it dịch vụ" },
                     description = manga.description,
@@ -676,7 +682,32 @@ fun MangaScreenLargeImpl(
                     onCta = onContinueReading,
                     onFavorite = onAddToLibraryClicked,
                     onTracking = onTrackingClicked,
-                    onDownload = onDownloadActionClicked?.let { { it(DownloadAction.NEXT_5_CHAPTERS) } },
+                    onDownload = null,
+                    downloadMenu = onDownloadActionClicked?.let { downloadAction ->
+                        { expanded, onDismiss ->
+                            DownloadDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = onDismiss,
+                                onDownloadClicked = downloadAction,
+                            )
+                        }
+                    },
+                    moreActions = buildList {
+                        add(KotoriDetailMenuAction(stringResource(MR.strings.action_webview_refresh), onRefresh))
+                        onEditCategoryClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_edit_categories), it))
+                        }
+                        onMigrateClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_migrate), it))
+                        }
+                        onShareClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_share), it))
+                        }
+                        add(KotoriDetailMenuAction(stringResource(MR.strings.action_notes), onEditNotesClicked))
+                        onEditIntervalClicked?.let {
+                            add(KotoriDetailMenuAction(stringResource(MR.strings.action_set_interval), it))
+                        }
+                    },
                     onMore = onFilterButtonClicked,
                     onCoverClick = onCoverClicked,
                     tabs = listOf("${chapters.size} chương", stringResource(MR.strings.action_web_view)),
@@ -687,6 +718,9 @@ fun MangaScreenLargeImpl(
                     onQuickDownload = onDownloadActionClicked?.let {
                         { it(DownloadAction.NEXT_5_CHAPTERS) }
                     },
+                    selectionCount = selectedChapterCount,
+                    onSelectAll = { onAllChapterSelected(true) },
+                    onInvertSelection = onInvertSelection,
                     items = detailItems,
                 )
             }

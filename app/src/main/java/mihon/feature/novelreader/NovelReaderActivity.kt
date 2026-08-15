@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import eu.kanade.presentation.theme.TachiyomiTheme
+import eu.kanade.tachiyomi.util.system.hideStatusBar
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import mihon.feature.novelreader.tts.NovelTtsPreferences
@@ -51,6 +52,7 @@ class NovelReaderActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideStatusBar()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -100,7 +102,8 @@ class NovelReaderActivity : ComponentActivity() {
     private fun setMenuVisibility(visible: Boolean) {
         menuVisibleState.value = visible
         if (visible) {
-            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            windowInsetsController.show(WindowInsetsCompat.Type.navigationBars())
+            windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())
         } else if (readerPreferences.fullscreen.get()) {
             windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         }
@@ -123,6 +126,7 @@ class NovelReaderActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             setMenuVisibility(menuVisibleState.value)
+            hideStatusBar()
         }
     }
 

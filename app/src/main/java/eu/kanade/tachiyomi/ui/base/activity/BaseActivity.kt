@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegate
 import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegateImpl
 import eu.kanade.tachiyomi.ui.base.delegate.ThemingDelegate
 import eu.kanade.tachiyomi.ui.base.delegate.ThemingDelegateImpl
+import eu.kanade.tachiyomi.util.system.hideStatusBar
 import eu.kanade.tachiyomi.util.system.prepareTabletUiContext
 
 open class BaseActivity :
@@ -21,5 +22,11 @@ open class BaseActivity :
     override fun onCreate(savedInstanceState: Bundle?) {
         applyAppTheme(this)
         super.onCreate(savedInstanceState)
+        hideStatusBar()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
     }
 }
