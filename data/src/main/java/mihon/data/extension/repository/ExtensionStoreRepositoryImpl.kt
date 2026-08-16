@@ -23,12 +23,16 @@ class ExtensionStoreRepositoryImpl(
         return service.fetch(indexUrl).mapCatching { upsert(it) }
     }
 
-    override suspend fun insertFromPreference(indexUrl: String, name: String) {
+    override suspend fun insertFromPreference(
+        indexUrl: String,
+        name: String,
+        signingKey: String,
+    ) {
         database.extension_storeQueries.upsert(
             indexUrl = indexUrl,
             name = name,
             badgeLabel = name,
-            signingKey = "NO_SIGNING_KEY",
+            signingKey = signingKey,
             contactWebsite = indexUrl,
             contactDiscord = null,
             isLegacy = false,

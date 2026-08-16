@@ -7,7 +7,7 @@ import mihon.domain.extension.model.ExtensionStore
 interface ExtensionStoreRepository {
     suspend fun insert(indexUrl: String): Result<Unit>
 
-    suspend fun insertFromPreference(indexUrl: String, name: String)
+    suspend fun insertFromPreference(indexUrl: String, name: String, signingKey: String = "NO_SIGNING_KEY")
 
     suspend fun refreshAll()
 

@@ -1,0 +1,89 @@
+{
+    "name": "Kotori",
+    "badgeLabel": "KTR",
+    "signingKey": "4cc9ab1cd650537c42c39582fa22eb5012029d56f9f4483f9ea9d073b4f9c779",
+    "contact": {
+        "website": "https://github.com/tailolicon/kotori"
+    },
+    "extensionList": {
+        "extensions": [
+            {
+                "name": "Hitomi.la",
+                "packageName": "app.kotori.extension.all.hitomi",
+                "resources": {
+                    "apkUrl": "https://raw.githubusercontent.com/tailolicon/kotori/main/extensions/repo/apk/app.kotori.extension.all.hitomi.apk",
+                    "iconUrl": "https://raw.githubusercontent.com/tailolicon/kotori/main/extensions/repo/icon/app.kotori.extension.all.hitomi.png"
+                },
+                "extensionLib": "1.4",
+                "versionCode": 1,
+                "versionName": "1.4.1",
+                "contentWarning": 3,
+                "sources": [
+                    {
+                        "id": 4656778511390388688,
+                        "name": "Hitomi.la",
+                        "language": "all",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 3606219181907634622,
+                        "name": "Hitomi.la",
+                        "language": "en",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 8463368527803594339,
+                        "name": "Hitomi.la",
+                        "language": "ja",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 1802607831140380152,
+                        "name": "Hitomi.la",
+                        "language": "ko",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 584889515970211990,
+                        "name": "Hitomi.la",
+                        "language": "zh",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 6530979593225351298,
+                        "name": "Hitomi.la",
+                        "language": "vi",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 6759694902142024014,
+                        "name": "Hitomi.la",
+                        "language": "id",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 3297686297890166327,
+                        "name": "Hitomi.la",
+                        "language": "ru",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    },
+                    {
+                        "id": 5272382536346953209,
+                        "name": "Hitomi.la",
+                        "language": "es",
+                        "homeUrl": "https://hitomi.la",
+                        "mirrorUrls": []
+                    }
+                ]
+            }
+        ]
+    }
+}
