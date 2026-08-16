@@ -322,7 +322,14 @@ class AnimeVietsub : HosterAnimeSource(), ConfigurableAnimeSource {
                 url = embed,
                 referer = referer,
                 userAgent = userAgent,
-            ) { requested -> requested.contains(".m3u8") }
+            ) { requested ->
+                // Not just `.m3u8`: this player's playlist is served from googleusercontent with no
+                // extension at all, so matching on the suffix walked straight past it.
+                // Media only: the player also pulls its poster and preview thumbnails from
+                // googleusercontent, and handing ExoPlayer a JPEG is worse than handing it nothing.
+                requested.contains(".m3u8") || requested.contains(".mp4") ||
+                    requested.contains("/hls/") || requested.contains(".ts?")
+            }
             ?: return emptyList()
 
         listOf(

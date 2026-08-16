@@ -60,6 +60,13 @@ internal class WebViewResolver(private val context: Application) {
                     mediaPlaybackRequiresUserGesture = false
                 }
                 view.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        // Permission to autoplay is not the same as pressing play: JW Player waits
+                        // for a click, and an off-screen page never gets one, so it sits on its
+                        // poster and never asks for video. Ask it directly instead.
+                        view.evaluateJavascript(PLAY_SCRIPT, null)
+                    }
+
                     override fun shouldInterceptRequest(
                         view: WebView,
                         request: WebResourceRequest,
@@ -101,6 +108,17 @@ internal class WebViewResolver(private val context: Application) {
         // feeds it to the video element directly — fails while the reader is still watching the
         // spinner rather than after they have given up.
         private const val DEFAULT_TIMEOUT_MILLIS = 8_000L
+
+        private val PLAY_SCRIPT =
+            """
+            (function () {
+              try { if (window.jwplayer) { jwplayer().play(true); } } catch (e) {}
+              var v = document.querySelector('video');
+              if (v) { v.muted = true; var p = v.play(); if (p && p.catch) { p.catch(function () {}); } }
+              var b = document.querySelector('.jw-icon-display, .jw-display-icon-container, .vjs-big-play-button');
+              if (b) { b.click(); }
+            })();
+            """.trimIndent()
 
         private val AD_HOSTS = listOf(
             "googlesyndication.com",
