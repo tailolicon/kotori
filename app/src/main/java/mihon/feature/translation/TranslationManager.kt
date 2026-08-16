@@ -3,6 +3,8 @@ package mihon.feature.translation
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,6 +52,25 @@ class TranslationManager(
      * webtoon strip is tens of megabytes.
      */
     private val pageSlots = Semaphore(MAX_PAGES_IN_FLIGHT)
+
+    private val workGate = TranslationWorkGate()
+
+    /**
+     * Marks [mangaId] as the series currently being translated. Any in-flight work for a
+     * different series is invalidated so it cannot keep occupying the page slots.
+     */
+    fun beginSession(mangaId: Long) {
+        workGate.begin(mangaId)
+    }
+
+    /**
+     * Drops in-flight work for [mangaId] (or every series if null). Used when the reader
+     * closes or the user turns translation off.
+     */
+    fun cancelWork(mangaId: Long? = null) {
+        workGate.cancel(mangaId)
+        _status.value = TranslationStatus.Idle
+    }
 
     /**
      * One mutex per page being worked on, so two callers cannot translate the same page twice.
@@ -110,7 +131,7 @@ class TranslationManager(
 
     fun setEnabled(mangaId: Long, enabled: Boolean) {
         preferences.enabledForManga(mangaId).set(enabled)
-        if (!enabled) _status.value = TranslationStatus.Idle
+        if (!enabled) cancelWork(mangaId)
     }
 
     fun isNovelEnabled(mangaId: Long): Boolean = preferences.novelEnabledForManga(mangaId).get()
@@ -178,7 +199,11 @@ class TranslationManager(
         pages: List<Pair<Int, () -> InputStream>>,
         joinContinuousPages: Boolean,
     ) {
-        if (pages.isEmpty() || isRateLimited()) return
+        if (pages.isEmpty() || isRateLimited() || !isEnabled(mangaId)) return
+        // Do not begin() here: leftover work from a series the reader already left would
+        // reclaim the session and keep occupying the page slots. The reader starts the session.
+        if (workGate.activeMangaId != mangaId) return
+        val generation = workGate.generation
         val stamp = preferences.outputStamp()
 
         val pending = pages.filterNot { (index, _) ->
@@ -206,7 +231,10 @@ class TranslationManager(
 
         try {
             for ((index, open) in pending) {
-                if (isRateLimited()) break
+                currentCoroutineContext().ensureActive()
+                if (isRateLimited() || !workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
+                    break
+                }
                 val bitmap = decode(open) ?: continue
                 val pixels = bitmap.width.toLong() * bitmap.height
                 // A page that fills the budget by itself simply travels alone, exactly as before.
@@ -216,7 +244,9 @@ class TranslationManager(
                 val maxPages = PageBatchPolicy.maxPages(joinContinuousPages, MAX_STRIP_PAGES)
                 if (groupPixels >= MAX_STRIP_PIXELS || group.size >= maxPages) flush()
             }
-            flush()
+            if (workGate.allows(mangaId, generation) && isEnabled(mangaId) && !isRateLimited()) {
+                flush()
+            }
         } finally {
             group.forEach { (_, bitmap) -> bitmap.recycle() }
         }
@@ -230,6 +260,7 @@ class TranslationManager(
     ) {
         pageSlots.withPermit {
             try {
+                if (!isEnabled(mangaId) || isRateLimited()) return@withPermit
                 val translated = translator.translateStrip(
                     group.map { it.second },
                     "chapter=$chapterId pages=${group.joinToString { it.first.toString() }}",
@@ -291,14 +322,18 @@ class TranslationManager(
         // on disk is what stops the pipeline re-detecting and re-asking the provider on every view.
         val noneMarker = noneMarker(target)
         if (noneMarker.exists()) return null
-        if (isRateLimited()) return null
+        if (isRateLimited() || !isEnabled(mangaId)) return null
+        if (workGate.activeMangaId != mangaId) return null
+        val generation = workGate.generation
 
         val pageKey = "$mangaId/$chapterId/$pageIndex/$stamp"
         return pageSlots.withPermit {
             mutexFor(pageKey).withLock {
                 // Re-check: a prefetch pass may have produced it while we waited.
                 if (cache.isCached(target)) return@withLock target
-                if (isRateLimited()) return@withLock null
+                if (isRateLimited() || !workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
+                    return@withLock null
+                }
 
                 val source = decode(openSource) ?: return@withLock null
                 try {

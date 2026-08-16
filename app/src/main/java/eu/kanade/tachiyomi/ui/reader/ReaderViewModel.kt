@@ -262,7 +262,10 @@ class ReaderViewModel @JvmOverloads constructor(
             }
         }
         translationPrefetchJob?.cancel()
-        manga?.let { translationManager.onReaderClosed(it.id) }
+        manga?.let { manga ->
+            translationManager.cancelWork(manga.id)
+            translationManager.onReaderClosed(manga.id)
+        }
     }
 
     /**
@@ -298,6 +301,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     val source = sourceManager.getOrStub(manga.source)
                     loader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
 
+                    translationManager.beginSession(manga.id)
                     loadChapter(loader!!, chapterList.first { chapterId == it.chapter.id })
                     Result.success(true)
                 } else {
@@ -325,7 +329,11 @@ class ReaderViewModel @JvmOverloads constructor(
     fun setTranslationEnabled(enabled: Boolean) {
         val manga = manga ?: return
         translationManager.setEnabled(manga.id, enabled)
-        if (!enabled) translationPrefetchJob?.cancel()
+        if (!enabled) {
+            translationPrefetchJob?.cancel()
+        } else {
+            translationManager.beginSession(manga.id)
+        }
 
         viewModelScope.launchIO {
             val context = Injekt.get<Application>()
@@ -372,6 +380,7 @@ class ReaderViewModel @JvmOverloads constructor(
             var total = 0
 
             prefetch@ for (readerChapter in targets) {
+                if (!translationManager.isEnabled(manga?.id ?: return@launchIO)) break@prefetch
                 if (readerChapter !== current) {
                     runCatching { loader.loadChapter(readerChapter) }
                         .onFailure {

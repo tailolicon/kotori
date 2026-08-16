@@ -7,8 +7,8 @@ import eu.kanade.tachiyomi.animesource.model.AnimeFilter
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
-import eu.kanade.tachiyomi.source.builtin.MirrorResolver
-import eu.kanade.tachiyomi.source.builtin.numberedHosts
+import eu.kanade.tachiyomi.source.MirrorResolver
+import eu.kanade.tachiyomi.source.numberedHosts
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.network.GET
@@ -107,12 +107,7 @@ class AnimeHay08Source : BuiltInHttpSource(), ConfigurableAnimeSource {
         // query instead of narrowing it.
         val genre = filters.filterIsInstance<GenreFilter>().firstOrNull()?.slug()
         if (genre != null && query.isBlank()) {
-            val genreUrl = if (page <= 1) {
-                "$baseUrl/the-loai/$genre.html"
-            } else {
-                "$baseUrl/the-loai/${genre.substringBeforeLast('-')}/trang-$page.html"
-            }
-            return GET(genreUrl, headers)
+            return GET(AnimeHayUrls.genre(baseUrl, genre, page), headers)
         }
         val keyword = URLEncoder.encode(query, "UTF-8")
         val url = if (page <= 1) {

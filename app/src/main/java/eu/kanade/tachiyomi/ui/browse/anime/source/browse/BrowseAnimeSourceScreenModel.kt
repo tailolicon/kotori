@@ -59,6 +59,7 @@ import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.Instant
 import eu.kanade.tachiyomi.animesource.model.AnimeFilter as AnimeSourceModelFilter
+import eu.kanade.tachiyomi.ui.browse.GenreFilterMatcher
 
 class BrowseAnimeSourceScreenModel(
     private val sourceId: Long,
@@ -223,7 +224,9 @@ class BrowseAnimeSourceScreenModel(
         for (sourceFilter in filters) {
             if (sourceFilter is AnimeSourceModelFilter.Group<*>) {
                 for (filter in sourceFilter.state) {
-                    if (filter is AnimeSourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                    if (filter is AnimeSourceModelFilter<*> &&
+                        GenreFilterMatcher.namesMatch(filter.name, genreName)
+                    ) {
                         when (filter) {
                             is AnimeSourceModelFilter.TriState -> filter.state = 1
                             is AnimeSourceModelFilter.CheckBox -> filter.state = true
@@ -233,12 +236,19 @@ class BrowseAnimeSourceScreenModel(
                     }
                 }
             } else if (sourceFilter is AnimeSourceModelFilter.Select<*>) {
-                val index = sourceFilter.values.filterIsInstance<String>()
-                    .indexOfFirst { it.equals(genreName, true) }
+                val index = GenreFilterMatcher.selectIndex(
+                    sourceFilter.values.filterIsInstance<String>(),
+                    genreName,
+                )
                 if (index != -1) {
                     sourceFilter.state = index
                     return filters
                 }
+            } else if (sourceFilter is AnimeSourceModelFilter.Text &&
+                GenreFilterMatcher.isTagTextFilter(sourceFilter.name)
+            ) {
+                sourceFilter.state = genreName
+                return filters
             }
         }
         return null
@@ -366,7 +376,9 @@ class BrowseAnimeSourceScreenModel(
         filter@ for (sourceFilter in defaultFilters) {
             if (sourceFilter is AnimeSourceModelFilter.Group<*>) {
                 for (filter in sourceFilter.state) {
-                    if (filter is AnimeSourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                    if (filter is AnimeSourceModelFilter<*> &&
+                        GenreFilterMatcher.namesMatch(filter.name, genreName)
+                    ) {
                         when (filter) {
                             is AnimeSourceModelFilter.TriState -> filter.state = 1
                             is AnimeSourceModelFilter.CheckBox -> filter.state = true
@@ -377,14 +389,22 @@ class BrowseAnimeSourceScreenModel(
                     }
                 }
             } else if (sourceFilter is AnimeSourceModelFilter.Select<*>) {
-                val index = sourceFilter.values.filterIsInstance<String>()
-                    .indexOfFirst { it.equals(genreName, true) }
+                val index = GenreFilterMatcher.selectIndex(
+                    sourceFilter.values.filterIsInstance<String>(),
+                    genreName,
+                )
 
                 if (index != -1) {
                     sourceFilter.state = index
                     genreExists = true
                     break
                 }
+            } else if (sourceFilter is AnimeSourceModelFilter.Text &&
+                GenreFilterMatcher.isTagTextFilter(sourceFilter.name)
+            ) {
+                sourceFilter.state = genreName
+                genreExists = true
+                break
             }
         }
         mutableState.update {

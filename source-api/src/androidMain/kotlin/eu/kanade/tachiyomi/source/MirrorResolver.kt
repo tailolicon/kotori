@@ -1,4 +1,4 @@
-package eu.kanade.tachiyomi.source.builtin
+package eu.kanade.tachiyomi.source
 
 import android.content.SharedPreferences
 import androidx.core.content.edit

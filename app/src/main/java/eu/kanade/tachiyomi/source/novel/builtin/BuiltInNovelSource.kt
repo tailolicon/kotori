@@ -4,7 +4,7 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
-import eu.kanade.tachiyomi.source.builtin.MirrorResolver
+import eu.kanade.tachiyomi.source.MirrorResolver
 import eu.kanade.tachiyomi.source.online.NovelHttpSource
 import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 
