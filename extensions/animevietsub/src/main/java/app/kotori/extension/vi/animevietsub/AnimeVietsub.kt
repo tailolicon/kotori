@@ -388,6 +388,9 @@ class AnimeVietsub : HosterAnimeSource(), ConfigurableAnimeSource {
          * moves next, and that is why this source needs no guessing.
          */
         private val MIRRORS = listOf(
+            // Where the site actually lives as of 2026-08: probed from a Vietnamese connection,
+            // `.mom`, `.ing` and `.meme` no longer answer at all, and `.moe`/`.info` redirect here.
+            "animevietsub.vc",
             "animevietsub.mom",
             "animevietsub.moe",
             "animevietsub.info",
