@@ -28,6 +28,8 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import java.net.URLEncoder
 
 /**
@@ -301,17 +303,33 @@ class AnimeVietsub : HosterAnimeSource(), ConfigurableAnimeSource {
         return videos
     }
 
+    /**
+     * The embed's playlist, read from the page if it is written there and otherwise watched for.
+     *
+     * The plain read is kept because it costs one request and still works on the simpler embeds.
+     * When it finds nothing the page is a JavaScript player that assembles its own playlist — see
+     * [WebViewResolver] for why that is answered by loading it rather than by decoding it.
+     */
     private suspend fun extractFromEmbed(embed: String): List<Video> = runCatching {
         val referer = "$baseUrl/"
+        val userAgent = network.defaultUserAgentProvider()
         val embedHeaders = headersBuilder().set("Referer", referer).build()
         val html = client.newCall(GET(embed, embedHeaders)).awaitSuccess().use { it.body.string() }
-        val m3u8 = M3U8_REGEX.find(html)?.value ?: return emptyList()
         val embedReferer = runCatching { embed.toHttpUrl().let { "${it.scheme}://${it.host}/" } }.getOrDefault(referer)
+
+        val m3u8 = M3U8_REGEX.find(html)?.value
+            ?: WebViewResolver(Injekt.get()).resolve(
+                url = embed,
+                referer = referer,
+                userAgent = userAgent,
+            ) { requested -> requested.contains(".m3u8") }
+            ?: return emptyList()
+
         listOf(
             Video(
                 videoUrl = m3u8,
                 videoTitle = "AnimeVietsub",
-                headers = Headers.headersOf("User-Agent", network.defaultUserAgentProvider(), "Referer", embedReferer),
+                headers = Headers.headersOf("User-Agent", userAgent, "Referer", embedReferer),
             ),
         )
     }.getOrDefault(emptyList())
