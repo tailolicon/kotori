@@ -193,52 +193,7 @@ class PageTranslator(
             }
             // Glyph geometry is collected regardless of who does the reading, because the renderer
             // needs it to mask strokes rather than whole bubbles. It is cheap and fully local.
-            // Reuse what the whole-page pass already read.
-            //
-            // That pass runs ML Kit over every band of the page and keeps line geometry; asking ML
-            // Kit again, once per bubble, was measured at 40s of a 76s page — over half the total,
-            // spent re-reading lettering the pipeline had already read. A bubble whose interior the
-            // page pass covered takes its text from there. Bubbles it did not cover — small or faint
-            // lettering the banded pass misses, which is exactly what the per-bubble crop with its
-            // padding, upscaling and retry ladder is for — still go through the recogniser.
-            val pageText = textBlockResult?.pageText.orEmpty()
-            val reused = arrayOfNulls<BubbleText>(ordered.size)
-            if (pageText.isNotEmpty()) {
-                ordered.forEachIndexed { index, box ->
-                    val inside = pageText.filter { block ->
-                        val overlap = Rect(block.rect)
-                        if (!overlap.intersect(box.toRect())) return@filter false
-                        val area = block.rect.width().toLong() * block.rect.height()
-                        area > 0 && overlap.width().toLong() * overlap.height() >=
-                            area * REUSED_BLOCK_CONTAINMENT
-                    }
-                    if (inside.isEmpty()) return@forEachIndexed
-                    val lines = inside.flatMap { it.lines }
-                    if (lines.isEmpty()) return@forEachIndexed
-                    val text = inside
-                        .sortedBy { it.rect.top }
-                        .joinToString("\n") { it.text.trim() }
-                        .trim()
-                    if (text.isEmpty()) return@forEachIndexed
-                    reused[index] = BubbleText(text, lines)
-                }
-            }
-            val needsOcr = ordered.indices.filter { reused[it] == null }
-            val freshlyRead = if (needsOcr.isEmpty()) {
-                emptyList()
-            } else {
-                recognizer.recognize(
-                    source,
-                    needsOcr.map(ordered::get),
-                    translationContext.sourceLanguage,
-                )
-            }
-            needsOcr.forEachIndexed { slot, index -> reused[index] = freshlyRead.getOrNull(slot) }
-            logcat {
-                "OCR: reused ${ordered.size - needsOcr.size}/${ordered.size} region(s) from the " +
-                    "page pass, read ${needsOcr.size} directly"
-            }
-            val read = reused.map { it ?: BubbleText("", emptyList()) }
+            val read = recognizer.recognize(source, ordered, translationContext.sourceLanguage)
             val longStrip = source.height > source.width * 3
             val evidenced = ordered.indices.filter { index ->
                 ordered[index].isTextBlock ||
@@ -806,9 +761,6 @@ class PageTranslator(
     }
 
     private companion object {
-        /** Share of a page-pass block that must sit inside a bubble before its read is reused. */
-        const val REUSED_BLOCK_CONTAINMENT = 0.7f
-
         const val CAPTION_ROW_OVERLAP = 0.45f
         const val CAPTION_MAX_GAP_HEIGHTS = 2
         const val CAPTION_CONTAINMENT = 0.65f

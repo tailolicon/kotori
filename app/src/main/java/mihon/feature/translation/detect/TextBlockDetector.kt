@@ -12,7 +12,6 @@ import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import mihon.feature.translation.model.BubbleBox
-import mihon.feature.translation.model.TextLineBox
 import tachiyomi.core.common.util.system.logcat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -44,15 +43,7 @@ class TextBlockDetector {
      * @param language the script the page turned out to be written in — the configured one unless
      *   it read nothing and another script did
      */
-    data class Result(
-        val boxes: List<BubbleBox>,
-        val language: String,
-        /** Everything this pass read off the page, for callers that can reuse it. */
-        val pageText: List<PageTextBlock> = emptyList(),
-    )
-
-    /** A block of lettering found anywhere on the page, in source-image pixels. */
-    data class PageTextBlock(val rect: Rect, val text: String, val lines: List<TextLineBox>)
+    data class Result(val boxes: List<BubbleBox>, val language: String)
 
     fun detect(bitmap: Bitmap, existing: List<BubbleBox>, sourceLanguage: String): Result {
         var found = readWholePage(bitmap, sourceLanguage)
@@ -135,11 +126,7 @@ class TextBlockDetector {
                     "${extras.count { it.isFallbackTextBlock }} speech fallback(s)"
             }
         }
-        return Result(
-            extras,
-            language,
-            merged.map { PageTextBlock(Rect(it.rect), it.text, it.lines) },
-        )
+        return Result(extras, language)
     }
 
     /**
@@ -239,18 +226,10 @@ class TextBlockDetector {
                     // artwork noise still fails MIN_BLOCK_CHARS after merging.
                     if (!TextBlockFallbackPolicy.shouldReadFragment(characters, block.text)) continue
                     val box = block.boundingBox ?: continue
-                    val shift = offsetY - edgePad
                     blocks += TextCandidate(
-                        Rect(box).apply { offset(0, shift) },
+                        Rect(box).apply { offset(0, offsetY - edgePad) },
                         characters,
                         block.text,
-                        // Line geometry is what the renderer masks against, and this pass already
-                        // has it. Carrying it out of here is what lets the bubble stage reuse this
-                        // read instead of running ML Kit a second time over the same lettering.
-                        block.lines.mapNotNull { line ->
-                            val lineBox = line.boundingBox ?: return@mapNotNull null
-                            TextLineBox(Rect(lineBox).apply { offset(0, shift) }, line.text)
-                        },
                     )
                 }
                 latch.countDown()
@@ -284,7 +263,6 @@ class TextBlockDetector {
             val current = Rect(first.rect)
             var characters = first.characters
             val text = StringBuilder(first.text)
-            val lines = ArrayList(first.lines)
             var grew = true
             while (grew) {
                 grew = false
@@ -302,23 +280,17 @@ class TextBlockDetector {
                         characters += other.characters
                         if (text.isNotEmpty()) text.append('\n')
                         text.append(other.text)
-                        lines += other.lines
                         iterator.remove()
                         grew = true
                     }
                 }
             }
-            merged += TextCandidate(current, characters, text.toString(), lines)
+            merged += TextCandidate(current, characters, text.toString())
         }
         return merged
     }
 
-    private data class TextCandidate(
-        val rect: Rect,
-        val characters: Int,
-        val text: String,
-        val lines: List<TextLineBox> = emptyList(),
-    )
+    private data class TextCandidate(val rect: Rect, val characters: Int, val text: String)
 
     /** True when [rect] is substantially covered by [box] — the bubble detector already has it. */
     private fun overlaps(rect: Rect, box: BubbleBox): Boolean {
@@ -358,16 +330,7 @@ class TextBlockDetector {
 
         /** Band height for reading a long strip. Comfortably inside ML Kit's input limits. */
         const val BAND_HEIGHT = 1200
-
-        /**
-         * Overlap between bands.
-         *
-         * It exists so a panel straddling a band boundary is still found whole in one of them, and
-         * at half the band height the page was read nearly twice over — this pass is one of the two
-         * most expensive stages. A third of the band still comfortably exceeds the height of a
-         * dialogue block, and [BAND_EDGE_CONTEXT] plus [mergeNearby] cover what lands on the seam.
-         */
-        const val BAND_OVERLAP = 400
+        const val BAND_OVERLAP = 600
         const val BAND_EDGE_CONTEXT = 96
         const val MIN_BAND_HEIGHT = 80
 
