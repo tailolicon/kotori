@@ -28,6 +28,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.CatalogueSource
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
 import mihon.domain.manga.model.toDomainManga
+import eu.kanade.tachiyomi.ui.browse.GenreFilterMatcher
 import eu.kanade.tachiyomi.ui.browse.anime.source.browse.KOTORI_COMMON_GENRES
 import eu.kanade.tachiyomi.ui.browse.anime.source.browse.PREFERRED_SHELF_GENRES
 import eu.kanade.tachiyomi.ui.browse.anime.source.browse.GENRE_SHELF_COUNT
@@ -217,7 +218,7 @@ class BrowseSourceScreenModel(
         for (sourceFilter in filters) {
             if (sourceFilter is SourceModelFilter.Group<*>) {
                 for (filter in sourceFilter.state) {
-                    if (filter is SourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                    if (filter is SourceModelFilter<*> && GenreFilterMatcher.namesMatch(filter.name, genreName)) {
                         when (filter) {
                             is SourceModelFilter.TriState -> filter.state = 1
                             is SourceModelFilter.CheckBox -> filter.state = true
@@ -227,12 +228,19 @@ class BrowseSourceScreenModel(
                     }
                 }
             } else if (sourceFilter is SourceModelFilter.Select<*>) {
-                val index = sourceFilter.values.filterIsInstance<String>()
-                    .indexOfFirst { it.equals(genreName, true) }
+                val index = GenreFilterMatcher.selectIndex(
+                    sourceFilter.values.filterIsInstance<String>(),
+                    genreName,
+                )
                 if (index != -1) {
                     sourceFilter.state = index
                     return filters
                 }
+            } else if (sourceFilter is SourceModelFilter.Text &&
+                GenreFilterMatcher.isTagTextFilter(sourceFilter.name)
+            ) {
+                sourceFilter.state = genreName
+                return filters
             }
         }
         return null
@@ -342,7 +350,7 @@ class BrowseSourceScreenModel(
         filter@ for (sourceFilter in defaultFilters) {
             if (sourceFilter is SourceModelFilter.Group<*>) {
                 for (filter in sourceFilter.state) {
-                    if (filter is SourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                    if (filter is SourceModelFilter<*> && GenreFilterMatcher.namesMatch(filter.name, genreName)) {
                         when (filter) {
                             is SourceModelFilter.TriState -> filter.state = 1
                             is SourceModelFilter.CheckBox -> filter.state = true
@@ -353,14 +361,45 @@ class BrowseSourceScreenModel(
                     }
                 }
             } else if (sourceFilter is SourceModelFilter.Select<*>) {
-                val index = sourceFilter.values.filterIsInstance<String>()
-                    .indexOfFirst { it.equals(genreName, true) }
+                val index = GenreFilterMatcher.selectIndex(
+                    sourceFilter.values.filterIsInstance<String>(),
+                    genreName,
+                )
 
                 if (index != -1) {
                     sourceFilter.state = index
                     genreExists = true
                     break
                 }
+            }
+        }
+
+        // Text filters are ranked rather than taken first-match: a source that splits tags by
+        // namespace lists "Male Tags" before "Tags", and a tag dropped in the wrong namespace is
+        // a 404 on the site, not a narrower search.
+        if (!genreExists && !GenreFilterMatcher.isGenericChip(genreName)) {
+            val target = defaultFilters
+                .filterIsInstance<SourceModelFilter.Text>()
+                .map { it to GenreFilterMatcher.tagFilterRank(it.name, genreName) }
+                .filter { it.second >= 0 }
+                .minByOrNull { it.second }
+                ?.first
+            if (target != null) {
+                target.state = GenreFilterMatcher.strippedTag(genreName)
+                genreExists = true
+            }
+        }
+
+        // A tag listing on Hitomi (and similar) is language-wide on the website. Leaving the
+        // source's own language selected (e.g. Vietnamese) turns the nozomi into a tiny subset
+        // and the list looks finished after a handful of titles.
+        if (genreExists) {
+            defaultFilters.filterIsInstance<SourceModelFilter.Select<*>>().forEach { filter ->
+                if (!filter.name.contains("lang", true) && !filter.name.contains("ngôn", true)) {
+                    return@forEach
+                }
+                val all = GenreFilterMatcher.languageAllIndex(filter.values.filterIsInstance<String>())
+                if (all != -1) filter.state = all
             }
         }
 
