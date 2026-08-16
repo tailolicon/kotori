@@ -122,23 +122,21 @@ internal object BubbleFill {
         }
         val best = counts.maxByOrNull { it.value }?.key ?: return null
 
-        // Average the real pixels in the winning bucket to recover full precision.
-        var r = 0L
-        var g = 0L
-        var b = 0L
-        var n = 0
+        // Take the most common exact colour in the winning bucket, not its average.
+        //
+        // Averaging pulled the fill off the paper it was meant to match: a pure-white bubble's
+        // bucket also holds the antialiased fringe of every glyph, and their mean came out at 248
+        // against a 255 background. Seven levels is faint but perfectly visible as a rectangle
+        // wherever the patch is smaller than the bubble — the "grey box behind the text" defect,
+        // and the single most frequent complaint in the render audit. The paper itself is by far
+        // the most repeated exact value in that bucket, so the mode lands on it.
+        val exact = HashMap<Int, Int>()
         forEachIn(centre, width) { index ->
             val p = pixels[index]
             val key = ((p shr 21) and 0x7 shl 6) or ((p shr 13) and 0x7 shl 3) or ((p shr 5) and 0x7)
-            if (key == best) {
-                r += (p shr 16) and 0xFF
-                g += (p shr 8) and 0xFF
-                b += p and 0xFF
-                n++
-            }
+            if (key == best) exact[p] = (exact[p] ?: 0) + 1
         }
-        if (n == 0) return null
-        return (0xFF shl 24) or ((r / n).toInt() shl 16) or ((g / n).toInt() shl 8) or (b / n).toInt()
+        return exact.maxByOrNull { it.value }?.key
     }
 
     /**

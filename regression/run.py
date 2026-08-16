@@ -53,7 +53,17 @@ def sh(serial, cmd):
 
 
 def push_corpus(serial, only):
-    sh(serial, f"rm -rf {DEV_BASE}/in {DEV_BASE}/out; mkdir -p {DEV_BASE}/in")
+    # Empty the input directory without deleting it. A directory `adb` recreates belongs to the
+    # shell user with the shell's SELinux label; after the app is reinstalled under a new UID it can
+    # open those files but not stat them, so listFiles() sees nothing and the suite silently runs
+    # zero fixtures. The receiver creates this directory itself — leave it alone and it keeps
+    # working across reinstalls.
+    sh(serial, f"rm -rf {DEV_BASE}/in/* {DEV_BASE}/out")
+    if "in" not in sh(serial, f"ls {DEV_BASE} 2>/dev/null"):
+        sh(serial, f"monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
+        time.sleep(6)
+        adb(serial, "shell", f"am broadcast -n {RECEIVER}")
+        time.sleep(6)
     names = sorted(n for n in os.listdir(CORPUS) if not only or n.startswith(only))
     for name in names:
         r = adb(serial, "push", os.path.join(CORPUS, name), f"{DEV_BASE}/in/{name}")

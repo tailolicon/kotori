@@ -46,6 +46,12 @@ class RegressionReceiver : BroadcastReceiver() {
     private suspend fun runSuite(context: Context) {
         val base = context.getExternalFilesDir(null)?.resolve("regression") ?: return
         val input = File(base, "in")
+        // Create it ourselves rather than relying on `adb push` to. A directory adb creates belongs
+        // to the shell user with the shell's SELinux label, and after the app is reinstalled under a
+        // new UID it can open those files but not stat them — `isFile()` returns false for every
+        // one and the suite runs zero fixtures while reporting no error. A directory the app owns
+        // accepts pushes into it and stats fine.
+        input.mkdirs()
         val output = File(base, "out")
         output.deleteRecursively()
         output.mkdirs()
