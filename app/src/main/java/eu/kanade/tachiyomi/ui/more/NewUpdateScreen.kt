@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.ui.more
 
 import android.content.Intent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -34,9 +33,6 @@ class NewUpdateScreen(
             changelogInfo.replace("""---(\R|.)*Checksums(\R|.)*""".toRegex(), "")
         }
 
-        // Anything left over from a previous attempt would otherwise pop the dialog straight open.
-        LaunchedEffect(Unit) { AppUpdateDownloadState.reset() }
-
         val downloadState by AppUpdateDownloadState.state.collectAsState()
 
         val startDownload = {
@@ -61,6 +57,9 @@ class NewUpdateScreen(
             onAcceptUpdate = startDownload,
         )
 
+        // Deliberately not reset when this screen opens: a download that finished while the
+        // screen was away is exactly the state worth showing, since the apk is sitting there ready
+        // to install. It clears when the reader closes the dialog.
         if (downloadState !is AppUpdateDownloadState.State.Idle) {
             AppUpdateDownloadDialog(
                 state = downloadState,
