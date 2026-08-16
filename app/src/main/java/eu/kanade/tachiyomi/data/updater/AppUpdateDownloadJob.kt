@@ -80,6 +80,7 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
     ) {
         // Show notification download starting.
         notifier.onDownloadStarted(title)
+        AppUpdateDownloadState.state.value = AppUpdateDownloadState.State.Downloading(null)
 
         val progressListener = object : ProgressListener {
             // Progress of the download
@@ -95,6 +96,8 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                     savedProgress = progress
                     lastTick = currentTime
                     notifier.onProgressChange(progress)
+                    AppUpdateDownloadState.state.value =
+                        AppUpdateDownloadState.State.Downloading(progress)
                 }
             }
         }
@@ -114,15 +117,19 @@ class AppUpdateDownloadJob(private val context: Context, workerParams: WorkerPar
                 throw Exception("Unsuccessful response")
             }
             AppUpdateVerifier.verify(apkFile, expectedSha256, expectedSize)
+            val apkUri = apkFile.getUriCompat(context)
             notifier.cancel()
-            notifier.promptInstall(apkFile.getUriCompat(context))
+            notifier.promptInstall(apkUri)
+            AppUpdateDownloadState.state.value = AppUpdateDownloadState.State.Finished(apkUri)
         } catch (e: Exception) {
             val shouldCancel = e is CancellationException ||
                 (e is StreamResetException && e.errorCode == ErrorCode.CANCEL)
             if (shouldCancel) {
                 notifier.cancel()
+                AppUpdateDownloadState.reset()
             } else {
                 notifier.onDownloadError(url, title, expectedSha256, expectedSize)
+                AppUpdateDownloadState.state.value = AppUpdateDownloadState.State.Error(e.message)
             }
         }
     }

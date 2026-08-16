@@ -1,13 +1,20 @@
 package eu.kanade.tachiyomi.ui.more
 
+import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.presentation.more.AppUpdateDownloadDialog
 import eu.kanade.presentation.more.NewUpdateScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
+import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadState
+import eu.kanade.tachiyomi.extension.util.ExtensionInstaller
 import eu.kanade.tachiyomi.util.system.openInBrowser
 
 class NewUpdateScreen(
@@ -27,6 +34,21 @@ class NewUpdateScreen(
             changelogInfo.replace("""---(\R|.)*Checksums(\R|.)*""".toRegex(), "")
         }
 
+        // Anything left over from a previous attempt would otherwise pop the dialog straight open.
+        LaunchedEffect(Unit) { AppUpdateDownloadState.reset() }
+
+        val downloadState by AppUpdateDownloadState.state.collectAsState()
+
+        val startDownload = {
+            AppUpdateDownloadJob.start(
+                context = context,
+                url = downloadLink,
+                title = versionName,
+                sha256 = sha256,
+                size = size,
+            )
+        }
+
         NewUpdateScreen(
             versionName = versionName,
             changelogInfo = changelogInfoNoChecksum,
@@ -34,16 +56,32 @@ class NewUpdateScreen(
                 { context.openInBrowser(link) }
             },
             onRejectUpdate = navigator::pop,
-            onAcceptUpdate = {
-                AppUpdateDownloadJob.start(
-                    context = context,
-                    url = downloadLink,
-                    title = versionName,
-                    sha256 = sha256,
-                    size = size,
-                )
-                navigator.pop()
-            },
+            // Stay on the screen rather than popping: the dialog below is what reports progress and
+            // hands over the install.
+            onAcceptUpdate = startDownload,
         )
+
+        if (downloadState !is AppUpdateDownloadState.State.Idle) {
+            AppUpdateDownloadDialog(
+                state = downloadState,
+                onDismissRequest = {
+                    AppUpdateDownloadState.reset()
+                    navigator.pop()
+                },
+                onInstall = {
+                    val uri = (downloadState as AppUpdateDownloadState.State.Finished).apkUri
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, ExtensionInstaller.APK_MIME)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        },
+                    )
+                },
+                onRetry = {
+                    AppUpdateDownloadState.reset()
+                    startDownload()
+                },
+            )
+        }
     }
 }

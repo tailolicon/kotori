@@ -124,14 +124,15 @@ data object BrowseTab : Tab {
         if (activeMode == MediaType.NOVEL) {
             // Novel sources ship as extensions like everything else now, and they are *manga*-feature
             // extensions — novels ride the manga stack and are told apart by `is NovelSource`. So the
-            // Extensions tab here is the same list the Manga mode shows; without it there is no way
-            // to install a novel source from the tab that needs it, and a reader whose extension is
-            // missing sees an empty Novel library with nowhere to fix it.
+            // same three tabs as Manga apply, and the Extensions one is not optional: without it
+            // there is no way to install a novel source from the tab that needs it, and a reader
+            // whose extension is missing sees an empty Novel library with nowhere to fix it.
             val novelExtensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }
             val novelExtensionsState by novelExtensionsScreenModel.state.collectAsState()
             val novelTabs = listOf(
                 sourcesTab(),
                 extensionsTab(novelExtensionsScreenModel),
+                migrateSourceTab(),
             )
             val novelState = rememberPagerState { novelTabs.size }
             if (isKotoriTablet()) {
