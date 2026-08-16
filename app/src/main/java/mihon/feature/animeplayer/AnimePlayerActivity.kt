@@ -16,7 +16,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import uy.kohesive.injekt.Injekt
@@ -52,7 +54,25 @@ class AnimePlayerActivity : ComponentActivity() {
         val episodeLabel = intent.getStringExtra(EXTRA_EPISODE) ?: "T1"
         val sourceLabel = intent.getStringExtra(EXTRA_SOURCE)
 
-        val exoPlayer = ExoPlayer.Builder(this).build().also { player = it }
+        // Sources hand back the headers their CDN expects — a Referer tied to the embed host, the
+        // desktop User-Agent the stream was authorised for. Playing the url on its own dropped all
+        // of that, which works right up until a host starts checking.
+        val requestHeaders = intent.getStringArrayExtra(EXTRA_HEADERS)
+            ?.toList()
+            ?.chunked(2)
+            ?.filter { it.size == 2 }
+            ?.associate { (name, value) -> name to value }
+            .orEmpty()
+
+        val dataSourceFactory = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(requestHeaders)
+            .setAllowCrossProtocolRedirects(true)
+            .apply { requestHeaders["User-Agent"]?.let(::setUserAgent) }
+
+        val exoPlayer = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .build()
+            .also { player = it }
         if (url != null) {
             exoPlayer.setMediaItem(MediaItem.fromUri(url))
             exoPlayer.prepare()
@@ -141,6 +161,7 @@ class AnimePlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val EXTRA_HEADERS = "headers"
         private const val EXTRA_URL = "url"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_EPISODE = "episode"
@@ -152,12 +173,16 @@ class AnimePlayerActivity : ComponentActivity() {
             title: String,
             episodeLabel: String,
             sourceLabel: String? = null,
+            headers: Map<String, String> = emptyMap(),
         ): Intent {
             return Intent(context, AnimePlayerActivity::class.java).apply {
                 putExtra(EXTRA_URL, url)
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_EPISODE, episodeLabel)
                 putExtra(EXTRA_SOURCE, sourceLabel)
+                // Flattened to name/value pairs: a Bundle of extras would need the receiver to know
+                // the keys, and there is no fixed set of them.
+                putExtra(EXTRA_HEADERS, headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
             }
         }
     }

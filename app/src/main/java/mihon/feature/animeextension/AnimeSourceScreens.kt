@@ -232,6 +232,13 @@ class AnimeDetailScreen(
                                                     title = animeTitle,
                                                     episodeLabel = currentEpisode.name,
                                                     sourceLabel = source?.name,
+                                                    headers = video.headers
+                                                        ?.toMultimap()
+                                                        ?.mapNotNull { (name, values) ->
+                                                            values.firstOrNull()?.let { name to it }
+                                                        }
+                                                        ?.toMap()
+                                                        .orEmpty(),
                                                 ),
                                             )
                                             resolvingFor = null

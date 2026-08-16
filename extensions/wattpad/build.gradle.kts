@@ -87,4 +87,15 @@ dependencies {
     compileOnly(libs.kotlinx.serialization.json)
     compileOnly(libs.injekt)
     compileOnly(libs.androidx.preference)
+
+    // The apk ships without a stdlib; the unit tests still need one to compile.
+    testImplementation(kotlin("stdlib"))
+    testImplementation(projects.sourceApi)
+    testImplementation(libs.jsoup)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+android.testOptions.unitTests.all {
+    it.useJUnitPlatform()
 }
