@@ -21,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -227,13 +229,25 @@ internal fun NovelColumnReader(
             page.columns.forEachIndexed { index, slice ->
                 Box(modifier = Modifier.width(columnWidth).fillMaxHeight()) {
                     if (index > 0) {
+                        // The fold, not a rule. A hairline reads as a divider between two panes;
+                        // paper darkens gradually toward the spine and lightens again, which is
+                        // what makes two columns look like one open book rather than two pages
+                        // pushed together.
                         Box(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .fillMaxHeight()
-                                .width(1.dp)
-                                .offset(x = -COLUMN_GAP / 2)
-                                .background(ink.copy(alpha = 0.12f)),
+                                .width(COLUMN_GAP)
+                                .offset(x = -COLUMN_GAP)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        0f to Color.Transparent,
+                                        0.42f to ink.copy(alpha = 0.05f),
+                                        0.5f to ink.copy(alpha = 0.13f),
+                                        0.58f to ink.copy(alpha = 0.05f),
+                                        1f to Color.Transparent,
+                                    ),
+                                ),
                         )
                     }
                     NovelTextColumn(
@@ -245,7 +259,11 @@ internal fun NovelColumnReader(
                         accent = accent,
                         onSeek = onSeek,
                         onTapOutsideSeek = onTapOutsideSeek,
-                        modifier = Modifier.fillMaxSize(),
+                        // Clipped, because a slice that is one pixel too tall for its column
+                        // should lose that pixel cleanly instead of bleeding into the next page.
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clipToBounds(),
                     )
                 }
             }
@@ -418,6 +436,7 @@ private fun sliceRun(
     var dropCapSplit = 0
     var bodyStart = 0
     var narrowExtraLines = 0
+    var capHeightPx = 0f
     if (dropCapWidthPx > 0 && flow.text.isNotEmpty()) {
         val lineHeightPx = (full.getLineBottom(0) - full.getLineTop(0)).coerceAtLeast(1f)
         dropCapLines = ceil(dropCapHeightPx / lineHeightPx).toInt().coerceIn(1, 4)
@@ -431,6 +450,7 @@ private fun sliceRun(
         bodyStart = dropCapSplit
         dropCapLines = lastNarrowLine + 1
         narrowExtraLines = dropCapLines
+        capHeightPx = narrow.getLineBottom(lastNarrowLine)
     }
 
     // Everything after the cap flows at full width; measure that once and slice on lines.
@@ -443,20 +463,23 @@ private fun sliceRun(
     } else {
         full
     }
-    val lineHeightPx = (body.getLineBottom(0) - body.getLineTop(0)).coerceAtLeast(1f)
-    val linesPerColumn = (columnHeightPx / lineHeightPx).toInt().coerceAtLeast(1)
-
+    // Fit each column against the laid-out line positions rather than a nominal line height.
+    // Paragraph gaps are taller than a line, so `height / lineHeight` overcounts: the column was
+    // handed more lines than fit and the last one was sliced through the middle of the letters.
     val slices = mutableListOf<NovelColumnSlice>()
     var line = 0
     var first = true
     while (line < body.lineCount) {
-        // The opening column loses the lines the drop cap already consumed.
-        val capacity = if (first && narrowExtraLines > 0) {
-            (linesPerColumn - narrowExtraLines).coerceAtLeast(1)
+        val budget = if (first && narrowExtraLines > 0) {
+            (columnHeightPx - capHeightPx).coerceAtLeast(1f)
         } else {
-            linesPerColumn
+            columnHeightPx.toFloat()
         }
-        val lastLine = (line + capacity - 1).coerceAtMost(body.lineCount - 1)
+        val top = body.getLineTop(line)
+        var lastLine = line
+        while (lastLine + 1 < body.lineCount && body.getLineBottom(lastLine + 1) - top <= budget) {
+            lastLine++
+        }
         val sliceStart = bodyStart + body.getLineStart(line)
         val sliceEnd = bodyStart + body.getLineEnd(lastLine, visibleEnd = true)
         slices += NovelColumnSlice(
