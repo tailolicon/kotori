@@ -49,6 +49,10 @@ import mihon.feature.novelreader.tts.SpeechSentence
 import kotlin.math.ceil
 
 private val COLUMN_GAP = 52.dp
+
+/** Head and foot margins. The foot is deeper than the head, as a bound page has always been. */
+private val PAGE_MARGIN_TOP = 14.dp
+private val PAGE_MARGIN_BOTTOM = 30.dp
 private const val PARAGRAPH_BREAK = "\n\n"
 private const val DROP_CAP_SP = 52f
 
@@ -171,7 +175,14 @@ internal fun NovelColumnReader(
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    // A printed page is not typed edge to edge. Without a margin the last line of every column
+    // sits on the screen boundary, which is what made a correctly-fitted spread still read as
+    // something chopped off rather than something bound.
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(top = PAGE_MARGIN_TOP, bottom = PAGE_MARGIN_BOTTOM),
+    ) {
         val availableWidth = maxWidth
         val availableHeight = maxHeight
         val style = remember(fontFamily, fontSize, lineHeightMultiplier, ink) {

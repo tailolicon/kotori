@@ -274,13 +274,13 @@ private fun KotoriNovelPaneFrame(
                 visible = panesVisible,
                 ink = ink,
                 onToggle = onTogglePanes,
-                // On the right edge at mid-height: the reader chrome owns the full width at the
-                // top (title) and the bottom (seek bar and tool tiles), so a corner would sit
-                // under one of them whenever the chrome is up.
+                // In the foot margin, not over the text. At mid-height it floated across the
+                // right-hand column and the prose read straight through it — the one thing a page
+                // that is meant to look printed cannot have.
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
+                    .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.systemBars)
-                    .padding(end = 10.dp),
+                    .padding(end = 10.dp, bottom = 6.dp),
             )
         }
         if (panesVisible) end()
