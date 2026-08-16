@@ -122,10 +122,17 @@ data object BrowseTab : Tab {
             return
         }
         if (activeMode == MediaType.NOVEL) {
-            // Novels are all built-in sources — there is no installable-novel-extension ecosystem —
-            // so Browse shows only Sources, not the manga Extensions/Migrate tabs (which would list
-            // manga extensions since they share this screen).
-            val novelTabs = listOf(sourcesTab())
+            // Novel sources ship as extensions like everything else now, and they are *manga*-feature
+            // extensions — novels ride the manga stack and are told apart by `is NovelSource`. So the
+            // Extensions tab here is the same list the Manga mode shows; without it there is no way
+            // to install a novel source from the tab that needs it, and a reader whose extension is
+            // missing sees an empty Novel library with nowhere to fix it.
+            val novelExtensionsScreenModel = rememberScreenModel { ExtensionsScreenModel() }
+            val novelExtensionsState by novelExtensionsScreenModel.state.collectAsState()
+            val novelTabs = listOf(
+                sourcesTab(),
+                extensionsTab(novelExtensionsScreenModel),
+            )
             val novelState = rememberPagerState { novelTabs.size }
             if (isKotoriTablet()) {
                 KotoriTabletMangaBrowse(tabs = novelTabs, state = novelState)
@@ -134,7 +141,13 @@ data object BrowseTab : Tab {
                     titleRes = MR.strings.browse,
                     tabs = novelTabs,
                     state = novelState,
+                    searchQuery = novelExtensionsState.searchQuery,
+                    onChangeSearchQuery = novelExtensionsScreenModel::search,
                 )
+            }
+            LaunchedEffect(Unit) {
+                switchToExtensionTabChannel.receiveAsFlow()
+                    .collectLatest { novelState.scrollToPage(1) }
             }
             LaunchedEffect(Unit) {
                 (context as? MainActivity)?.ready = true

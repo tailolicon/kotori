@@ -67,6 +67,11 @@ class SourcePreferences(
 
     val kotoriStoreSeeded: Preference<Boolean> = preferenceStore.getBoolean("kotori_store_seeded", false)
 
+    // Separate from the manga flag: the anime store arrived later, and readers who already had
+    // the manga one seeded would otherwise never be offered it.
+    val kotoriAnimeStoreSeeded: Preference<Boolean> =
+        preferenceStore.getBoolean("kotori_anime_store_seeded", false)
+
     val extensionUpdatesCount: Preference<Int> = preferenceStore.getInt("ext_updates_count", 0)
 
     val trustedExtensions: Preference<Set<String>> = preferenceStore.getStringSet(
