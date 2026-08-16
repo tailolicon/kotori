@@ -1,9 +1,11 @@
 package eu.kanade.tachiyomi.network
 
+import okhttp3.Dns
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.dnsoverhttps.DnsOverHttps
 import java.net.InetAddress
+import java.util.concurrent.TimeUnit
 
 /**
  * Based on https://github.com/square/okhttp/blob/ef5d0c83f7bbd3a0c0534e7ca23cbc4ee7550f3b/okhttp-dnsoverhttps/src/test/java/okhttp3/dnsoverhttps/DohProviders.java
@@ -23,34 +25,83 @@ const val PREF_DOH_NJALLA = 11
 const val PREF_DOH_SHECAN = 12
 const val PREF_DOH_LIBREDNS = 13
 
-fun OkHttpClient.Builder.dohCloudflare() = dns(
-    DnsOverHttps.Builder().client(build())
-        .url("https://cloudflare-dns.com/dns-query".toHttpUrl())
-        .bootstrapDnsHosts(
-            InetAddress.getByName("162.159.36.1"),
-            InetAddress.getByName("162.159.46.1"),
-            InetAddress.getByName("1.1.1.1"),
-            InetAddress.getByName("1.0.0.1"),
-            InetAddress.getByName("162.159.132.53"),
-            InetAddress.getByName("2606:4700:4700::1111"),
-            InetAddress.getByName("2606:4700:4700::1001"),
-            InetAddress.getByName("2606:4700:4700::0064"),
-            InetAddress.getByName("2606:4700:4700::6400"),
-        )
-        .build(),
-)
+/** Built-in Cloudflare then Google. Same stored value as the old "disabled" default. */
+const val PREF_DOH_CLOUDFLARE_GOOGLE = -1
+const val PREF_DOH_SYSTEM = 0
 
-fun OkHttpClient.Builder.dohGoogle() = dns(
-    DnsOverHttps.Builder().client(build())
-        .url("https://dns.google/dns-query".toHttpUrl())
-        .bootstrapDnsHosts(
-            InetAddress.getByName("8.8.4.4"),
-            InetAddress.getByName("8.8.8.8"),
-            InetAddress.getByName("2001:4860:4860::8888"),
-            InetAddress.getByName("2001:4860:4860::8844"),
-        )
-        .build(),
-)
+fun cloudflareDns(client: OkHttpClient, includeIPv6: Boolean = true): Dns = DnsOverHttps.Builder()
+    .client(client)
+    .url("https://cloudflare-dns.com/dns-query".toHttpUrl())
+    .includeIPv6(includeIPv6)
+    .bootstrapDnsHosts(
+        buildList {
+            add(InetAddress.getByName("1.1.1.1"))
+            add(InetAddress.getByName("1.0.0.1"))
+            add(InetAddress.getByName("162.159.36.1"))
+            add(InetAddress.getByName("162.159.46.1"))
+            add(InetAddress.getByName("162.159.132.53"))
+            if (includeIPv6) {
+                add(InetAddress.getByName("2606:4700:4700::1111"))
+                add(InetAddress.getByName("2606:4700:4700::1001"))
+                add(InetAddress.getByName("2606:4700:4700::0064"))
+                add(InetAddress.getByName("2606:4700:4700::6400"))
+            }
+        },
+    )
+    .build()
+
+fun googleDns(client: OkHttpClient, includeIPv6: Boolean = true): Dns = DnsOverHttps.Builder()
+    .client(client)
+    .url("https://dns.google/dns-query".toHttpUrl())
+    .includeIPv6(includeIPv6)
+    .bootstrapDnsHosts(
+        buildList {
+            add(InetAddress.getByName("8.8.8.8"))
+            add(InetAddress.getByName("8.8.4.4"))
+            if (includeIPv6) {
+                add(InetAddress.getByName("2001:4860:4860::8888"))
+                add(InetAddress.getByName("2001:4860:4860::8844"))
+            }
+        },
+    )
+    .build()
+
+fun OkHttpClient.Builder.dohCloudflare() = dns(cloudflareDns(build()))
+
+fun OkHttpClient.Builder.dohGoogle() = dns(googleDns(build()))
+
+fun OkHttpClient.Builder.dohCloudflareGoogle(): OkHttpClient.Builder {
+    val bootstrap = OkHttpClient.Builder()
+        .socketFactory(ClientHelloSplittingSocketFactory())
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(4, TimeUnit.SECONDS)
+        .callTimeout(6, TimeUnit.SECONDS)
+        .build()
+    return dns(
+        SequentialDns(
+            cloudflareDns(bootstrap, includeIPv6 = false),
+            googleDns(bootstrap, includeIPv6 = false),
+        ),
+    )
+}
+
+fun OkHttpClient.Builder.applyDohProvider(provider: Int): OkHttpClient.Builder = when (provider) {
+    PREF_DOH_SYSTEM -> this
+    PREF_DOH_CLOUDFLARE -> dohCloudflare()
+    PREF_DOH_GOOGLE -> dohGoogle()
+    PREF_DOH_ADGUARD -> dohAdGuard()
+    PREF_DOH_QUAD9 -> dohQuad9()
+    PREF_DOH_ALIDNS -> dohAliDNS()
+    PREF_DOH_DNSPOD -> dohDNSPod()
+    PREF_DOH_360 -> doh360()
+    PREF_DOH_QUAD101 -> dohQuad101()
+    PREF_DOH_MULLVAD -> dohMullvad()
+    PREF_DOH_CONTROLD -> dohControlD()
+    PREF_DOH_NJALLA -> dohNajalla()
+    PREF_DOH_SHECAN -> dohShecan()
+    PREF_DOH_LIBREDNS -> dohLibreDNS()
+    else -> dohCloudflareGoogle()
+}
 
 // AdGuard "Default" DNS works too but for the sake of making sure no site is blacklisted,
 // we use "Unfiltered"

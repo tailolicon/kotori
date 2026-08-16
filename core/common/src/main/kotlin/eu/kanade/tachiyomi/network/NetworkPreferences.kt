@@ -10,7 +10,7 @@ class NetworkPreferences(
 
     val verboseLogging: Preference<Boolean> = preferenceStore.getBoolean("verbose_logging", verboseLoggingDefault)
 
-    val dohProvider: Preference<Int> = preferenceStore.getInt("doh_provider", -1)
+    val dohProvider: Preference<Int> = preferenceStore.getInt("doh_provider", PREF_DOH_CLOUDFLARE_GOOGLE)
 
     val defaultUserAgent: Preference<String> = preferenceStore.getString(
         "default_user_agent",

@@ -29,8 +29,10 @@ class NetworkHelper(
                     maxSize = 5L * 1024 * 1024, // 5 MiB
                 ),
             )
+            .socketFactory(ClientHelloSplittingSocketFactory())
             .addInterceptor(UncaughtExceptionInterceptor())
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
+            .addInterceptor(HttpsPortFallbackInterceptor())
 
         if (preferences.verboseLogging.get()) {
             val httpLoggingInterceptor = HttpLoggingInterceptor().apply {
@@ -39,22 +41,7 @@ class NetworkHelper(
             builder.addNetworkInterceptor(httpLoggingInterceptor)
         }
 
-        when (preferences.dohProvider.get()) {
-            PREF_DOH_CLOUDFLARE -> builder.dohCloudflare()
-            PREF_DOH_GOOGLE -> builder.dohGoogle()
-            PREF_DOH_ADGUARD -> builder.dohAdGuard()
-            PREF_DOH_QUAD9 -> builder.dohQuad9()
-            PREF_DOH_ALIDNS -> builder.dohAliDNS()
-            PREF_DOH_DNSPOD -> builder.dohDNSPod()
-            PREF_DOH_360 -> builder.doh360()
-            PREF_DOH_QUAD101 -> builder.dohQuad101()
-            PREF_DOH_MULLVAD -> builder.dohMullvad()
-            PREF_DOH_CONTROLD -> builder.dohControlD()
-            PREF_DOH_NJALLA -> builder.dohNajalla()
-            PREF_DOH_SHECAN -> builder.dohShecan()
-                PREF_DOH_LIBREDNS -> builder.dohLibreDNS()
-            else -> builder
-        }
+        builder.applyDohProvider(preferences.dohProvider.get())
     }
 
     val client = clientBuilder
