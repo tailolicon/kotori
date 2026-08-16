@@ -212,7 +212,7 @@ def discover(entry: dict) -> tuple[list[str], list[str], list[str]]:
         elif probe.host:
             log.append(f"  {host}: {probe.note}")
 
-    return rank(probes, announced), [h for h in unverified if h not in previous[:1]], log
+    return rank(probes, announced), unverified, log
 
 
 def counter_hosts(entry: dict) -> list[str]:
