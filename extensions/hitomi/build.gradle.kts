@@ -2,10 +2,9 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.serialization)
 }
 
-val extVersionCode = 2
+val extVersionCode = 8
 val extLib = "1.4"
 
 android {
@@ -75,9 +74,11 @@ dependencies {
     compileOnly(libs.rxJava)
     compileOnly(libs.jsoup)
     compileOnly(libs.kotlinx.serialization.json)
+    compileOnly(libs.kotlinx.coroutines.core)
     compileOnly(libs.injekt)
 
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.kotlinx.serialization.json)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
