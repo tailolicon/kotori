@@ -25,6 +25,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.internal.http2.ErrorCode
 import okhttp3.internal.http2.StreamResetException
+import rx.Observable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -60,35 +61,44 @@ class Hitomi(
         .set("referer", "$baseUrl/")
         .set("origin", baseUrl)
 
-    override suspend fun getPopularManga(page: Int): MangasPage {
-        val entries = getGalleryIDsFromNozomi("popular", "year", nozomiLang, page.nextPageRange())
-            .toMangaList()
+    // Overriding the suspend `getPopularManga`/`getSearchManga` instead is a LinkageError: the
+    // extension is loaded child-first and carries its own `kotlin.coroutines.Continuation`, so an
+    // override whose signature names Continuation never resolves against the host's HttpSource.
+    override fun fetchPopularManga(page: Int): Observable<MangasPage> = Observable.fromCallable {
+        runBlocking {
+            val entries = getGalleryIDsFromNozomi("popular", "year", nozomiLang, page.nextPageRange())
+                .toMangaList()
 
-        return MangasPage(entries, entries.size >= 24)
+            MangasPage(entries, entries.size >= 24)
+        }
     }
 
-    override suspend fun getLatestUpdates(page: Int): MangasPage {
-        val entries = getGalleryIDsFromNozomi(null, "index", nozomiLang, page.nextPageRange())
-            .toMangaList()
+    override fun fetchLatestUpdates(page: Int): Observable<MangasPage> = Observable.fromCallable {
+        runBlocking {
+            val entries = getGalleryIDsFromNozomi(null, "index", nozomiLang, page.nextPageRange())
+                .toMangaList()
 
-        return MangasPage(entries, entries.size >= 24)
+            MangasPage(entries, entries.size >= 24)
+        }
     }
 
     private lateinit var searchResponse: List<Int>
 
-    override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
-        if (page == 1) {
-            searchResponse = hitomiSearch(
-                query.trim(),
-                filters,
-                nozomiLang,
-            )
-        }
+    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> = Observable.fromCallable {
+        runBlocking {
+            if (page == 1) {
+                searchResponse = hitomiSearch(
+                    query.trim(),
+                    filters,
+                    nozomiLang,
+                )
+            }
 
-        val end = min(page * 25, searchResponse.size)
-        val entries = searchResponse.subList((page - 1) * 25, end)
-            .toMangaList()
-        return MangasPage(entries, end < searchResponse.size)
+            val end = min(page * 25, searchResponse.size)
+            val entries = searchResponse.subList((page - 1) * 25, end)
+                .toMangaList()
+            MangasPage(entries, end < searchResponse.size)
+        }
     }
 
     override fun getFilterList() = getFilters()

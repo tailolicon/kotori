@@ -4,6 +4,13 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Extensions load through a child-first classloader. A kotlin-stdlib inside the apk therefore
+// shadows the host's, and every Kotlin runtime type that crosses the boundary — Continuation on a
+// suspend override, Function2 on a lambda handed to runBlocking — becomes a *different* class:
+// LinkageError on load, ClassCastException on use. Upstream sets this repo-wide in
+// gradle.properties; the app module still needs its own stdlib, so scope it to this module.
+extra["kotlin.stdlib.default.dependency"] = "false"
+
 val extVersionCode = 8
 val extLib = "1.4"
 
@@ -68,6 +75,7 @@ kotlin {
 }
 
 dependencies {
+    compileOnly(kotlin("stdlib"))
     compileOnly(projects.sourceApi)
     compileOnly(projects.core.common)
     compileOnly(libs.okhttp.core)
