@@ -129,6 +129,7 @@ fun MangaInfoBox(
     isStubSource: Boolean,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
@@ -167,6 +168,7 @@ fun MangaInfoBox(
                     isStubSource = isStubSource,
                     onCoverClick = onCoverClick,
                     doSearch = doSearch,
+                    onCreatorSearch = onCreatorSearch,
                 )
             } else {
                 MangaAndSourceTitlesLarge(
@@ -176,6 +178,7 @@ fun MangaInfoBox(
                     isStubSource = isStubSource,
                     onCoverClick = onCoverClick,
                     doSearch = doSearch,
+                    onCreatorSearch = onCreatorSearch,
                 )
             }
         }
@@ -402,6 +405,7 @@ private fun MangaAndSourceTitlesLarge(
     isStubSource: Boolean,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -427,6 +431,7 @@ private fun MangaAndSourceTitlesLarge(
             sourceName = sourceName,
             isStubSource = isStubSource,
             doSearch = doSearch,
+            onCreatorSearch = onCreatorSearch,
             textAlign = TextAlign.Center,
         )
     }
@@ -440,6 +445,7 @@ private fun MangaAndSourceTitlesSmall(
     isStubSource: Boolean,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -470,6 +476,7 @@ private fun MangaAndSourceTitlesSmall(
                 sourceName = sourceName,
                 isStubSource = isStubSource,
                 doSearch = doSearch,
+                onCreatorSearch = onCreatorSearch,
             )
         }
     }
@@ -484,6 +491,7 @@ private fun ColumnScope.MangaContentInfo(
     sourceName: String,
     isStubSource: Boolean,
     doSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
     textAlign: TextAlign? = LocalTextStyle.current.textAlign,
 ) {
     val context = LocalContext.current
@@ -530,7 +538,9 @@ private fun ColumnScope.MangaContentInfo(
                             )
                         }
                     },
-                    onClick = { if (!author.isNullOrBlank()) doSearch(author, true) },
+                    // The author line is the circle on a doujinshi catalogue, the artist line
+                    // the person; each has its own listing on the site.
+                    onClick = { if (!author.isNullOrBlank()) onCreatorSearch(author, true) },
                 ),
             textAlign = textAlign,
         )
@@ -553,7 +563,7 @@ private fun ColumnScope.MangaContentInfo(
                 modifier = Modifier
                     .clickableNoIndication(
                         onLongClick = { context.copyToClipboard(artist, artist) },
-                        onClick = { doSearch(artist, true) },
+                        onClick = { onCreatorSearch(artist, false) },
                     ),
                 textAlign = textAlign,
             )

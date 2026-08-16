@@ -343,6 +343,42 @@ class BrowseSourceScreenModel(
         }
     }
 
+    /**
+     * Search for an author, artist or circle through the source's own creator filter.
+     *
+     * Falls back to a plain query when the source has none, which is all this used to do — and on a
+     * catalogue that indexes creators separately from text, a plain query for a name returns
+     * nothing whatsoever.
+     */
+    fun searchCreator(name: String, preferGroup: Boolean = false) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val defaultFilters = source.getFilterList()
+
+        val target = defaultFilters
+            .filterIsInstance<SourceModelFilter.Text>()
+            .map { it to GenreFilterMatcher.creatorFilterRank(it.name, preferGroup) }
+            .filter { it.second >= 0 }
+            .minByOrNull { it.second }
+            ?.first
+
+        target?.state = trimmed
+
+        mutableState.update {
+            val listing = if (target != null) {
+                Listing.Search(query = null, filters = defaultFilters)
+            } else {
+                Listing.Search(query = trimmed, filters = defaultFilters)
+            }
+            it.copy(
+                filters = defaultFilters,
+                listing = listing,
+                toolbarQuery = listing.query,
+                activeGenre = trimmed,
+            )
+        }
+    }
+
     fun searchGenre(genreName: String) {
         val defaultFilters = source.getFilterList()
         var genreExists = false

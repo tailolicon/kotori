@@ -53,6 +53,24 @@ class GenreFilterMatcherTest {
     }
 
     @Test
+    fun `a creator goes to the artist or the group field, whichever the row means`() {
+        val filters = listOf("Groups", "Artists", "Series", "Tags")
+
+        fun pick(preferGroup: Boolean) = filters
+            .map { it to GenreFilterMatcher.creatorFilterRank(it, preferGroup) }
+            .filter { it.second >= 0 }
+            .minByOrNull { it.second }
+            ?.first
+
+        assertEquals("Groups", pick(preferGroup = true))
+        assertEquals("Artists", pick(preferGroup = false))
+        // A source with only one of the two still takes the creator.
+        assertEquals(0, GenreFilterMatcher.creatorFilterRank("Tác giả", preferGroup = false))
+        assertEquals(-1, GenreFilterMatcher.creatorFilterRank("Tags", preferGroup = false))
+        assertEquals(-1, GenreFilterMatcher.creatorFilterRank("Sort by", preferGroup = true))
+    }
+
+    @Test
     fun `browse chips are not mistaken for a source's own tags`() {
         assertTrue(GenreFilterMatcher.isGenericChip("Hành động"))
         assertTrue(GenreFilterMatcher.isGenericChip("Action"))

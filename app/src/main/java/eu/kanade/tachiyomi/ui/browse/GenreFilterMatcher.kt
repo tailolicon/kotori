@@ -70,6 +70,30 @@ object GenreFilterMatcher {
     }
 
     /**
+     * Which text filter an author, artist or circle belongs in, best match first; -1 for none.
+     *
+     * Catalogues index people apart from prose. On Hitomi `artist/<name>-all.nozomi` is a real
+     * listing while the same name is absent from the text index altogether, so a creator searched
+     * as free text finds nothing at all — the failure looks like the site has nothing by them.
+     *
+     * [preferGroup] picks which of the two fields wins when a source offers both: the entry's
+     * author line is a circle on doujinshi catalogues, the artist line a person.
+     */
+    fun creatorFilterRank(filterName: String, preferGroup: Boolean): Int {
+        val n = filterName.lowercase()
+        val group = n.contains("group") || n.contains("circle") || n.contains("nhóm")
+        val artist = !group && (
+            n.contains("artist") || n.contains("author") ||
+                n.contains("tác giả") || n.contains("tac gia")
+            )
+        return when {
+            group -> if (preferGroup) 0 else 1
+            artist -> if (preferGroup) 1 else 0
+            else -> -1
+        }
+    }
+
+    /**
      * Whether this name is one of Browse's own genre chips rather than a tag a source handed us.
      *
      * The two need different treatment. A source's tag is real on that site, so it belongs in the

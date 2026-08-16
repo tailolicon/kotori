@@ -119,6 +119,7 @@ fun MangaScreen(
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
 
     // For cover dialog
     onCoverClicked: () -> Unit,
@@ -172,6 +173,7 @@ fun MangaScreen(
             onRefresh = onRefresh,
             onContinueReading = onContinueReading,
             onSearch = onSearch,
+            onCreatorSearch = onCreatorSearch,
             onCoverClicked = onCoverClicked,
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
@@ -208,6 +210,7 @@ fun MangaScreen(
             onRefresh = onRefresh,
             onContinueReading = onContinueReading,
             onSearch = onSearch,
+            onCreatorSearch = onCreatorSearch,
             onCoverClicked = onCoverClicked,
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
@@ -250,6 +253,7 @@ private fun MangaScreenSmallImpl(
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
 
     // For cover dialog
     onCoverClicked: () -> Unit,
@@ -403,6 +407,7 @@ private fun MangaScreenSmallImpl(
                             isStubSource = remember { state.source is StubSource },
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
+                            onCreatorSearch = onCreatorSearch,
                         )
                     }
 
@@ -506,6 +511,7 @@ fun MangaScreenLargeImpl(
     onRefresh: () -> Unit,
     onContinueReading: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
+    onCreatorSearch: (name: String, preferGroup: Boolean) -> Unit,
 
     // For cover dialog
     onCoverClicked: () -> Unit,

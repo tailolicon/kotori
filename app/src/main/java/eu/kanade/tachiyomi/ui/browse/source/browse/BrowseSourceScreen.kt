@@ -354,6 +354,7 @@ data class BrowseSourceScreen(
                 .collectLatest {
                     when (it) {
                         is SearchType.Genre -> screenModel.searchGenre(it.txt)
+                        is SearchType.Creator -> screenModel.searchCreator(it.txt, it.preferGroup)
                         is SearchType.Text -> screenModel.search(it.txt)
                     }
                 }
@@ -362,6 +363,8 @@ data class BrowseSourceScreen(
 
     suspend fun search(query: String) = queryEvent.send(SearchType.Text(query))
     suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
+    suspend fun searchCreator(name: String, preferGroup: Boolean) =
+        queryEvent.send(SearchType.Creator(name, preferGroup))
 
     companion object {
         // A genre tap can replace the detail screen before this screen starts collecting. Buffer
@@ -372,6 +375,9 @@ data class BrowseSourceScreen(
     sealed class SearchType(val txt: String) {
         class Text(txt: String) : SearchType(txt)
         class Genre(txt: String) : SearchType(txt)
+
+        /** An author, artist or circle — a name the source usually indexes apart from its text. */
+        class Creator(txt: String, val preferGroup: Boolean) : SearchType(txt)
     }
 }
 

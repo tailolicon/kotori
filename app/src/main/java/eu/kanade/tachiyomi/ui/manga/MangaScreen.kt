@@ -41,7 +41,9 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
+import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.ui.browse.GenreFilterMatcher
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -147,6 +149,9 @@ class MangaScreen(
                 }
             },
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, screenModel.source!!) } },
+            onCreatorSearch = { name, preferGroup ->
+                scope.launch { performCreatorSearch(navigator, name, screenModel.source!!, preferGroup) }
+            },
             onFilterButtonClicked = screenModel::showSettingsDialog,
             onRefresh = screenModel::fetchAllFromSource,
             onContinueReading = { continueReading(context, screenModel.getNextUnreadChapter()) },
@@ -376,6 +381,42 @@ class MangaScreen(
         }
 
         performSearch(navigator, genreName, global = false)
+    }
+
+    /**
+     * Search this source for an author, artist or circle.
+     *
+     * Only when the source has a filter for them — a catalogue that indexes creators separately
+     * from prose answers a free-text search for a name with nothing at all. Without such a filter
+     * this stays the global text search it has always been.
+     */
+    private suspend fun performCreatorSearch(
+        navigator: Navigator,
+        name: String,
+        source: Source,
+        preferGroup: Boolean,
+    ) {
+        val hasCreatorFilter = source is HttpSource &&
+            runCatching {
+                source.getFilterList().filterIsInstance<Filter.Text>().any {
+                    GenreFilterMatcher.creatorFilterRank(it.name, preferGroup) >= 0
+                }
+            }.getOrDefault(false)
+
+        if (!hasCreatorFilter) {
+            performSearch(navigator, name, global = true)
+            return
+        }
+
+        val previousController = navigator.items.getOrNull(navigator.size - 2)
+        if (previousController is BrowseSourceScreen) {
+            navigator.pop()
+            previousController.searchCreator(name, preferGroup)
+        } else {
+            val browseSourceScreen = BrowseSourceScreen(source.id, null)
+            navigator.replace(browseSourceScreen)
+            browseSourceScreen.searchCreator(name, preferGroup)
+        }
     }
 
     /**
