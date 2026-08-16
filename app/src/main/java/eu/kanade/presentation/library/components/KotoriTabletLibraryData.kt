@@ -71,7 +71,9 @@ fun rememberKotoriResumeItems(
                 subtitle = "Ch. ${formatChapterNumber(history.chapterNumber)}",
                 coverData = history.coverData,
                 progress = 0f,
-                mode = MediaType.MANGA,
+                // The row takes its accent and icon from this, and the list is already filtered to
+                // one mode. Hardcoding MANGA put pink book icons under a teal Novel header.
+                mode = mode,
                 onClick = { onOpenManga(history.mangaId) },
             ) to (history.readAt?.time ?: 0L)
         }
