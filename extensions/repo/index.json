@@ -15,8 +15,8 @@
                     "iconUrl": "https://raw.githubusercontent.com/tailolicon/kotori/main/extensions/repo/icon/app.kotori.extension.all.hitomi.png"
                 },
                 "extensionLib": "1.4",
-                "versionCode": 1,
-                "versionName": "1.4.1",
+                "versionCode": 8,
+                "versionName": "1.4.8",
                 "contentWarning": 3,
                 "sources": [
                     {

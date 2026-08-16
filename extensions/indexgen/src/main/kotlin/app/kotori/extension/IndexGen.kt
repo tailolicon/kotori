@@ -9,7 +9,6 @@ import kotlinx.serialization.protobuf.ProtoNumber
 import java.io.File
 import java.security.MessageDigest
 import java.util.Properties
-import java.util.jar.JarFile
 
 /**
  * Builds the Kotori extension stores from the signed APKs.
@@ -139,11 +138,11 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
         val iconSrc = File(root, "extensions/${module.dir}/src/main/res/mipmap-xxxhdpi/ic_launcher.png")
         if (iconSrc.isFile) iconSrc.copyTo(File(iconDir, "${module.pkg}.png"), overwrite = true)
 
-        val versionName = readVersionName(File(apkDir, "${module.pkg}.apk")) ?: "1.4.1"
-        module to versionName
+        module to readVersion(apk)
     }
 
-    val extensions = built.map { (module, versionName) ->
+    val extensions = built.map { (module, version) ->
+        val (versionCode, versionName) = version
         NetworkExtensionStore.Extension(
             name = module.label,
             packageName = module.pkg,
@@ -154,7 +153,7 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
             // The Aniyomi-side loader takes the lib version from the versionName prefix and
             // only accepts 12–16, so anime extensions cannot use Mihon's "1.4".
             extensionLib = if (kind == Kind.ANIME) "16" else "1.4",
-            versionCode = versionName.substringAfterLast('.').toLongOrNull() ?: 1L,
+            versionCode = versionCode,
             versionName = versionName,
             contentWarning = if (module.nsfw) 3 else 0,
             sources = module.sources.map {
@@ -197,7 +196,7 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
         """.trimIndent() + "\n",
     )
 
-    val legacy = built.mapIndexed { index, (module, versionName) ->
+    val legacy = built.mapIndexed { index, (module, version) ->
         val extension = extensions[index]
         LegacyExtension(
             name = "Tachiyomi: ${module.label}",
@@ -205,7 +204,7 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
             apk = "${module.pkg}.apk",
             lang = module.sources.map { it.lang }.distinct().singleOrNull() ?: "all",
             code = extension.versionCode,
-            version = versionName,
+            version = version.second,
             nsfw = if (module.nsfw) 1 else 0,
             sources = extension.sources.map {
                 LegacyExtension.Source(it.id, it.language, it.name, it.homeUrl)
@@ -227,9 +226,28 @@ private fun generateId(name: String, lang: String, versionId: Int): Long {
     return (0..7).map { bytes[it].toLong() and 0xff shl 8 * (7 - it) }.reduce(Long::or) and Long.MAX_VALUE
 }
 
-private fun readVersionName(apk: File): String? = runCatching {
-    JarFile(apk).use { jar -> jar.manifest?.mainAttributes?.getValue("Implementation-Version") }
-}.getOrNull()
+/**
+ * The version AGP actually stamped into the apk, from the metadata it writes beside it.
+ *
+ * Not from the jar manifest: AGP writes no `Implementation-Version`, so reading it there always
+ * fell through to a default and every extension in the store claimed to be 1.4.1 — which also made
+ * the anime index advertise lib 1.4, a version the anime loader refuses.
+ */
+private fun readVersion(apk: File): Pair<Long, String> {
+    val metadata = File(apk.parentFile, "output-metadata.json")
+    require(metadata.isFile) { "No output-metadata.json beside ${apk.name}" }
+    val element = Json { ignoreUnknownKeys = true }
+        .decodeFromString(OutputMetadata.serializer(), metadata.readText())
+        .elements
+        .first()
+    return element.versionCode to element.versionName
+}
+
+@Serializable
+private data class OutputMetadata(val elements: List<Element>) {
+    @Serializable
+    data class Element(val versionCode: Long, val versionName: String)
+}
 
 private fun readSigningFingerprint(root: File): String {
     val props = Properties()
