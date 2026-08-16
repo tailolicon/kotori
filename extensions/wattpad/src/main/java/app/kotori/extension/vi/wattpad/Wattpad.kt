@@ -143,7 +143,11 @@ class Wattpad : MirroredNovelSource(), WebViewLoginSource {
                 SChapter.create().apply {
                     val partId = part["id"]?.jsonPrimitive?.contentOrNull.orEmpty()
                     this.url = "/part/$partId"
-                    name = part["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                    val title = part["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                    // Authors title their parts freely — "Zero", "Prolog.", an emoji — and Wattpad
+                    // itself relies on list position to say where you are. Reproduce that position
+                    // rather than leaving the reader to infer it from a list shown newest-first.
+                    name = "%02d. %s".format(index + 1, title).trimEnd('.', ' ')
                     chapter_number = (index + 1).toFloat()
                     // When the part was last edited is what a reader means by "updated"; the
                     // creation date stands in for parts that have never been touched since.
