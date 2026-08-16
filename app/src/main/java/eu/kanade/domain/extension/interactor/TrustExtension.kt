@@ -12,7 +12,7 @@ class TrustExtension(
 ) {
 
     suspend fun isTrusted(pkgInfo: PackageInfo, fingerprints: List<String>): Boolean {
-        val trustedFingerprints = repository.getAll().map { it.signingKey }.toHashSet()
+        val trustedFingerprints = repository.getAll().mapTo(hashSetOf(KOTORI_KEY)) { it.signingKey }
         val key = "${pkgInfo.packageName}:${PackageInfoCompat.getLongVersionCode(pkgInfo)}:${fingerprints.last()}"
         return trustedFingerprints.any { fingerprints.contains(it) } || key in preferences.trustedExtensions.get()
     }
@@ -28,5 +28,17 @@ class TrustExtension(
 
     fun revokeAll() {
         preferences.trustedExtensions.delete()
+    }
+
+    companion object {
+        /**
+         * The key Kotori signs its own extensions with, trusted without a store being configured.
+         *
+         * Otherwise trust hangs on the store list: an extension installed by hand — sideloaded,
+         * or pushed to a test device — is refused, and so is one whose store row was written from
+         * an older index. Kotori built these apks and signs them with a key only it holds, so the
+         * signature is the stronger statement of the two.
+         */
+        const val KOTORI_KEY = "4cc9ab1cd650537c42c39582fa22eb5012029d56f9f4483f9ea9d073b4f9c779"
     }
 }

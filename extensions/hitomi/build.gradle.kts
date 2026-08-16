@@ -20,7 +20,10 @@ android {
 
     defaultConfig {
         applicationId = "app.kotori.extension.all.hitomi"
-        minSdk = 21
+        // Must match the app: at 21 D8 desugars interface default methods and the dex
+        // then asks for `<Interface>$-CC`, which the host — compiled at 26 — never
+        // generated. The extension loads and dies the moment it touches one.
+        minSdk = 26
         targetSdk = 34
         versionCode = extVersionCode
         versionName = "$extLib.$extVersionCode"

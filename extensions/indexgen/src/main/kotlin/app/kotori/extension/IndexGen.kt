@@ -151,7 +151,9 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
                 apkUrl = "$baseUrl/apk/${module.pkg}.apk",
                 iconUrl = "$baseUrl/icon/${module.pkg}.png",
             ),
-            extensionLib = "1.4",
+            // The Aniyomi-side loader takes the lib version from the versionName prefix and
+            // only accepts 12–16, so anime extensions cannot use Mihon's "1.4".
+            extensionLib = if (kind == Kind.ANIME) "16" else "1.4",
             versionCode = versionName.substringAfterLast('.').toLongOrNull() ?: 1L,
             versionName = versionName,
             contentWarning = if (module.nsfw) 3 else 0,

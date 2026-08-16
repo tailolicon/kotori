@@ -11,7 +11,9 @@ plugins {
 extra["kotlin.stdlib.default.dependency"] = "false"
 
 val extVersionCode = 1
-val extLib = "1.4"
+// Anime extensions are read by the Aniyomi-side loader, which accepts lib 12–16 and takes
+// it from the versionName prefix. Mihon's "1.4" is rejected outright.
+val extLib = "16"
 
 android {
     namespace = "app.kotori.extension.vi.animehay"
@@ -19,7 +21,10 @@ android {
 
     defaultConfig {
         applicationId = "app.kotori.extension.vi.animehay"
-        minSdk = 21
+        // Must match the app: at 21 D8 desugars interface default methods and the dex
+        // then asks for `<Interface>$-CC`, which the host — compiled at 26 — never
+        // generated. The extension loads and dies the moment it touches one.
+        minSdk = 26
         targetSdk = 34
         versionCode = extVersionCode
         versionName = "$extLib.$extVersionCode"
