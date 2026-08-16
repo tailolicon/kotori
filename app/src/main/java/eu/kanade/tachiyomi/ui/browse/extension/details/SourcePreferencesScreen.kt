@@ -24,6 +24,7 @@ import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.DialogPreference
 import androidx.preference.EditTextPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import androidx.preference.forEach
@@ -36,7 +37,10 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.preference.SharedPreferencesDataStore
 import eu.kanade.tachiyomi.source.ConfigurableSource
+import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.WebViewLoginSource
 import eu.kanade.tachiyomi.source.sourcePreferences
+import eu.kanade.tachiyomi.ui.webview.WebViewActivity
 import eu.kanade.tachiyomi.widget.TachiyomiTextInputEditText.Companion.setIncognito
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.presentation.core.components.material.Scaffold
@@ -130,6 +134,29 @@ class SourcePreferencesFragment : PreferenceFragmentCompat() {
         preferenceScreen = populateScreen()
     }
 
+    /**
+     * Adds the sign-in button for a source that declares a login page.
+     *
+     * Done here rather than by the source: an extension apk cannot reach [WebViewActivity], and
+     * the WebView is the whole point — the reader signs in on the site's own page and the cookies
+     * land in the shared jar this source's client already reads.
+     */
+    private fun addWebViewLogin(source: Source, screen: PreferenceScreen) {
+        val login = (source as? WebViewLoginSource)?.loginUrl ?: return
+        val context = screen.context
+        screen.addPreference(
+            Preference(context).apply {
+                title = "Đăng nhập bằng WebView"
+                summary = "Mở trang đăng nhập của ${source.name} để xem nội dung cần tài khoản. " +
+                    "Bạn tự nhập tài khoản của mình; app không lưu mật khẩu."
+                setOnPreferenceClickListener {
+                    context.startActivity(WebViewActivity.newIntent(context, login, source.id, source.name))
+                    true
+                }
+            },
+        )
+    }
+
     private fun populateScreen(): PreferenceScreen {
         val sourceId = requireArguments().getLong(SOURCE_ID)
         val source = Injekt.get<SourceManager>().getOrStub(sourceId)
@@ -140,6 +167,7 @@ class SourcePreferencesFragment : PreferenceFragmentCompat() {
             preferenceManager.preferenceDataStore = dataStore
 
             source.setupPreferenceScreen(sourceScreen)
+            addWebViewLogin(source, sourceScreen)
             sourceScreen.forEach { pref ->
                 pref.isIconSpaceReserved = false
                 pref.isSingleLineTitle = false

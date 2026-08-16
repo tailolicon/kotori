@@ -3,9 +3,6 @@ package eu.kanade.tachiyomi.source
 import android.content.Context
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.extension.ExtensionManager
-import eu.kanade.tachiyomi.source.novel.builtin.DocLnSource
-import eu.kanade.tachiyomi.source.novel.builtin.NovelFeverSource
-import eu.kanade.tachiyomi.source.novel.builtin.WattpadSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,15 +51,6 @@ class AndroidSourceManager(
         stubs.filterNot { installed.containsKey(it.id) }
     }
 
-    /**
-     * Novel sources compiled into the app. Novels ride the manga stack — same database, downloads
-     * and history — so they register here rather than in a parallel manager of their own; the
-     * Novel tab filters them back out by [eu.kanade.tachiyomi.source.NovelSource].
-     */
-    private val builtInNovelSources: List<Source> by lazy {
-        listOf(DocLnSource(), NovelFeverSource(), WattpadSource())
-    }
-
     init {
         scope.launch {
             extensionManager.installedExtensionsFlow
@@ -76,7 +64,6 @@ class AndroidSourceManager(
                             ),
                         ),
                     )
-                    builtInNovelSources.forEach { mutableMap[it.id] = it }
                     extensions.forEach { extension ->
                         extension.sources.forEach {
                             mutableMap[it.id] = it

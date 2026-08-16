@@ -85,6 +85,8 @@ dependencies {
     compileOnly(libs.kotlinx.coroutines.core)
     compileOnly(libs.injekt)
 
+    // The apk ships without a stdlib; the unit tests still need one to compile.
+    testImplementation(kotlin("stdlib"))
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlinx.serialization.json)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -6,8 +6,6 @@ import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
-import eu.kanade.tachiyomi.source.anime.builtin.AnimeHay08Source
-import eu.kanade.tachiyomi.source.anime.builtin.AnimeVietsubSource
 import eu.kanade.tachiyomi.source.anime.builtin.youtube.AniOneVietnamSource
 import eu.kanade.tachiyomi.source.anime.builtin.youtube.MuseVietnamSource
 import kotlinx.coroutines.CoroutineScope
@@ -50,12 +48,13 @@ class AndroidAnimeSourceManager(
 
     /**
      * Anime sources compiled directly into Kotori (not installed as extension APKs).
-     * Instantiated lazily so Injekt is fully wired before their dependencies resolve.
+     *
+     * Only the YouTube channels are left. Everything else ships as an extension apk so a site
+     * change is a store update rather than a new build of the app. Instantiated lazily so Injekt
+     * is fully wired before their dependencies resolve.
      */
     private val builtInSources: List<AnimeSource> by lazy {
         listOf(
-            AnimeHay08Source(),
-            AnimeVietsubSource(),
             MuseVietnamSource(),
             AniOneVietnamSource(),
         )
