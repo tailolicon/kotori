@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "updated": "2026-08-16T12:48:54Z",
+  "sources": [
+    {
+      "key": "animehay",
+      "match": [
+        "animehay"
+      ],
+      "marker": "the-loai/anime-1",
+      "template": "animehay%02d.site",
+      "ahead": 6,
+      "behind": 6,
+      "announce": [],
+      "domains": [
+        "animehay11.site",
+        "animehay12.site",
+        "animehay15.site",
+        "animehay14.site",
+        "animehay13.site",
+        "animehay10.site",
+        "animehay09.site",
+        "animehay08.site"
+      ]
+    },
+    {
+      "key": "animevietsub",
+      "match": [
+        "animevietsub"
+      ],
+      "marker": "danh-sach/list-dang-chieu",
+      "announce": [
+        "https://bit.ly/animevietsubtv"
+      ],
+      "domains": [
+        "animevietsub.vc",
+        "animevietsub.info",
+        "animevietsub.moe",
+        "animevietsub.mom",
+        "animevietsub.ing",
+        "animevietsub.meme"
+      ]
+    }
+  ]
+}

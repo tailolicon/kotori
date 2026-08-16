@@ -3,8 +3,8 @@ package eu.kanade.tachiyomi.source.online
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
-import eu.kanade.tachiyomi.source.WebViewLoginSource
 import eu.kanade.tachiyomi.source.MirrorResolver
+import eu.kanade.tachiyomi.source.WebViewLoginSource
 
 /**
  * A [NovelHttpSource] for a site that answers on more than one hostname.
@@ -16,8 +16,6 @@ import eu.kanade.tachiyomi.source.MirrorResolver
 abstract class MirroredNovelSource : NovelHttpSource(), ConfigurableSource {
 
     override val lang: String = "vi"
-
-
 
     /**
      * Hostnames the site answers on, most-preferred first; empty when it has only one.

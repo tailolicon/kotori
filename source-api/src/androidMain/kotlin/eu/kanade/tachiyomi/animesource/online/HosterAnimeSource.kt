@@ -20,7 +20,6 @@ abstract class HosterAnimeSource : AnimeHttpSource() {
     // These sources target Vietnamese content by default; override if needed.
     override val lang: String = "vi"
 
-
     /**
      * Resolve the playable video(s) for an [episode] (often multi-step: page -> embed -> stream).
      * The first video with a non-empty url is auto-selected by the player.

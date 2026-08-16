@@ -1,0 +1,48 @@
+# Keeps extensions/repo-anime/domains.json pointed at hosts that answer right now.
+#
+# The app reads that file at runtime, so this is what lets AnimeHay and AnimeVietsub follow a
+# domain change without an app or extension release. Nothing here builds or signs anything —
+# the only output is a one-line change to a JSON file.
+name: Update source domains
+
+on:
+  schedule:
+    # Every six hours, matching the app's own probe interval; offset off the hour because
+    # GitHub queues the busiest cron slots and drops them under load.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    # The upstream repo has no such sources; only this fork should run it.
+    if: github.repository == 'tailolicon/kotori'
+    name: Probe domains
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # No setup-python step: the script is stdlib-only and the runner image ships 3.12.
+      - name: Probe
+        run: python3 .github/scripts/update_domains.py
+
+      - name: Commit
+        run: |
+          set -e
+          if git diff --quiet -- extensions/repo-anime/domains.json; then
+            echo "No domain change."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add extensions/repo-anime/domains.json
+          git commit -m "chore(sources): refresh AnimeHay/AnimeVietsub domains"
+          git push
