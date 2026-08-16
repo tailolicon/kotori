@@ -108,13 +108,30 @@ def host_of(url: str) -> str:
     return re.sub(r"^https?://", "", url).split("/")[0].lower()
 
 
-def resolve(url: str, marker: str) -> str | None:
-    """The host `url` lands on, if the page it served is really the site."""
+class Probe:
+    """What one host had to say.
+
+    Answering and *being the site* are tracked apart because a runner is not a phone: these
+    sites see a datacentre IP and can serve a challenge instead of a page, which reads as
+    "the marker is missing" and is indistinguishable from a squatter unless the two are
+    recorded separately. Collapsing them into a bool made a reachable site look dead.
+    """
+
+    def __init__(self, host: str | None, verified: bool, note: str):
+        self.host = host
+        self.verified = verified
+        self.note = note
+
+
+def resolve(url: str, marker: str) -> Probe:
     result = get(url)
     if result is None:
-        return None
+        return Probe(None, False, "no answer")
     landed, body = result
-    return host_of(landed) if marker.lower() in body.lower() else None
+    host = host_of(landed)
+    if marker.lower() in body.lower():
+        return Probe(host, True, "live")
+    return Probe(host, False, f"answered at {host}, but the page is not the site (no marker)")
 
 
 # ============================== Discovery ==============================
@@ -135,23 +152,23 @@ def counter_candidates(known: list[str], template: str, ahead: int, span: int) -
     return [template % n for n in wanted]
 
 
-def probe_all(hosts: list[str], marker: str) -> dict[str, str]:
-    """Maps each host that answered to where it landed, following redirects."""
+def probe_all(hosts: list[str], marker: str) -> dict[str, Probe]:
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        landings = pool.map(lambda h: resolve(f"https://{h}/", marker), hosts)
-    return {host: landed for host, landed in zip(hosts, landings) if landed}
+        return dict(zip(hosts, pool.map(lambda h: resolve(f"https://{h}/", marker), hosts)))
 
 
-def rank(landings: dict[str, str], announced: list[str]) -> list[str]:
-    """Live hosts, best first.
+def rank(probes: dict[str, Probe], announced: list[str]) -> list[str]:
+    """Verified hosts, best first.
 
     A host several others redirect at is where the site currently *is*, rather than merely
     another name it answers to, so it wins — and an announced host wins outright, because the
     site said so itself.
     """
     votes: dict[str, int] = {}
-    for source, landed in landings.items():
-        votes[landed] = votes.get(landed, 0) + 1
+    for source, probe in probes.items():
+        if not probe.verified:
+            continue
+        votes[probe.host] = votes.get(probe.host, 0) + 1
         # A host that redirects elsewhere is worth keeping as a name the site still answers to,
         # but it is not where the site is, so it earns no vote of its own.
         votes.setdefault(source, 0)
@@ -164,28 +181,38 @@ def rank(landings: dict[str, str], announced: list[str]) -> list[str]:
     return sorted(votes, key=key)
 
 
-def discover(entry: dict) -> tuple[list[str], list[str]]:
-    """The live hosts for one source, best first, plus a human-readable log of the probe."""
+def discover(entry: dict) -> tuple[list[str], list[str], list[str]]:
+    """What one source's hosts look like from here.
+
+    Returns the verified hosts best-first, the hosts an announcement points at that could not
+    be verified, and a log. The middle one exists because a CI runner is the one place these
+    sites are most likely to refuse: AnimeVietsub serves a datacentre IP a challenge rather
+    than a page, so from here it looks dead however healthy it is. Its own short link still
+    redirects correctly, and that redirect is the only signal left worth reading.
+    """
     marker = entry["marker"]
     previous = list(entry.get("domains", []))
     log: list[str] = []
 
     announced: list[str] = []
+    unverified: list[str] = []
     for url in entry.get("announce", []):
-        landed = resolve(url, marker)
-        log.append(f"  announce {url} -> {landed or 'no answer / marker missing'}")
-        if landed and landed not in announced:
-            announced.append(landed)
+        probe = resolve(url, marker)
+        log.append(f"  announce {url}: {probe.note}")
+        target = announced if probe.verified else unverified
+        if probe.host and probe.host not in target:
+            target.append(probe.host)
 
-    candidates = list(dict.fromkeys(announced + previous + counter_hosts(entry)))
-    landings = probe_all(candidates, marker)
+    candidates = list(dict.fromkeys(announced + unverified + previous + counter_hosts(entry)))
+    probes = probe_all(candidates, marker)
     for host in candidates:
-        landed = landings.get(host)
-        if landed:
-            log.append(f"  {host} -> {landed}" if landed != host else f"  {host} live")
+        probe = probes[host]
+        if probe.verified:
+            log.append(f"  {host} live" if probe.host == host else f"  {host} -> {probe.host}")
+        elif probe.host:
+            log.append(f"  {host}: {probe.note}")
 
-    ordered = rank(landings, announced)
-    return ordered, log
+    return rank(probes, announced), [h for h in unverified if h not in previous[:1]], log
 
 
 def counter_hosts(entry: dict) -> list[str]:
@@ -234,11 +261,18 @@ def main() -> int:
     for entry in feed["sources"]:
         if args.only and entry["key"] != args.only:
             continue
-        live, log = discover(entry)
+        live, unverified, log = discover(entry)
         report.append(f"### {entry['key']}")
         report.extend(log or ["  nothing answered"])
 
-        if not live:
+        if not live and unverified:
+            # The site is unreachable from a runner but still announcing where it is. Trust the
+            # announcement: it comes from the site, and the app re-checks the marker anyway from
+            # a connection that can actually reach it. Not doing this is how a source that CI
+            # can never verify ends up never tracked at all.
+            report.append(f"  unreachable from CI; trusting the announcement: {unverified[0]}")
+            live = unverified
+        elif not live:
             # Never blank a list on a bad probe: a runner-side network blip would otherwise
             # leave the app with no candidates at all until the next run six hours later.
             all_dead.append(entry["key"])
