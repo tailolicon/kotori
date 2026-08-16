@@ -120,7 +120,7 @@ class PageTranslator(
         horizontalSeams: IntArray,
         diagnosticLabel: String,
     ): Bitmap = withIOContext {
-        val translationContext = TranslationContext(
+        var translationContext = TranslationContext(
             sourceLanguage = preferences.sourceLanguage.get(),
             targetLanguage = preferences.targetLanguage.get(),
             styleHint = preferences.styleHint.get(),
@@ -138,9 +138,24 @@ class PageTranslator(
             // The bubble model only knows speech bubbles. Status windows, captions and narration
             // boxes are lettering too, and readers care about them just as much — a chapter whose
             // skill panels stay in English is not a translated chapter.
-            val extras = runCatching { textBlocks.detect(source, detected, translationContext.sourceLanguage) }
+            val textBlockResult = runCatching {
+                textBlocks.detect(source, detected, translationContext.sourceLanguage)
+            }
                 .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
-                .getOrDefault(emptyList())
+                .getOrNull()
+            val extras = textBlockResult?.boxes.orEmpty()
+
+            // The text-block pass reads the whole page, so when it had to fall back to another
+            // script it has already established what this page is written in. Adopt that for the
+            // bubble OCR and for the provider: reading Japanese artwork with the Latin recogniser
+            // returns plausible-looking garbage ("LEM,TMIE UVGELSW"), which then gets translated
+            // and stamped as if it were dialogue.
+            textBlockResult?.language
+                ?.takeIf { it != translationContext.sourceLanguage }
+                ?.let { pageLanguage ->
+                    logcat { "Reading this page as '$pageLanguage' rather than the configured source" }
+                    translationContext = translationContext.copy(sourceLanguage = pageLanguage)
+                }
 
             val refinedDetected = detected.filterNot { speech ->
                 extras.any { text ->
@@ -727,6 +742,7 @@ class PageTranslator(
         const val CAPTION_ROW_OVERLAP = 0.45f
         const val CAPTION_MAX_GAP_HEIGHTS = 2
         const val CAPTION_CONTAINMENT = 0.65f
+
 
         /** Floor for the row-banding height, so a page of tiny boxes still bands sensibly. */
         const val MIN_READING_BAND = 24

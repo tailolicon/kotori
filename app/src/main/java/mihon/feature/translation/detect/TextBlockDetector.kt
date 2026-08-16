@@ -38,36 +38,57 @@ class TextBlockDetector {
      * @param existing boxes already found by the bubble detector, in source-image pixels
      * @return additional boxes for lettering outside [existing], in the same coordinate space
      */
-    fun detect(bitmap: Bitmap, existing: List<BubbleBox>, sourceLanguage: String): List<BubbleBox> {
-        // ML Kit's input cap is well below a webtoon strip's height, so the page is read in bands.
-        // Bands overlap so a panel split across a boundary is still found whole in one of them.
-        val recognizer = recognizerFor(sourceLanguage)
-        val found = ArrayList<TextCandidate>()
-        try {
-            var top = 0
-            while (top < bitmap.height) {
-                val height = minOf(BAND_HEIGHT, bitmap.height - top)
-                if (height < MIN_BAND_HEIGHT) break
-                val band = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, height)
-                try {
-                    found += readBlocks(
-                        recognizer = recognizer,
-                        band = band,
-                        offsetY = top,
-                        padEdges = bitmap.height > BAND_HEIGHT,
-                    )
-                } finally {
-                    // createBitmap hands back the *source* when the requested region is the whole
-                    // image. Recycling that destroys the page mid-translation, and every later stage
-                    // fails with "cannot use a recycled source" — which is what happened to short
-                    // pages, whose single band covers everything.
-                    if (band !== bitmap) band.recycle()
+    /**
+     * @param boxes lettering regions found outside the bubble detector's boxes
+     * @param language the script the page turned out to be written in — the configured one unless
+     *   it read nothing and another script did
+     */
+    data class Result(val boxes: List<BubbleBox>, val language: String)
+
+    fun detect(bitmap: Bitmap, existing: List<BubbleBox>, sourceLanguage: String): Result {
+        var found = readWholePage(bitmap, sourceLanguage)
+        var language = sourceLanguage
+
+        // A page the configured recogniser reads nothing from is usually written in another script,
+        // not blank. English aggregators mix Japanese raw chapters into the same series, and every
+        // stage downstream is blind to them: the Latin recogniser returns no blocks, so no text
+        // regions exist, so the page is reported as having nothing to translate and is served
+        // untranslated.
+        //
+        // Only pages the bubble model found lettering on are worth re-reading. A full-page splash
+        // or an art-only panel reads as nothing in every script, and sweeping all four over each of
+        // them would quadruple the slowest stage of the pipeline on exactly the pages with nothing
+        // to gain — the reader would feel that as the whole chapter translating more slowly.
+        if (found.isEmpty() && existing.isNotEmpty()) {
+            // Probe on one band around the lettering, not the whole page. A webtoon strip is read
+            // in a dozen bands, and sweeping every candidate script across all of them took long
+            // enough that a chapter appeared to hang. The probe is a single band, so the cost of
+            // being wrong about the script is one band per candidate instead of one page.
+            val probe = probeBand(bitmap, existing)
+            var bestLanguage: String? = null
+            var bestBlocks = 0
+            for (candidate in SCRIPT_FALLBACK_ORDER) {
+                if (candidate == sourceLanguage) continue
+                val blocks = readBand(probe, candidate)
+                if (blocks > bestBlocks) {
+                    bestBlocks = blocks
+                    bestLanguage = candidate
                 }
-                if (top + height >= bitmap.height) break
-                top += BAND_HEIGHT - BAND_OVERLAP
+                if (blocks >= PROBE_CONFIDENT_BLOCKS) break
             }
-        } finally {
-            runCatching { recognizer.close() }
+            if (probe !== bitmap) probe.recycle()
+
+            if (bestLanguage != null) {
+                val attempt = readWholePage(bitmap, bestLanguage)
+                if (attempt.isNotEmpty()) {
+                    logcat {
+                        "Text-block pass found nothing as '$sourceLanguage'; '$bestLanguage' read " +
+                            "${attempt.size} block(s) — this page is '$bestLanguage'"
+                    }
+                    found = attempt
+                    language = bestLanguage
+                }
+            }
         }
 
         val merged = mergeNearby(found)
@@ -105,7 +126,68 @@ class TextBlockDetector {
                     "${extras.count { it.isFallbackTextBlock }} speech fallback(s)"
             }
         }
-        return extras
+        return Result(extras, language)
+    }
+
+    /**
+     * One band worth of page, centred on where the bubble model found lettering.
+     *
+     * Returns the page itself when it is already band-sized, in which case the caller must not
+     * recycle it — createBitmap hands back the source for a whole-image region.
+     */
+    private fun probeBand(bitmap: Bitmap, existing: List<BubbleBox>): Bitmap {
+        if (bitmap.height <= BAND_HEIGHT) return bitmap
+        val focus = existing.map { (it.top + it.bottom) / 2 }.sorted().let { it[it.size / 2] }
+        val top = (focus - BAND_HEIGHT / 2).coerceIn(0, bitmap.height - BAND_HEIGHT)
+        return Bitmap.createBitmap(bitmap, 0, top, bitmap.width, BAND_HEIGHT)
+    }
+
+    /** Blocks one script's recogniser can read off a single band. */
+    private fun readBand(band: Bitmap, sourceLanguage: String): Int {
+        val recognizer = recognizerFor(sourceLanguage)
+        return try {
+            readBlocks(recognizer = recognizer, band = band, offsetY = 0, padEdges = false).size
+        } finally {
+            runCatching { recognizer.close() }
+        }
+    }
+
+    /**
+     * Reads every text block on the page with one script's recogniser.
+     *
+     * ML Kit's input cap is well below a webtoon strip's height, so the page is read in bands.
+     * Bands overlap so a panel split across a boundary is still found whole in one of them.
+     */
+    private fun readWholePage(bitmap: Bitmap, sourceLanguage: String): List<TextCandidate> {
+        val recognizer = recognizerFor(sourceLanguage)
+        val found = ArrayList<TextCandidate>()
+        try {
+            var top = 0
+            while (top < bitmap.height) {
+                val height = minOf(BAND_HEIGHT, bitmap.height - top)
+                if (height < MIN_BAND_HEIGHT) break
+                val band = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, height)
+                try {
+                    found += readBlocks(
+                        recognizer = recognizer,
+                        band = band,
+                        offsetY = top,
+                        padEdges = bitmap.height > BAND_HEIGHT,
+                    )
+                } finally {
+                    // createBitmap hands back the *source* when the requested region is the whole
+                    // image. Recycling that destroys the page mid-translation, and every later stage
+                    // fails with "cannot use a recycled source" — which is what happened to short
+                    // pages, whose single band covers everything.
+                    if (band !== bitmap) band.recycle()
+                }
+                if (top + height >= bitmap.height) break
+                top += BAND_HEIGHT - BAND_OVERLAP
+            }
+        } finally {
+            runCatching { recognizer.close() }
+        }
+        return found
     }
 
     private fun readBlocks(
@@ -233,6 +315,18 @@ class TextBlockDetector {
 
     private companion object {
         const val TIMEOUT_SECONDS = 30L
+
+        /**
+         * Scripts to try when the configured one reads nothing off a page.
+         *
+         * Ordered by how often a mixed English catalogue turns out to carry them: Japanese raws
+         * first, then Chinese and Korean, then Latin for a library configured to a CJK source that
+         * hits a scanlated chapter.
+         */
+        val SCRIPT_FALLBACK_ORDER = listOf("ja", "zh", "ko", "en")
+
+        /** Blocks on the probe band that settle the question without trying the rest. */
+        const val PROBE_CONFIDENT_BLOCKS = 3
 
         /** Band height for reading a long strip. Comfortably inside ML Kit's input limits. */
         const val BAND_HEIGHT = 1200

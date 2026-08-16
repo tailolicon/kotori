@@ -22,6 +22,8 @@ import tachiyomi.domain.chapter.service.ChapterRecognition
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.source.local.isLocal
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import java.lang.Long.max
 import java.time.ZonedDateTime
 import java.util.TreeSet
@@ -73,10 +75,31 @@ class SyncChaptersWithSource(
 
         val newChapters = mutableListOf<Chapter>()
         val updatedChapters = mutableListOf<Chapter>()
-        val removedChapters = dbChapters.filterNot { dbChapter ->
+        var removedChapters = dbChapters.filterNot { dbChapter ->
             sourceChapters.any { sourceChapter ->
                 dbChapter.url == sourceChapter.url
             }
+        }
+
+        // A fetch that is missing a block of known chapters is far more likely a truncated
+        // response than a real removal — even when page 1 also carries one newly published
+        // chapter. Madara-style sources page the list; a silent failure on a later page arrives
+        // short, and deleting on that evidence made whole ranges vanish until the next successful
+        // refresh, then vanish again on the next partial one. A manual pull-to-refresh keeps
+        // authority so a series the source really cut down can still be pruned.
+        if (
+            TruncatedChapterFetch.shouldKeepExisting(
+                dbCount = dbChapters.size,
+                sourceCount = sourceChapters.size,
+                removedCount = removedChapters.size,
+                manualFetch = manualFetch,
+            )
+        ) {
+            logcat(LogPriority.WARN) {
+                "Ignoring ${removedChapters.size} chapter removal(s) for '${manga.title}': " +
+                    "the fetch shrank ${dbChapters.size} → ${sourceChapters.size} — treating it as truncated"
+            }
+            removedChapters = emptyList()
         }
 
         // Used to not set upload date of older chapters

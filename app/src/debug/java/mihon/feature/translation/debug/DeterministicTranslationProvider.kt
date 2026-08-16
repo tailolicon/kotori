@@ -41,14 +41,34 @@ class DeterministicTranslationProvider : TranslationProvider {
         // made the harness stamp grey patches over SFX that live output leaves untouched — the
         // audit then counted defects no user would ever see. Deterministic either way.
         val trimmed = text.trim()
-        val isShortShout = !trimmed.contains(Regex("\\s")) && trimmed.length <= 5
+        // The short-shout rule is a Latin one. CJK writing has no spaces and packs a whole line of
+        // dialogue into four or five characters ("逃げろ!"), so applying it there echoed every
+        // bubble on a Japanese page and the harness reported the page as having nothing to
+        // translate — a defect of the fixture provider, not of the pipeline.
+        val isLatin = trimmed.all { it.code < 0x2E80 }
+        val isShortShout = isLatin && !trimmed.contains(Regex("\\s")) && trimmed.length <= 5
         if (isShortShout || trimmed.none { it.isLetter() }) return text
+        if (isLatin) {
+            return buildString(text.length) {
+                for (ch in text) append(VOWELS[ch] ?: ch)
+            }
+        }
+        // CJK has none of the Latin vowels the transform swaps, so it came back byte-identical and
+        // the pipeline's isUntranslated guard correctly dropped every bubble — a Japanese page then
+        // rendered as "nothing to translate" no matter how well the rest of the pipeline did. Map
+        // each character through the marked-vowel alphabet by code point instead: still a pure
+        // function of the input, still forces diacritics through the layout, and never an echo.
         return buildString(text.length) {
-            for (ch in text) append(VOWELS[ch] ?: ch)
+            for (ch in text) {
+                if (ch.isLetter()) append(CJK_ALPHABET[ch.code % CJK_ALPHABET.length]) else append(ch)
+            }
         }
     }
 
     private companion object {
+        /** Stand-in alphabet for scripts the vowel swap cannot touch. */
+        const val CJK_ALPHABET = "ạệịộựỵăâđêôơưbcdghklmnpqrstvx"
+
         val VOWELS = mapOf(
             'a' to 'ạ', 'e' to 'ệ', 'i' to 'ị', 'o' to 'ộ', 'u' to 'ự', 'y' to 'ỵ',
             'A' to 'Ạ', 'E' to 'Ệ', 'I' to 'Ị', 'O' to 'Ộ', 'U' to 'Ự', 'Y' to 'Ỵ',

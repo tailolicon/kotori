@@ -262,6 +262,15 @@
     "guards": "red and yellow lettering re-rendered plain white; a separate right-aligned signature block absorbed into the paragraph above it"
    }
   ],
+  "jpraw": [
+   {
+    "file": "jpraw-99877464.jpg",
+    "w": 900,
+    "h": 1300,
+    "kb": 82,
+    "guards": "Japanese page in a library configured to an English source: every recogniser and the provider must follow the script the page is actually written in, or the whole page reports nothing to translate"
+   }
+  ],
   "asg123": [
    {
     "file": "asg123-0659af12.jpg",
@@ -310,6 +319,7 @@
  "sets_doc": {
   "asg8": "Apocalypse Sword God ch.8 (KaiScans, 1280w webtoon strips). Guards: ghost lettering framing translations (fixed r17-r19), blue skill panels erase-by-strip + left alignment, jagged shout bubbles, TL/N captions, credit page dense panels, edge slivers, near-black ink #0c1924 vs the title-art saturation gate.",
   "ch35": "Chapter 35 set (900w WEBP, mixes a 16000px strip with short slices). Material the r20+ renderer revisions were tuned against; locks their current behaviour.",
+  "jpraw": "A synthetic Japanese page (bubbles over a dark panel), added 2026-08-16. English aggregators mix raw Japanese chapters into English series, and with the source language set to 'en' the Latin recogniser read nothing, so no text regions existed and the page was served untranslated with no error anywhere. Guards the script fallback end to end: detector probe, bubble OCR and the provider must all follow the page's real script.",
   "asg123": "Apocalypse Sword God ch.123 (Raven Scans, 800w colour manhua). Added 2026-08-15 from the same audit as kd53: 39 of 98 changed bands were defective. Where kd53 covers colour manhwa, this set covers the manhua failure modes — flat zero-variance fills swallowing whole panels, text placed in the gutter between two bubbles instead of inside either, and erase rectangles decoupled from where the translation actually lands.",
   "kd53": "Kidnapped Dragons ch.53 (Raven Scans, 800w colour manhwa). Added 2026-08-15 after a full-chapter audit found rendering defects on 46 of 129 changed bands. Colour webtoon art is what the earlier sets lack: glowing narration boxes, oval bubbles with neon rims, gradient bubble interiors and outlined lettering on grey — every one of which defeats a guard that greyscale strips never exercised."
  }
