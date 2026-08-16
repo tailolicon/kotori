@@ -35,16 +35,15 @@ import kotlin.math.roundToInt
 class TextBlockDetector {
 
     /**
-     * @param existing boxes already found by the bubble detector, in source-image pixels
-     * @return additional boxes for lettering outside [existing], in the same coordinate space
-     */
-    /**
      * @param boxes lettering regions found outside the bubble detector's boxes
      * @param language the script the page turned out to be written in — the configured one unless
      *   it read nothing and another script did
      */
     data class Result(val boxes: List<BubbleBox>, val language: String)
 
+    /**
+     * @param existing boxes already found by the bubble detector, in source-image pixels
+     */
     fun detect(bitmap: Bitmap, existing: List<BubbleBox>, sourceLanguage: String): Result {
         var found = readWholePage(bitmap, sourceLanguage)
         var language = sourceLanguage
@@ -340,6 +339,7 @@ class TextBlockDetector {
 
         /** Vertical gap, as a fraction of block height, still counted as the same panel. */
         const val MERGE_GAP_RATIO = 0.8f
+
         /** Horizontal overlap, as a fraction of the narrower block, required to merge. */
         const val MERGE_OVERLAP_RATIO = 0.5f
 
