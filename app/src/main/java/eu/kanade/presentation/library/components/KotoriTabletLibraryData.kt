@@ -9,15 +9,14 @@ import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.util.lang.toLocalDate
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import tachiyomi.domain.entries.anime.model.Anime
 import tachiyomi.domain.history.anime.interactor.GetAnimeHistory
 import tachiyomi.domain.history.anime.model.AnimeHistoryWithRelations
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.model.HistoryWithRelations
 import eu.kanade.tachiyomi.source.NovelSource
-import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.source.service.SourceManager
-import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.library.service.LibraryPreferences
 import mihon.domain.upcoming.anime.interactor.GetUpcomingAnime
 import tachiyomi.presentation.core.util.collectAsState
@@ -42,17 +41,30 @@ fun rememberKotoriResumeItems(
     onOpenManga: (Long) -> Unit,
     onOpenAnime: (Long) -> Unit,
 ): List<KotoriTabletResumeItem> {
-    val mangaHistory by produceState<List<HistoryWithRelations>>(initialValue = emptyList()) {
-        Injekt.get<GetHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE * 8) }
+    // Novels ride the manga stack, so manga history hands both kinds back together and the source
+    // is what tells them apart. Filter before truncating: cutting to a fixed head first meant a
+    // reader with a few dozen recent manga chapters had every novel trimmed away before the
+    // question was even asked, and the Novel panel came up permanently empty.
+    //
+    // Paired with the source list because extensions load after the first frame — the same shape
+    // the library grid and History use, so the three can never disagree about what is a novel.
+    val mangaHistory by produceState<List<HistoryWithRelations>>(initialValue = emptyList(), mode) {
+        combine(
+            Injekt.get<GetHistory>().subscribe(""),
+            Injekt.get<SourceManager>().sources,
+        ) { history, sources ->
+            val novelSources = sources.filterIsInstance<NovelSource>().mapTo(mutableSetOf()) { it.id }
+            history
+                .filter { (it.coverData.sourceId in novelSources) == (mode == MediaType.NOVEL) }
+                .take(RESUME_PANEL_SIZE)
+        }.collectLatest { value = it }
     }
     val animeHistory by produceState<List<AnimeHistoryWithRelations>>(initialValue = emptyList()) {
         Injekt.get<GetAnimeHistory>().subscribe("").collectLatest { value = it.take(RESUME_PANEL_SIZE * 2) }
     }
 
-    val isNovelEntry = rememberNovelEntryLookup(remember(mangaHistory) { mangaHistory.map { it.mangaId } })
-
-    return remember(mangaHistory, animeHistory, mode, isNovelEntry) {
-        val manga = mangaHistory.filter { isNovelEntry(it.mangaId) == (mode == MediaType.NOVEL) }.map { history ->
+    return remember(mangaHistory, animeHistory, mode) {
+        val manga = mangaHistory.map { history ->
             KotoriTabletResumeItem(
                 key = "manga-${history.id}",
                 title = history.title,
@@ -152,34 +164,4 @@ private fun formatRemaining(millis: Long): String {
     } else {
         "%02d:%02d".format(minutes, seconds)
     }
-}
-
-/**
- * Whether a history entry is a novel.
- *
- * Novels ride the manga stack, so history hands both back together; the source is what tells
- * them apart. Resolved through the source manager rather than the database because that is
- * where the novel flag lives.
- */
-@Composable
-private fun rememberNovelEntryLookup(ids: List<Long>): (Long) -> Boolean {
-    val novelIds by produceState(initialValue = emptySet<Long>(), ids) {
-        val getManga = Injekt.get<GetManga>()
-        val sourceManager = Injekt.get<SourceManager>()
-        // Extensions load asynchronously, so asking once — right after the app starts, which is
-        // exactly when this panel first draws — answers "nothing is a novel" and caches it.
-        // Following the source list means the answer corrects itself when they arrive.
-        sourceManager.sources.collectLatest {
-            value = withIOContext {
-                ids.filterTo(mutableSetOf()) { id ->
-                    val sourceId = getManga.await(id)?.source ?: return@filterTo false
-                    // `sourceManager.get(...)` rather than scanning the emitted list: it is the
-                    // same call the library grid filters by, so the panel and the grid can never
-                    // disagree about what counts as a novel.
-                    sourceManager.get(sourceId) is NovelSource
-                }
-            }
-        }
-    }
-    return { it in novelIds }
 }

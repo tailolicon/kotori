@@ -26,6 +26,8 @@ import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.Database
+import tachiyomi.domain.source.anime.repository.AnimeStubSourceRepository
+import tachiyomi.domain.source.repository.StubSourceRepository
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -96,6 +98,11 @@ class BackupRestorer(
         sourceMapping = backup.backupSources.associate { it.sourceId to it.name } +
             backup.backupAnimeSources.associate { it.sourceId to it.name }
 
+        // The backup is the only place a name survives for a source this device has no extension
+        // for. Without writing them down, a restored library reported its missing sources as bare
+        // ids — "3313733609433811176 · not found" tells a reader nothing about what to install.
+        rememberSourceNames(backup.backupSources, backup.backupAnimeSources)
+
         if (options.libraryEntries) {
             restoreAmount += backup.backupManga.size + backup.backupAnime.size
         }
@@ -133,6 +140,41 @@ class BackupRestorer(
             }
 
             // TODO: optionally trigger online library + tracker update
+        }
+    }
+
+    /**
+     * Write every source the backup mentions into the stub tables.
+     *
+     * These are the rows [tachiyomi.domain.source.service.SourceManager.getOrStub] falls back to
+     * when no extension provides a source, and they are what the Tiện ích screen lists under
+     * missing sources. The backup does not carry a language per source, so the stub keeps whatever
+     * language it already had — an installed extension overwrites the row with the real values the
+     * moment it appears, so a name recovered here is never the one that wins.
+     */
+    private suspend fun rememberSourceNames(
+        sources: List<eu.kanade.tachiyomi.data.backup.models.BackupSource>,
+        animeSources: List<eu.kanade.tachiyomi.data.backup.models.BackupAnimeSource>,
+    ) {
+        val stubSources = Injekt.get<StubSourceRepository>()
+        val stubAnimeSources = Injekt.get<AnimeStubSourceRepository>()
+        sources.filter { it.name.isNotBlank() }.forEach { source ->
+            try {
+                val existing = stubSources.getStubSource(source.sourceId)
+                if (existing?.name == source.name) return@forEach
+                stubSources.upsertStubSource(source.sourceId, existing?.lang.orEmpty(), source.name)
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Failed to remember source name for ${source.sourceId}" }
+            }
+        }
+        animeSources.filter { it.name.isNotBlank() }.forEach { source ->
+            try {
+                val existing = stubAnimeSources.getStubAnimeSource(source.sourceId)
+                if (existing?.name == source.name) return@forEach
+                stubAnimeSources.upsertStubAnimeSource(source.sourceId, existing?.lang.orEmpty(), source.name)
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Failed to remember anime source name for ${source.sourceId}" }
+            }
         }
     }
 

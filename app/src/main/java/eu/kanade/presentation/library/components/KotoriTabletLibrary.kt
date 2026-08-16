@@ -734,6 +734,22 @@ private fun KotoriTabletSidePanel(
             items(resumeItems, key = { it.key }) { item ->
                 KotoriTabletResumeRow(item = item)
             }
+            // A header over blank space reads as a panel that failed to load. Say which it is,
+            // so an empty history and a broken panel stop looking identical.
+            if (resumeItems.isEmpty()) {
+                item("empty") {
+                    Text(
+                        text = if (mode == MediaType.ANIME) {
+                            "Chưa có tập nào xem dở."
+                        } else {
+                            "Chưa có chương nào đọc dở."
+                        },
+                        fontFamily = BeVietnamProFamily,
+                        fontSize = 11.5.sp,
+                        color = KotoriColors.textMuted,
+                    )
+                }
+            }
         }
         if (airingItems.isNotEmpty()) {
             KotoriPanelDivider()

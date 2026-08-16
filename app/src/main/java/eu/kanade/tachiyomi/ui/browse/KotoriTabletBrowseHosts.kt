@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,8 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +49,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +63,8 @@ import eu.kanade.domain.ui.model.MediaType
 import eu.kanade.presentation.browse.ExtensionScreen
 import eu.kanade.presentation.browse.anime.AnimeExtensionScreen
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.presentation.theme.kotori.BeVietnamProFamily
 import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriInlineSearchField
@@ -82,8 +82,6 @@ import eu.kanade.tachiyomi.ui.browse.anime.source.browse.BrowseAnimeSourceScreen
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.AnimeSearchItemResult
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.AnimeSourceFilter
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreenModel
-import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionFilterScreen
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionUiModel
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsScreenModel
@@ -95,6 +93,8 @@ import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SearchItemResult
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.SourceFilter
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import mihon.feature.upcoming.UpcomingScreen
 import mihon.feature.upcoming.anime.UpcomingAnimeScreen
 import tachiyomi.i18n.MR
@@ -348,7 +348,10 @@ private fun TabletBrowseHost(
     searchResults: @Composable () -> Unit,
     tabContent: @Composable () -> Unit,
 ) {
-    var searchActive by rememberSaveable { mutableStateOf(false) }
+    // Deliberately not saveable. Browsing a source and coming back restored the expanded search
+    // with nothing in the box, so the dashboard came back wearing its search clothes — filter
+    // pills instead of Bộ lọc and Lịch mùa — over a pane with nothing to show.
+    var searchActive by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     DisposableEffect(Unit) {
@@ -432,7 +435,10 @@ private fun TabletBrowseHost(
                         .onFocusChanged { if (it.hasFocus) searchActive = true }
                         .focusGroup(),
                 )
-                if (searchActive) {
+                // Mọi nguồn / Đã ghim / Có trong thư viện / Có kết quả narrow a title search across
+                // sources. On Tiện ích the box searches extension names, so those four answered a
+                // question nobody had asked and hid Bộ lọc and Cửa hàng behind an unrelated set.
+                if (searchActive && activeTab != EXTENSIONS_TAB) {
                     TabletSearchFilters(
                         activeFilters = activeSearchFilters,
                         onSelect = onSelectSearchFilter,
@@ -478,7 +484,11 @@ private fun TabletBrowseHost(
                     // list. Handing it the global title results instead left an empty pane while
                     // the thing being searched sat filtered out of view.
                     activeTab == EXTENSIONS_TAB -> tabContent()
-                    searchActive -> searchResults()
+                    // An empty query has no results to draw, so `searchActive` alone emptied the
+                    // pane — and it turns on by itself whenever the field takes focus back, which
+                    // is what happens on returning from a source. Coming back from browsing a
+                    // source blanked the whole right-hand side until something was typed.
+                    searchActive && searchQuery.isNotBlank() -> searchResults()
                     activeTab == 0 -> pendingUpdates()
                     else -> tabContent()
                 }
