@@ -135,22 +135,56 @@ class DocLn : MirroredNovelSource(), WebViewLoginSource {
 
     // ============================== Chapters ==============================
 
+    /**
+     * Chapters grouped by volume, in the site's own reading order.
+     *
+     * DocLN lays a series out as volumes — "Tập 01", "Ngoại truyện ngắn", "Tập 02" — each with its
+     * own chapter list, and chapter titles *repeat* across them: Youkoso has "Hai người có mối quan
+     * hệ không tốt" in two different volumes. Flattening the page into one list therefore produced
+     * duplicate-looking entries with no way to tell which volume a chapter belonged to, or where in
+     * the story the reader was.
+     *
+     * So each chapter carries its volume in the name, and [SChapter.chapter_number] counts up in
+     * the order the site prints — volume by volume, chapter by chapter — which is what makes the
+     * app's list read the same way the website does.
+     */
     override suspend fun getChapterList(novel: SManga): List<SChapter> {
         val document = client.newCall(GET(baseUrl + novel.url, headers)).awaitSuccess().asJsoup()
+
+        var position = 0
+        val chapters = document.select("section.volume-list").flatMap { volume ->
+            val volumeName = volume.selectFirst(".sect-title")?.text()?.toVolumeName()
+            volume.select("ul.list-chapters li").mapNotNull { row ->
+                row.toSChapter(volumeName, ++position)
+            }
+        }.ifEmpty {
+            // A series page without volume sections still has to yield its chapters.
+            document.select("ul.list-chapters li").mapNotNull { row ->
+                row.toSChapter(null, ++position)
+            }
+        }
+
         // Site lists oldest-first; the app expects newest-first.
-        // Walked per row rather than per link because the posting date is the row's sibling: the
-        // link alone cannot reach it, which is why every chapter used to be dated "today".
-        return document.select("ul.list-chapters li")
-            .mapNotNull { it.toSChapter() }
-            .reversed()
+        return chapters.asReversed()
     }
 
-    private fun Element.toSChapter(): SChapter? {
+    /**
+     * "Tập 01 [Đã hoàn thành]" -> "Tập 01".
+     *
+     * The completion marker belongs to the volume, not to any chapter in it, and repeating it on
+     * every line would crowd out the chapter's own title.
+     */
+    private fun String.toVolumeName(): String? = substringBefore('[').trim().takeIf { it.isNotEmpty() }
+
+    private fun Element.toSChapter(volumeName: String?, position: Int): SChapter? {
         val link = selectFirst("div.chapter-name a") ?: return null
+        val title = link.text().trim()
         return SChapter.create().apply {
             setUrlWithoutDomain(link.absUrl("href"))
-            name = link.text().trim()
-            chapter_number = CHAPTER_NUMBER_REGEX.find(name)?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
+            name = if (volumeName.isNullOrEmpty()) title else "$volumeName — $title"
+            // Position on the page, not a number parsed out of the title: titles number themselves
+            // per volume and restart, so parsing them put every volume's "Chương 01" in one place.
+            chapter_number = position.toFloat()
             date_upload = selectFirst("div.chapter-time")?.text()?.toEpochMillis() ?: 0L
         }
     }
@@ -170,8 +204,6 @@ class DocLn : MirroredNovelSource(), WebViewLoginSource {
         private const val CHUNK_PREFIX_LENGTH = 4
         private val CHAPTER_DATE_FORMAT =
             java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.US)
-        private val CHAPTER_NUMBER_REGEX =
-            Regex("""(?:chương|chuong)\s*(\d+(?:\.\d+)?)""", RegexOption.IGNORE_CASE)
     }
 
     // ============================== Chapter text ==============================
