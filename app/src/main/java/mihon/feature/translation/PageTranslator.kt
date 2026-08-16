@@ -126,6 +126,10 @@ class PageTranslator(
             styleHint = preferences.styleHint.get(),
         )
 
+        val startedAt = System.currentTimeMillis()
+        var lockedAt = startedAt
+        var localDoneAt = startedAt
+
         // Detection and OCR hold the lock; the provider call deliberately does not.
         //
         // The ONNX session and the ML Kit recogniser are single-lane, so those stages must not
@@ -133,8 +137,12 @@ class PageTranslator(
         // meant a page could not even begin reading while the page before it sat waiting on an HTTP
         // response, which is most of a page's wall-clock time. Releasing it here lets one page be
         // read while another is in flight.
+        var detectDoneAt = startedAt
+        var blocksDoneAt = startedAt
         val (boxes, recognized) = localWork.withLock {
+            lockedAt = System.currentTimeMillis()
             val detected = detector.detect(source, horizontalSeams)
+            detectDoneAt = System.currentTimeMillis()
             // The bubble model only knows speech bubbles. Status windows, captions and narration
             // boxes are lettering too, and readers care about them just as much — a chapter whose
             // skill panels stay in English is not a translated chapter.
@@ -144,6 +152,7 @@ class PageTranslator(
                 .onFailure { logcat { "Text-block detection failed: ${it.message}" } }
                 .getOrNull()
             val extras = textBlockResult?.boxes.orEmpty()
+            blocksDoneAt = System.currentTimeMillis()
 
             // The text-block pass reads the whole page, so when it had to fall back to another
             // script it has already established what this page is written in. Adopt that for the
@@ -243,6 +252,7 @@ class PageTranslator(
             }
             val finalBoxes = kept.map { coalescedBoxes[it] }
             val finalRead = kept.map { coalescedRead[it] }
+            localDoneAt = System.currentTimeMillis()
             finalBoxes to finalRead
         }
 
@@ -395,7 +405,19 @@ class PageTranslator(
         if (bubbles.isEmpty()) throw NothingToTranslate()
         logcat { "$diagnosticLabel rendering ${bubbles.size}/${boxes.size} translated bubbles" }
 
-        renderer.render(source, bubbles, preferences.font.get(), horizontalSeams)
+        val providerDoneAt = System.currentTimeMillis()
+        val rendered = renderer.render(source, bubbles, preferences.font.get(), horizontalSeams)
+        // Stage timings, because "translation is slow" is not actionable without them: waiting for
+        // the single-lane local stages, running them, waiting on the network, and drawing are four
+        // very different problems with four different fixes.
+        logcat {
+            "$diagnosticLabel timing: queue=${lockedAt - startedAt}ms " +
+                "detect=${detectDoneAt - lockedAt}ms blocks=${blocksDoneAt - detectDoneAt}ms " +
+                "ocr=${localDoneAt - blocksDoneAt}ms provider=${providerDoneAt - localDoneAt}ms " +
+                "render=${System.currentTimeMillis() - providerDoneAt}ms " +
+                "total=${System.currentTimeMillis() - startedAt}ms"
+        }
+        rendered
     }
 
     /**
