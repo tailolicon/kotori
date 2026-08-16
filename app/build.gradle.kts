@@ -95,10 +95,9 @@ android {
                 abiFilters += listOf("arm64-v8a", "x86_64")
             }
         }
-        ndk {
-            // Rest of the app still ships all four ABIs; offline .so is simply absent elsewhere.
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        }
+        // No `ndk { abiFilters }` here: AGP refuses to configure when it is set alongside abi
+        // splits, even when the two lists agree. The splits block below is what decides which ABIs
+        // ship, and each split apk carries only its own.
     }
 
     if (System.getenv("MIHON_GITHUB_RELEASE").toBoolean()) {
@@ -216,9 +215,13 @@ android {
     splits {
         abi {
             isEnable = true
-            isUniversalApk = true
+            // No universal apk: at ~480 MB it was the largest artifact of every release and nobody
+            // installed it. 32-bit is gone for the same reason — Kotori's readers are on arm64, and
+            // building four splits plus a universal turned every release into a 1.1 GB upload.
+            // x86_64 stays only so the emulator can run what the phone will run.
+            isUniversalApk = false
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            include("arm64-v8a", "x86_64")
         }
     }
 
