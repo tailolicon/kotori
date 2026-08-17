@@ -55,28 +55,44 @@ class SimplePageReader {
         var lines = readPage(bitmap, sourceLanguage)
         var language = sourceLanguage
 
-        // A page the configured recogniser reads nothing from is usually written in another script,
-        // not blank: English aggregators mix Japanese raw chapters into the same series. Probe one
-        // band per candidate rather than the whole page, so being wrong about the script costs a
-        // band instead of a strip.
-        if (lines.isEmpty()) {
+        // A page the configured recogniser barely reads is usually written in another script, not
+        // blank: English aggregators mix Japanese raw chapters into the same series, and a reader
+        // whose source is still on English gets Korean read as "0}2| 0.".
+        //
+        // "Barely" rather than "not at all" is the whole point. A recogniser pointed at the wrong
+        // script does not politely return nothing — it finds letter-shaped marks in the strokes and
+        // returns a handful of junk characters, which is enough for an emptiness test to conclude
+        // the page was read fine. The page then goes to the translator as noise.
+        val bands = max(1, (bitmap.height + BAND_HEIGHT - BAND_OVERLAP - 1) / (BAND_HEIGHT - BAND_OVERLAP))
+        if (charactersIn(lines) < bands * MIN_CHARACTERS_PER_BAND) {
             val probe = probeBand(bitmap)
+            val baseline = withRecognizer(sourceLanguage) {
+                charactersIn(readBand(it, probe, 0, padEdges = false))
+            }
             var best: String? = null
             var bestCount = 0
             for (candidate in SCRIPT_FALLBACK_ORDER) {
                 if (candidate == sourceLanguage) continue
-                val count = withRecognizer(candidate) { readBand(it, probe, 0, padEdges = false).size }
+                val count = withRecognizer(candidate) {
+                    charactersIn(readBand(it, probe, 0, padEdges = false))
+                }
                 if (count > bestCount) {
                     bestCount = count
                     best = candidate
                 }
-                if (count >= PROBE_CONFIDENT_LINES) break
+                if (count >= PROBE_CONFIDENT_CHARACTERS) break
             }
             if (probe !== bitmap) probe.recycle()
-            if (best != null) {
+            // Only switch on a decisive win. Every recogniser reads a little of every page, so a
+            // narrow margin means nothing, and a page that genuinely holds two words must not be
+            // re-read four times over and then handed to whichever script guessed loudest.
+            if (best != null && bestCount >= max(MIN_PROBE_CHARACTERS, baseline * PROBE_WIN_MARGIN)) {
                 val attempt = readPage(bitmap, best)
-                if (attempt.isNotEmpty()) {
-                    logcat { "Page reads as '$best' rather than the configured '$sourceLanguage'" }
+                if (charactersIn(attempt) > charactersIn(lines)) {
+                    logcat {
+                        "Page reads as '$best' ($bestCount chars on the probe band) rather than the " +
+                            "configured '$sourceLanguage' ($baseline)"
+                    }
                     lines = attempt
                     language = best
                 }
@@ -288,6 +304,9 @@ class SimplePageReader {
         return groups.sortedWith(compareBy({ it[0].rect.top / band }, { it[0].rect.left }))
     }
 
+    private fun charactersIn(lines: List<ReadLine>): Int =
+        lines.sumOf { read -> read.line.text.count { it.isLetterOrDigit() } }
+
     /** One band worth of page, taken from its middle, for deciding which script it is written in. */
     private fun probeBand(bitmap: Bitmap): Bitmap {
         if (bitmap.height <= BAND_HEIGHT) return bitmap
@@ -343,7 +362,13 @@ class SimplePageReader {
 
         /** Scripts to try when the configured one reads nothing off a page. */
         val SCRIPT_FALLBACK_ORDER = listOf("ja", "zh", "ko", "en")
-        const val PROBE_CONFIDENT_LINES = 4
+        /** Characters off the probe band that settle the question without trying the rest. */
+        const val PROBE_CONFIDENT_CHARACTERS = 40
+        /** Below this, per band, the configured recogniser has not really read the page. */
+        const val MIN_CHARACTERS_PER_BAND = 12
+        /** A challenger must read at least this much, and this many times the configured script. */
+        const val MIN_PROBE_CHARACTERS = 20
+        const val PROBE_WIN_MARGIN = 2
 
         /** Band height for reading a long strip. Comfortably inside ML Kit's input limits. */
         const val BAND_HEIGHT = 1200

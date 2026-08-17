@@ -228,12 +228,12 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         FilterChip(
             selected = simpleRender,
             onClick = { preferences.simpleRender.set(true) },
-            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ") },
+            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ (nhanh hơn nhiều)") },
         )
         FilterChip(
             selected = !simpleRender,
             onClick = { preferences.simpleRender.set(false) },
-            label = { Text("Theo bóng thoại (cũ)") },
+            label = { Text("Theo bóng thoại (cũ, chậm)") },
         )
     }
 
