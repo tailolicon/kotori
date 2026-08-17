@@ -84,6 +84,21 @@ private val sourceLanguages = listOf(
     "Trung" to "zh",
     "Hàn" to "ko",
     "Anh" to "en",
+    "Tây Ban Nha" to "es",
+)
+
+/**
+ * Languages the reader can ask for.
+ *
+ * Vietnamese gets a much longer, hand-written prompt than the rest — see [TranslationPrompts] — so
+ * it stays first. The others share a generic prompt, which is why adding one is a list entry and
+ * nothing more: the recogniser for any Latin-script source is the same one, and every guard
+ * downstream already keys on the code rather than on Vietnamese specifically.
+ */
+private val targetLanguages = listOf(
+    "Việt" to "vi",
+    "Anh" to "en",
+    "Tây Ban Nha" to "es",
 )
 
 /**
@@ -218,6 +233,17 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             FilterChip(
                 selected = sourceLanguage == code,
                 onClick = { preferences.sourceLanguage.set(code) },
+                label = { Text(label) },
+            )
+        }
+    }
+
+    val targetLanguage by preferences.targetLanguage.collectAsState()
+    LabelledChipRow(label = "Dịch sang") {
+        targetLanguages.forEach { (label, code) ->
+            FilterChip(
+                selected = targetLanguage == code,
+                onClick = { preferences.targetLanguage.set(code) },
                 label = { Text(label) },
             )
         }
