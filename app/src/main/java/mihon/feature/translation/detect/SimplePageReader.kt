@@ -99,7 +99,7 @@ class SimplePageReader {
             }
         }
 
-        val groups = groupIntoParagraphs(lines)
+        val groups = groupIntoParagraphs(lines, bitmap)
         val boxes = ArrayList<BubbleBox>(groups.size)
         val texts = ArrayList<BubbleText>(groups.size)
         for (group in groups) {
@@ -263,7 +263,7 @@ class SimplePageReader {
      * Vertically adjacent and horizontally overlapping is the test, which is also how a status panel
      * — something the speech-bubble model never saw at all — comes back as one region.
      */
-    private fun groupIntoParagraphs(lines: List<ReadLine>): List<List<TextLineBox>> {
+    private fun groupIntoParagraphs(lines: List<ReadLine>, bitmap: Bitmap): List<List<TextLineBox>> {
         if (lines.isEmpty()) return emptyList()
         val remaining = lines.groupBy { it.paragraph }.values
             .map { paragraph -> paragraph.map { it.line }.sortedWith(compareBy({ it.rect.top }, { it.rect.left })) }
@@ -316,7 +316,25 @@ class SimplePageReader {
                     val candidateSize = typeSize(candidate)
                     val sameType = max(lineHeight, candidateSize) <=
                         min(lineHeight, candidateSize) * MERGE_SIZE_RATIO
-                    if (closeEnough && sameType && across > narrower * MERGE_OVERLAP_RATIO) {
+                    // Nor are two paragraphs printed on different backgrounds one paragraph. A line
+                    // of handwriting on the night sky beside a balloon is adjacent to the balloon's
+                    // lettering and the same size as it, and belongs to neither it nor its balloon:
+                    // merged, the translation ran out past the balloon's edge, and — because the
+                    // paper colour was then measured across both — the erase painted the balloon's
+                    // white over the sky, one rectangle per line of it.
+                    val samePaper =
+                        channelDistance(paperOf(members, bitmap), paperOf(candidate, bitmap)) <= MERGE_PAPER_DISTANCE
+                    val overlaps = across > narrower * MERGE_OVERLAP_RATIO
+                    // Narrate only near misses. A page has hundreds of obviously unrelated pairs and
+                    // none of them explains anything; the pairs worth seeing are the ones that were
+                    // adjacent and overlapping and still did not join.
+                    if (closeEnough && overlaps && !(sameType && samePaper)) {
+                        logcat {
+                            "Not one paragraph: $bounds + $candidateBounds — " +
+                                "type $lineHeight vs $candidateSize, same paper: $samePaper"
+                        }
+                    }
+                    if (closeEnough && sameType && samePaper && overlaps) {
                         members += candidate
                         bounds.union(candidateBounds)
                         iterator.remove()
@@ -340,6 +358,75 @@ class SimplePageReader {
 
     private fun charactersIn(lines: List<ReadLine>): Int =
         lines.sumOf { read -> read.line.text.count { it.isLetterOrDigit() } }
+
+    /**
+     * The colour a paragraph is printed on.
+     *
+     * The median of its line boxes, for the same reason the renderer uses it: lettering never fills
+     * half of its own bounding box, so the middle of that distribution is the paper it sits on.
+     * Sampled sparsely — this decides a merge, not a pixel.
+     */
+    private fun paperOf(lines: List<TextLineBox>, bitmap: Bitmap): Int {
+        val histogram = IntArray(256)
+        val samples = ArrayList<Int>()
+        for (line in lines) {
+            // Widen the box first. A recognised line box hugs its glyphs, and bold lettering fills
+            // more than half of that — so the median of the box as reported is the *ink*, and two
+            // lines of one balloon came back with different "paper" and refused to merge.
+            val margin = max(3, (min(line.rect.height(), line.rect.width()) * PAPER_MARGIN).roundToInt())
+            val left = (line.rect.left - margin).coerceIn(0, bitmap.width - 1)
+            val top = (line.rect.top - margin).coerceIn(0, bitmap.height - 1)
+            val right = (line.rect.right + margin).coerceIn(left + 1, bitmap.width)
+            val bottom = (line.rect.bottom + margin).coerceIn(top + 1, bitmap.height)
+            var y = top
+            while (y < bottom) {
+                var x = left
+                while (x < right) {
+                    val pixel = bitmap.getPixel(x, y)
+                    samples += pixel
+                    histogram[luminanceOf(pixel)]++
+                    x += PAPER_SAMPLE_STEP
+                }
+                y += PAPER_SAMPLE_STEP
+            }
+        }
+        if (samples.isEmpty()) return Color.WHITE
+        var seen = 0
+        var median = 0
+        val half = samples.size / 2
+        for (value in histogram.indices) {
+            seen += histogram[value]
+            if (seen > half) {
+                median = value
+                break
+            }
+        }
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        var count = 0
+        for (pixel in samples) {
+            if (kotlin.math.abs(luminanceOf(pixel) - median) > PAPER_BAND) continue
+            r += (pixel shr 16) and 0xFF
+            g += (pixel shr 8) and 0xFF
+            b += pixel and 0xFF
+            count++
+        }
+        if (count == 0) return samples[samples.size / 2]
+        return Color.rgb((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+    }
+
+    private fun luminanceOf(color: Int): Int =
+        (299 * ((color shr 16) and 0xFF) + 587 * ((color shr 8) and 0xFF) + 114 * (color and 0xFF)) / 1000
+
+    /** Max per-channel difference, in 0..255. */
+    private fun channelDistance(color: Int, other: Int): Int = max(
+        kotlin.math.abs(((color shr 16) and 0xFF) - ((other shr 16) and 0xFF)),
+        max(
+            kotlin.math.abs(((color shr 8) and 0xFF) - ((other shr 8) and 0xFF)),
+            kotlin.math.abs((color and 0xFF) - (other and 0xFF)),
+        ),
+    )
 
     /** True when this paragraph is set in columns rather than rows — manga, and vertical signage. */
     private fun isVertical(lines: List<TextLineBox>): Boolean =
@@ -432,8 +519,15 @@ class SimplePageReader {
         /** Overlap of the smaller rectangle above which two sightings are the same line. */
         const val DUPLICATE_OVERLAP = 0.55f
 
-        /** Vertical gap, as a multiple of line height, still counted as the same paragraph. */
-        const val MERGE_GAP_RATIO = 0.9f
+        /**
+         * Gap between paragraphs, as a multiple of type size, still counted as one paragraph.
+         *
+         * Measured against the *recognised box*, which hugs the glyphs and so is a good deal shorter
+         * than the line's leading. At 0.9 an ordinary balloon whose lines sat 56px apart on 27px
+         * boxes — a gap of 29 against a threshold of 24 — was split into one region per line, and
+         * each line was then translated and lettered on its own.
+         */
+        const val MERGE_GAP_RATIO = 1.4f
 
         /** Horizontal overlap, as a fraction of the narrower box, required to join a paragraph. */
         const val MERGE_OVERLAP_RATIO = 0.4f
@@ -443,6 +537,13 @@ class SimplePageReader {
 
         /** Height-to-width ratio above which a recognised line is a column, not a row. */
         const val VERTICAL_ASPECT = 1.5f
+
+        /** How far two paragraphs' backgrounds may differ and still be one paragraph. */
+        const val MERGE_PAPER_DISTANCE = 55
+        const val PAPER_SAMPLE_STEP = 3
+        const val PAPER_BAND = 12
+        /** Outset of a line box before sampling, as a fraction of its short side. */
+        const val PAPER_MARGIN = 0.55f
 
         /** Letters or digits a lone line needs before it counts as dialogue rather than noise. */
         const val MIN_STANDALONE_CHARACTERS = 3
