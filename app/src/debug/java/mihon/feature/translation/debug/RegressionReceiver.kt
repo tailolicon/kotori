@@ -42,7 +42,12 @@ class RegressionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext
-        scope.launch { runSuite(app) }
+        // `--ez live true` runs the fixtures through the *configured* provider instead of the
+        // deterministic one. The suite must never depend on that — it would stop being reproducible
+        // — but checking a new target language end to end otherwise means driving the reader by
+        // hand, and the thing worth checking is exactly what the real provider sends back.
+        val live = intent.getBooleanExtra("live", false)
+        scope.launch { runSuite(app, live) }
     }
 
     /**
@@ -54,9 +59,10 @@ class RegressionReceiver : BroadcastReceiver() {
      * from under it, and every remaining fixture fails with "no Gemini API key" after having done all
      * of its detection and OCR work.
      */
-    private suspend fun runSuite(context: Context) = suiteLock.withLock { runSuiteLocked(context) }
+    private suspend fun runSuite(context: Context, live: Boolean) =
+        suiteLock.withLock { runSuiteLocked(context, live) }
 
-    private suspend fun runSuiteLocked(context: Context) {
+    private suspend fun runSuiteLocked(context: Context, live: Boolean) {
         val base = context.getExternalFilesDir(null)?.resolve("regression") ?: return
         val input = File(base, "in")
         // Create it ourselves rather than relying on `adb push` to. A directory adb creates belongs
@@ -73,7 +79,7 @@ class RegressionReceiver : BroadcastReceiver() {
         val summary = StringBuilder("fixtures=${fixtures.size}\n")
 
         val translator = PageTranslator(context, Injekt.get<TranslationPreferences>())
-        TranslationProviders.overrideForTesting = DeterministicTranslationProvider()
+        TranslationProviders.overrideForTesting = if (live) null else DeterministicTranslationProvider()
         try {
             for (fixture in fixtures) {
                 val since = LOG_STAMP.format(Date())
