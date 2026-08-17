@@ -284,12 +284,20 @@ class SimplePageReader {
                     val candidateBounds = Rect(candidate[0].rect)
                     candidate.drop(1).forEach { candidateBounds.union(it.rect) }
                     val gap = candidateBounds.top - bounds.bottom
-                    val lineHeight = max(1, members.sumOf { it.rect.height() } / members.size)
+                    val lineHeight = typeSize(members)
                     val horizontal = min(bounds.right, candidateBounds.right) -
                         max(bounds.left, candidateBounds.left)
                     val narrower = min(bounds.width(), candidateBounds.width())
                     val closeEnough = gap <= lineHeight * MERGE_GAP_RATIO && gap >= -bounds.height()
-                    if (closeEnough && horizontal > narrower * MERGE_OVERLAP_RATIO) {
+                    // Two paragraphs set at very different sizes are two different things, however
+                    // close together they sit. A chapter title and the credit line under it are the
+                    // case that matters: merged, they become one long paragraph, which is enough
+                    // words to escape the guard that leaves decorative artwork alone — so the title
+                    // art was erased and re-lettered as a run-on sentence across the illustration.
+                    val candidateSize = typeSize(candidate)
+                    val sameType = max(lineHeight, candidateSize) <=
+                        min(lineHeight, candidateSize) * MERGE_SIZE_RATIO
+                    if (closeEnough && sameType && horizontal > narrower * MERGE_OVERLAP_RATIO) {
                         members += candidate
                         bounds.union(candidateBounds)
                         iterator.remove()
@@ -306,6 +314,12 @@ class SimplePageReader {
 
     private fun charactersIn(lines: List<ReadLine>): Int =
         lines.sumOf { read -> read.line.text.count { it.isLetterOrDigit() } }
+
+    /** How big the type is in a paragraph: the median line thickness, not the tallest line. */
+    private fun typeSize(lines: List<TextLineBox>): Int {
+        val heights = lines.map { min(it.rect.height(), it.rect.width()) }.sorted()
+        return max(1, heights[heights.size / 2])
+    }
 
     /** One band worth of page, taken from its middle, for deciding which script it is written in. */
     private fun probeBand(bitmap: Bitmap): Bitmap {
@@ -393,6 +407,9 @@ class SimplePageReader {
 
         /** Horizontal overlap, as a fraction of the narrower box, required to join a paragraph. */
         const val MERGE_OVERLAP_RATIO = 0.4f
+
+        /** How far two paragraphs' type sizes may differ and still be one paragraph. */
+        const val MERGE_SIZE_RATIO = 1.8f
 
         /** Letters or digits a lone line needs before it counts as dialogue rather than noise. */
         const val MIN_STANDALONE_CHARACTERS = 3
