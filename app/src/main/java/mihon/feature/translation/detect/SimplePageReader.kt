@@ -283,12 +283,31 @@ class SimplePageReader {
                     val candidate = iterator.next()
                     val candidateBounds = Rect(candidate[0].rect)
                     candidate.drop(1).forEach { candidateBounds.union(it.rect) }
-                    val gap = candidateBounds.top - bounds.bottom
                     val lineHeight = typeSize(members)
-                    val horizontal = min(bounds.right, candidateBounds.right) -
-                        max(bounds.left, candidateBounds.left)
-                    val narrower = min(bounds.width(), candidateBounds.width())
-                    val closeEnough = gap <= lineHeight * MERGE_GAP_RATIO && gap >= -bounds.height()
+                    // Manga is set in columns, so the next line of a sentence is *beside* this one,
+                    // not under it. Left as a purely vertical test, every column of a balloon became
+                    // its own region — and a region one column wide is a tall sliver, into which the
+                    // horizontal replacement had to be set at about six pixels to fit. Swapping the
+                    // axes for vertical lettering makes a balloon one region again, the same shape
+                    // the translation needs.
+                    val vertical = isVertical(members) && isVertical(candidate)
+                    val gap = if (vertical) {
+                        max(bounds.left - candidateBounds.right, candidateBounds.left - bounds.right)
+                    } else {
+                        candidateBounds.top - bounds.bottom
+                    }
+                    val across = if (vertical) {
+                        min(bounds.bottom, candidateBounds.bottom) - max(bounds.top, candidateBounds.top)
+                    } else {
+                        min(bounds.right, candidateBounds.right) - max(bounds.left, candidateBounds.left)
+                    }
+                    val narrower = if (vertical) {
+                        min(bounds.height(), candidateBounds.height())
+                    } else {
+                        min(bounds.width(), candidateBounds.width())
+                    }
+                    val span = if (vertical) bounds.width() else bounds.height()
+                    val closeEnough = gap <= lineHeight * MERGE_GAP_RATIO && gap >= -span
                     // Two paragraphs set at very different sizes are two different things, however
                     // close together they sit. A chapter title and the credit line under it are the
                     // case that matters: merged, they become one long paragraph, which is enough
@@ -297,7 +316,7 @@ class SimplePageReader {
                     val candidateSize = typeSize(candidate)
                     val sameType = max(lineHeight, candidateSize) <=
                         min(lineHeight, candidateSize) * MERGE_SIZE_RATIO
-                    if (closeEnough && sameType && horizontal > narrower * MERGE_OVERLAP_RATIO) {
+                    if (closeEnough && sameType && across > narrower * MERGE_OVERLAP_RATIO) {
                         members += candidate
                         bounds.union(candidateBounds)
                         iterator.remove()
@@ -305,7 +324,14 @@ class SimplePageReader {
                     }
                 }
             }
-            groups += members.sortedWith(compareBy({ it.rect.top }, { it.rect.left }))
+            // Columns of vertical lettering are read right to left, so the rightmost is the start
+            // of the sentence. Ordering them left to right hands the translator its clauses
+            // backwards — the greeting on the test page came back as "ございます / おはよう".
+            groups += if (isVertical(members)) {
+                members.sortedWith(compareByDescending<TextLineBox> { it.rect.left }.thenBy { it.rect.top })
+            } else {
+                members.sortedWith(compareBy({ it.rect.top }, { it.rect.left }))
+            }
         }
         // Reading order: down the page, left to right within a row of comparable height.
         val band = max(MIN_READING_BAND, groups.sumOf { it[0].rect.height() } / groups.size)
@@ -314,6 +340,10 @@ class SimplePageReader {
 
     private fun charactersIn(lines: List<ReadLine>): Int =
         lines.sumOf { read -> read.line.text.count { it.isLetterOrDigit() } }
+
+    /** True when this paragraph is set in columns rather than rows — manga, and vertical signage. */
+    private fun isVertical(lines: List<TextLineBox>): Boolean =
+        lines.count { it.rect.height() > it.rect.width() * VERTICAL_ASPECT } * 2 > lines.size
 
     /** How big the type is in a paragraph: the median line thickness, not the tallest line. */
     private fun typeSize(lines: List<TextLineBox>): Int {
@@ -410,6 +440,9 @@ class SimplePageReader {
 
         /** How far two paragraphs' type sizes may differ and still be one paragraph. */
         const val MERGE_SIZE_RATIO = 1.8f
+
+        /** Height-to-width ratio above which a recognised line is a column, not a row. */
+        const val VERTICAL_ASPECT = 1.5f
 
         /** Letters or digits a lone line needs before it counts as dialogue rather than noise. */
         const val MIN_STANDALONE_CHARACTERS = 3
