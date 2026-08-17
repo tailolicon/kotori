@@ -235,7 +235,11 @@ class BubbleRenderer(private val context: Context) {
                     inkColor = inkColor,
                     paperColor = paperColor,
                     typeface = typeface,
-                    alignLeft = false,
+                    // Match how the original was set. A status panel's rows are flush left and its
+                    // line breaks are its structure, not an artefact of fitting — centring it and
+                    // collapsing the breaks turned a leaderboard of eight countries into one
+                    // run-on sentence.
+                    alignLeft = looksLeftAligned(bubble.lines),
                     // The slot here is the original lettering's own footprint, not a whole balloon,
                     // so the generous margin and the font's default leading — both sensible when
                     // there is empty balloon to spare — only make the replacement come out visibly
