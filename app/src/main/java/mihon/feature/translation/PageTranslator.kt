@@ -168,7 +168,8 @@ class PageTranslator(
                 read.boxes.indices.filterNot(usable::contains).forEach { index ->
                     logcat { "Dropped ${read.boxes[index]} as an edge sliver or decoration: ${read.texts[index].text}" }
                 }
-                localDoneAt = System.currentTimeMillis()
+
+                localDoneAt = detectDoneAt
                 return@withLock usable.map(read.boxes::get) to usable.map(read.texts::get)
             }
 
@@ -455,6 +456,69 @@ class PageTranslator(
                 "total=${System.currentTimeMillis() - startedAt}ms"
         }
         rendered
+    }
+
+    /**
+     * Hands each block of lettering the balloon it sits in, and joins the blocks that share one.
+     *
+     * Two things come out of this. The renderer gets a region it may letter *into* — a balloon has
+     * room for a sentence where the source text's own footprint may not, which is the whole of the
+     * vertical-Japanese problem. And a balloon read as two or three blocks becomes one translation
+     * unit, so a sentence is not cut into fragments that are then set at their own sizes.
+     *
+     * Lettering no balloon claims — a caption over artwork, a sign, a status panel — keeps its own
+     * bounds and the renderer keeps erasing it stroke by stroke, because painting a block over open
+     * artwork is the defect that mode exists to avoid.
+     */
+    private fun placeInBalloons(
+        regions: List<BubbleBox>,
+        texts: List<BubbleText>,
+        balloons: List<BubbleBox>,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        if (balloons.isEmpty()) return regions to texts
+
+        // Smallest balloon that holds most of the block, so nested detections pick the tight one.
+        val host = regions.map { region ->
+            balloons
+                .filter { containedFraction(region, it) >= MIN_BALLOON_CONTAINMENT }
+                .minByOrNull { it.width.toLong() * it.height }
+        }
+
+        val outBoxes = ArrayList<BubbleBox>(regions.size)
+        val outTexts = ArrayList<BubbleText>(regions.size)
+        val done = HashSet<BubbleBox>()
+        regions.indices.forEach { index ->
+            val balloon = host[index]
+            if (balloon == null) {
+                val best = balloons.maxOfOrNull { containedFraction(regions[index], it) } ?: 0f
+                logcat { "No balloon for ${regions[index].toRect()}: best containment ${(best * 100).toInt()}%" }
+                outBoxes += regions[index]
+                outTexts += texts[index]
+                return@forEach
+            }
+            if (!done.add(balloon)) return@forEach
+            val shared = regions.indices.filter { host[it] === balloon }
+            outBoxes += balloon
+            outTexts += BubbleText(
+                text = shared.joinToString("\n") { texts[it].text }.trim(),
+                lines = shared.flatMap { texts[it].lines },
+            )
+        }
+        val joined = regions.size - outBoxes.size
+        logcat {
+            "Placed ${outBoxes.count { !it.isTextBlock }} block(s) in balloons" +
+                if (joined > 0) ", joining $joined that shared one" else ""
+        }
+        return outBoxes to outTexts
+    }
+
+    /** Fraction of [inner] that lies inside [outer]. */
+    private fun containedFraction(inner: BubbleBox, outer: BubbleBox): Float {
+        val overlap = Rect(inner.toRect())
+        if (!overlap.intersect(outer.toRect())) return 0f
+        val area = inner.width.toLong() * inner.height
+        if (area <= 0) return 0f
+        return (overlap.width().toLong() * overlap.height()).toFloat() / area
     }
 
     /**
@@ -805,6 +869,9 @@ class PageTranslator(
 
         /** Floor for the row-banding height, so a page of tiny boxes still bands sensibly. */
         const val MIN_READING_BAND = 24
+
+        /** Share of a block that must lie inside a balloon before that balloon owns it. */
+        const val MIN_BALLOON_CONTAINMENT = 0.75f
 
         /** How much better a swap must score before it is trusted over the model's own ordering. */
         const val SWAP_MARGIN = 0.30f

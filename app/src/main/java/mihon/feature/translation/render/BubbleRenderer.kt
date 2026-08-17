@@ -94,6 +94,29 @@ class BubbleRenderer(private val context: Context) {
                 continue
             }
 
+            // A balloon is lettered *into*, not over. Where the lettering sits and where a
+            // translation may go are different questions, and only the balloon answers the second:
+            // Japanese runs in columns, so the recognised footprint is a tall sliver and a sentence
+            // written into it comes out one or two words per row. Lettering with no balloon around
+            // it — a caption on artwork — falls through to the stroke-by-stroke erase below, because
+            // painting a block over open artwork is the defect this mode exists to avoid.
+            //
+            // The balloon is found by flooding its own colour outward from the lettering rather than
+            // by asking the bubble model, which on a hand-drawn manga page proposed nineteen boxes at
+            // confidences of 0.05 to 0.28 and matched almost none of the real balloons. Flooding
+            // costs nothing extra and answers the only question that matters: how much room, all of
+            // one colour, surrounds this text.
+            val textBounds = Rect(lines[0])
+            lines.drop(1).forEach { textBounds.union(it) }
+            if (paintedFraction(textBounds, painted) <= SIMPLE_MAX_OVERLAP) {
+                val area = letterInBalloon(output, canvas, bubble, lines, textBounds, typeface)
+                if (area != null) {
+                    painted += area
+                    written += textBounds to bubble.translated
+                    continue
+                }
+            }
+
             // Every margin below is a multiple of how *thick* a line of lettering is, so take the
             // line's short side rather than its height. They are the same thing for ordinary
             // horizontal text and wildly different for a rotated caption or a column of vertical
@@ -257,6 +280,110 @@ class BubbleRenderer(private val context: Context) {
             }
         }
         return output
+    }
+
+    /**
+     * Repaints a balloon's interior and sets the translation inside it.
+     *
+     * This is what the reference implementation does and what the stroke-by-stroke erase cannot: the
+     * balloon, not the source lettering, decides where a sentence may go. [BubbleFill] finds the
+     * interior the same way — the dominant colour of the middle, everything close to it, the largest
+     * component, holes closed back up, then pulled back so the outline survives — so repainting it
+     * cannot leave a ghost and cannot touch the drawing outside.
+     *
+     * @return the rectangle lettered, or null when the interior could not be established, in which
+     *   case the caller falls back to erasing the strokes.
+     */
+    private fun letterInBalloon(
+        output: Bitmap,
+        canvas: Canvas,
+        bubble: TranslatedBubble,
+        lines: List<Rect>,
+        textBounds: Rect,
+        typeface: Typeface,
+    ): Rect? {
+        // How far to look for the balloon's edge. Bounded on purpose: a bubble outline is not
+        // watertight, and an unbounded flood escapes through the first broken pixel and paints a slab
+        // across the artwork.
+        val reach = Rect(textBounds).apply {
+            inset(
+                -(textBounds.width() * BALLOON_SEARCH_GROWTH).roundToInt(),
+                -(textBounds.height() * BALLOON_SEARCH_GROWTH).roundToInt(),
+            )
+            left = left.coerceAtLeast(0)
+            top = top.coerceAtLeast(0)
+            right = right.coerceAtMost(output.width)
+            bottom = bottom.coerceAtMost(output.height)
+        }
+        val box = BubbleBox(reach.left, reach.top, reach.right, reach.bottom, bubble.box.confidence)
+        if (!box.isUsable()) return null
+        val crop = Rect(box.toRect()).apply {
+            inset(-BALLOON_CONTEXT, -BALLOON_CONTEXT)
+            left = left.coerceAtLeast(0)
+            top = top.coerceAtLeast(0)
+            right = right.coerceAtMost(output.width)
+            bottom = bottom.coerceAtMost(output.height)
+        }
+        val width = crop.width()
+        val height = crop.height()
+        if (width < MIN_REGION_SIDE || height < MIN_REGION_SIDE) return null
+
+        val pixels = IntArray(width * height)
+        output.getPixels(pixels, 0, width, crop.left, crop.top, width, height)
+        val originalPixels = pixels.copyOf()
+
+        val search = Rect(box.toRect()).apply { offset(-crop.left, -crop.top) }
+        val linesLocal = lines.map { Rect(it).apply { offset(-crop.left, -crop.top) } }
+        val fill = BubbleFill.detect(pixels, width, height, search, linesLocal) ?: run {
+            logcat { "Simple: ${bubble.box} has no readable balloon interior" }
+            return null
+        }
+
+        for (i in pixels.indices) if (fill.region[i]) pixels[i] = fill.fillColor
+        output.setPixels(pixels, 0, width, crop.left, crop.top, width, height)
+
+        // The same gate every other erase path answers to: if the original lettering survived the
+        // repaint, repair it, and if it still stands, leave the balloon alone rather than overprint.
+        if (!ensureErased(output, pixels, originalPixels, width, height, crop.left, crop.top, linesLocal, bubble.box)) {
+            return null
+        }
+
+        val area = Rect(fill.bounds).apply { offset(crop.left, crop.top) }
+        if (area.width() < MIN_DRAW_WIDTH) return null
+        // A "balloon" no bigger than the lettering is not a balloon — it is the text's own footprint
+        // with a hair of paper round it. Lettering into that gains nothing over erasing the strokes,
+        // and repainting it risks a flat patch where the drawing was.
+        if (area.width().toLong() * area.height() <
+            textBounds.width().toLong() * textBounds.height() * MIN_BALLOON_ROOM
+        ) {
+            return null
+        }
+        var lettered = false
+        runCatching {
+            canvas.save()
+            canvas.clipRect(area.left, area.top, area.right, area.bottom)
+            lettered = drawText(
+                canvas = canvas,
+                text = bubble.translated,
+                left = area.left,
+                top = area.top,
+                width = area.width(),
+                height = area.height(),
+                inkColor = fill.textColor,
+                paperColor = fill.fillColor,
+                typeface = typeface,
+                alignLeft = false,
+                paddingRatio = BALLOON_PADDING_RATIO,
+                lineHeightRatio = BALLOON_LINE_HEIGHT_RATIO,
+                maxFontSize = BALLOON_MAX_FONT_SIZE,
+            )
+            canvas.restore()
+        }.onFailure { logcat { "Simple: lettering balloon $area failed: ${it.message}" } }
+        if (!lettered) {
+            logcat { "Simple: ${bubble.translated.take(24)} did not fit balloon $area" }
+            return null
+        }
+        return area
     }
 
     /** Share of [slot] that already-lettered slots cover, counting each pixel once. */
@@ -2558,6 +2685,9 @@ class BubbleRenderer(private val context: Context) {
         alignLeft: Boolean = false,
         paddingRatio: Float = TEXT_PADDING_RATIO,
         linePitch: Float = 1f,
+        /** Line advance as a multiple of the type size, overriding the font's own spacing. */
+        lineHeightRatio: Float? = null,
+        maxFontSize: Int = MAX_FONT_SIZE,
     ): Boolean {
         val padX = max(3, (width * paddingRatio).roundToInt())
         val padY = max(3, (height * paddingRatio).roundToInt())
@@ -2583,7 +2713,7 @@ class BubbleRenderer(private val context: Context) {
         // fits, so the text ends up as large as the bubble allows. Starting from an area-based
         // estimate instead — as the reference does — undershoots whenever the wrap lands favourably,
         // and the result is dialogue that sits small and lost in a large bubble.
-        val ceiling = min(MAX_FONT_SIZE, max(MIN_FONT_SIZE, usableHeight))
+        val ceiling = min(maxFontSize, max(MIN_FONT_SIZE, usableHeight))
         var size = ceiling
         var lines: List<String> = listOf(normalized)
         var chosen = false
@@ -2602,7 +2732,7 @@ class BubbleRenderer(private val context: Context) {
         while (size >= ABSOLUTE_MIN_FONT_SIZE) {
             paint.textSize = size.toFloat()
             val candidate = wrap(normalized, paint, usableWidth)
-            val lineHeight = paint.fontSpacing * linePitch
+            val lineHeight = lineHeightRatio?.let { size * it } ?: (paint.fontSpacing * linePitch)
             if (candidate.lines.size * lineHeight <= usableHeight &&
                 candidate.lines.all { paint.measureText(it) <= usableWidth }
             ) {
@@ -2633,7 +2763,7 @@ class BubbleRenderer(private val context: Context) {
 
         paint.textSize = size.coerceAtLeast(ABSOLUTE_MIN_FONT_SIZE).toFloat()
 
-        val lineHeight = paint.fontSpacing * linePitch
+        val lineHeight = lineHeightRatio?.let { paint.textSize * it } ?: (paint.fontSpacing * linePitch)
         val blockHeight = lines.size * lineHeight
         var baseline = top + padY + (usableHeight - blockHeight) / 2f - paint.fontMetrics.ascent
 
@@ -2823,6 +2953,19 @@ class BubbleRenderer(private val context: Context) {
         const val SIMPLE_FLAT_FRACTION = 0.94f
         /** Share of a slot already lettered above which it is the same region detected twice. */
         const val SIMPLE_MAX_OVERLAP = 0.55f
+
+        // ── Lettering into a balloon ──────────────────────────────────────────────────────────────
+        // Taken from the reference implementation rather than tuned here: a tenth of the balloon as
+        // margin, a line advance of 1.3 type sizes, and a ceiling of 60px on the type.
+        const val BALLOON_PADDING_RATIO = 0.1f
+        const val BALLOON_LINE_HEIGHT_RATIO = 1.3f
+        const val BALLOON_MAX_FONT_SIZE = 60
+        /** Context around the search box so the interior flood sees the outline on every side. */
+        const val BALLOON_CONTEXT = 12
+        /** How far past the lettering to look for the balloon's edge, as a fraction of its size. */
+        const val BALLOON_SEARCH_GROWTH = 0.9f
+        /** Interior must be this much larger than the lettering before it counts as a balloon. */
+        const val MIN_BALLOON_ROOM = 1.6f
         /** Margin inside the slot. Small, because the slot is the lettering's own footprint. */
         const val SIMPLE_TEXT_PADDING_RATIO = 0.03f
         /**
