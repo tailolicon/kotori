@@ -168,7 +168,7 @@ class TranslationPreferences(
          * page already translated — the cache keeps serving the old artwork, which makes the fix look
          * like it did nothing and is exactly how a masking bug can survive several rounds of testing.
          */
-        const val RENDERER_VERSION = "r96"
+        const val RENDERER_VERSION = "r97"
     }
 
     /**

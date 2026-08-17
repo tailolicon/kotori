@@ -94,7 +94,13 @@ class BubbleRenderer(private val context: Context) {
                 continue
             }
 
-            val lineHeight = lines.sumOf { it.height() } / lines.size
+            // Every margin below is a multiple of how *thick* a line of lettering is, so take the
+            // line's short side rather than its height. They are the same thing for ordinary
+            // horizontal text and wildly different for a rotated caption or a column of vertical
+            // Japanese, where the height is the line's whole length: on a sideways signboard that
+            // read 300px tall, margins scaled from its height reached far enough to swallow the
+            // panel's own border and to open a slot several times the panel's width.
+            val lineHeight = lines.sumOf { min(it.height(), it.width()) } / lines.size
             val slot = Rect(lines[0])
             lines.drop(1).forEach { slot.union(it) }
             slot.inset(
@@ -150,9 +156,10 @@ class BubbleRenderer(private val context: Context) {
             val areas = lines.map { line ->
                 Rect(line).apply {
                     offset(-crop.left, -crop.top)
+                    val thickness = min(line.height(), line.width())
                     inset(
-                        -max(4, (line.height() * SIMPLE_LINE_PAD_X).roundToInt()),
-                        -max(3, (line.height() * SIMPLE_LINE_PAD_Y).roundToInt()),
+                        -max(4, (thickness * SIMPLE_LINE_PAD_X).roundToInt()),
+                        -max(3, (thickness * SIMPLE_LINE_PAD_Y).roundToInt()),
                     )
                     left = left.coerceIn(0, width - 1)
                     top = top.coerceIn(0, height - 1)
@@ -168,7 +175,7 @@ class BubbleRenderer(private val context: Context) {
             fun boxes(ratio: Float) = lines.map { line ->
                 Rect(line).apply {
                     offset(-crop.left, -crop.top)
-                    val margin = max(2, (line.height() * ratio).roundToInt())
+                    val margin = max(2, (min(line.height(), line.width()) * ratio).roundToInt())
                     inset(-margin, -margin)
                     left = left.coerceIn(0, width - 1)
                     top = top.coerceIn(0, height - 1)
@@ -395,7 +402,11 @@ class BubbleRenderer(private val context: Context) {
             }
         }
 
-        val grown = dilateMask(lettering, width, height, SIMPLE_INK_DILATE)
+        // The fringe around a stroke scales with the stroke, so the growth that swallows it has to
+        // as well: a fixed two pixels is right for dialogue and leaves a legible grey ghost of a
+        // signboard capital five times that size.
+        val fringe = max(SIMPLE_INK_DILATE, (lineHeight * SIMPLE_INK_DILATE_RATIO).roundToInt())
+        val grown = dilateMask(lettering, width, height, fringe)
         // Keep only what is joined to the recognised lettering.
         //
         // Two things sit inside a padded line box and both read as "not paper": the glyphs, and
@@ -2787,6 +2798,7 @@ class BubbleRenderer(private val context: Context) {
         const val SIMPLE_MAX_INK_FRACTION = 0.52f
         /** Grown around the glyph core so the antialiased fringe goes with it. */
         const val SIMPLE_INK_DILATE = 2
+        const val SIMPLE_INK_DILATE_RATIO = 0.06f
         /** A contrasting rim clears a lower bar than the core, since it lies between core and paper. */
         const val SIMPLE_RIM_LEVEL_RATIO = 0.40f
         const val SIMPLE_MIN_RIM_DISTANCE = 22
