@@ -162,13 +162,16 @@ class TranslationPreferences(
 
     companion object {
         /**
-         * Bumped whenever the masking or rendering changes shape.
+         * Bumped whenever anything that shapes the output changes — masking, drawing, *and how the
+         * page is read*, since grouping the recognised lines is what decides where a translation goes.
          *
-         * Cached pages are keyed on this. Without it a rendering fix has no visible effect on any
-         * page already translated — the cache keeps serving the old artwork, which makes the fix look
-         * like it did nothing and is exactly how a masking bug can survive several rounds of testing.
+         * Cached pages are keyed on this. Without it a fix has no visible effect on any page already
+         * translated: the cache keeps serving the old artwork, which makes the fix look like it did
+         * nothing and is exactly how a masking bug survives several rounds of testing. Shipped that
+         * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
+         * reader had already seen came back with the defect intact.
          */
-        const val RENDERER_VERSION = "r97"
+        const val RENDERER_VERSION = "r98"
     }
 
     /**
