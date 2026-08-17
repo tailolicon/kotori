@@ -223,6 +223,20 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         }
     }
 
+    val simpleRender by preferences.simpleRender.collectAsState()
+    LabelledChipRow(label = "Kiểu vẽ chữ") {
+        FilterChip(
+            selected = simpleRender,
+            onClick = { preferences.simpleRender.set(true) },
+            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ") },
+        )
+        FilterChip(
+            selected = !simpleRender,
+            onClick = { preferences.simpleRender.set(false) },
+            label = { Text("Theo bóng thoại (cũ)") },
+        )
+    }
+
     when (provider) {
         TranslationProviderType.GEMINI -> {
             TextItem(

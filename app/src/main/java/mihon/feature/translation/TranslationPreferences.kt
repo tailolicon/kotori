@@ -106,6 +106,15 @@ class TranslationPreferences(
     /** Typeface used for rendered bubble text; resolved against assets/translation/. */
     val font: Preference<String> = preferenceStore.getString("pref_translation_font", "HL-Comic")
 
+    /**
+     * Simple lettering: erase the recognised text, write the translation in its footprint, and do
+     * nothing else. Defaults on — it is what a human letterer does, and every extra ambition of the
+     * bubble-aware mode (fills matched to the balloon, text recentred, larger type) is also a way
+     * for a page to come out redecorated. The bubble-aware renderer remains available behind this
+     * switch for readers who prefer its look.
+     */
+    val simpleRender: Preference<Boolean> = preferenceStore.getBoolean("pref_translation_simple_render", true)
+
     /** Upper bound for the on-disk translated-page cache, in mebibytes. */
     val cacheSizeMb: Preference<Int> = preferenceStore.getInt("pref_translation_cache_mb", 1024)
 
@@ -148,6 +157,7 @@ class TranslationPreferences(
         },
         font.get(),
         styleHint.get(),
+        if (simpleRender.get()) "simple" else "bubble",
     ).joinToString("|")
 
     companion object {
@@ -158,7 +168,7 @@ class TranslationPreferences(
          * page already translated — the cache keeps serving the old artwork, which makes the fix look
          * like it did nothing and is exactly how a masking bug can survive several rounds of testing.
          */
-        const val RENDERER_VERSION = "r95"
+        const val RENDERER_VERSION = "r96"
     }
 
     /**

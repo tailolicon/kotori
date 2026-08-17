@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.PageTranslator
 import mihon.feature.translation.TranslationPreferences
 import mihon.feature.translation.provider.TranslationProviders
@@ -43,7 +45,18 @@ class RegressionReceiver : BroadcastReceiver() {
         scope.launch { runSuite(app) }
     }
 
-    private suspend fun runSuite(context: Context) {
+    /**
+     * One suite at a time.
+     *
+     * The runner fires this receiver twice — once so the app creates `in/`, once after the fixtures
+     * are staged into it — and both broadcasts land in the same process. Without this the second run
+     * starts while the first is still going, the first's `finally` clears the provider override out
+     * from under it, and every remaining fixture fails with "no Gemini API key" after having done all
+     * of its detection and OCR work.
+     */
+    private suspend fun runSuite(context: Context) = suiteLock.withLock { runSuiteLocked(context) }
+
+    private suspend fun runSuiteLocked(context: Context) {
         val base = context.getExternalFilesDir(null)?.resolve("regression") ?: return
         val input = File(base, "in")
         // Create it ourselves rather than relying on `adb push` to. A directory adb creates belongs
@@ -121,18 +134,22 @@ class RegressionReceiver : BroadcastReceiver() {
 
     private companion object {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val suiteLock = Mutex()
         val LOG_STAMP = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
 
         /** Tags the translation pipeline logs under; extend when new stages start narrating. */
         val TRACE_TAGS = listOf(
-            "DispatchedCoroutine", "BubbleRenderer", "BubbleDetector", "TextBlockDetector",
-            "PageTranslator", "TranslationManager", "RegressionReceiver",
+            "DispatchedCoroutine", "UndispatchedCoroutine", "BubbleRenderer", "BubbleDetector",
+            "TextBlockDetector", "SimplePageReader", "PageTranslator", "TranslationManager",
+            "RegressionReceiver",
         )
         // "Bubble detector ready" is logged once per process when the ONNX session opens, so it
         // lands in whichever fixture happened to trigger the load. That is not a decision about the
         // page, and letting it through made two runs of identical code report a trace change.
         val NOISE = listOf(
             "GC freed", "Davey", "Choreographer", "Regression run complete", "Bubble detector ready",
+            // Wall-clock numbers are the point of the timing line and also make every run differ.
+            "timing: queue=",
         )
     }
 }

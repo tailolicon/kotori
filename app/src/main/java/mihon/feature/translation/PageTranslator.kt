@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.detect.BubbleDetector
 import mihon.feature.translation.detect.LowConfidenceSpeechGuard
 import mihon.feature.translation.detect.OversizedSpeechRefiner
+import mihon.feature.translation.detect.SimplePageReader
 import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
@@ -35,6 +36,7 @@ class PageTranslator(
 
     private val detector by lazy { BubbleDetector(context) }
     private val textBlocks by lazy { TextBlockDetector() }
+    private val simpleReader by lazy { SimplePageReader() }
     private val recognizer by lazy { BubbleTextRecognizer(context) }
     private val renderer by lazy { BubbleRenderer(context) }
 
@@ -141,6 +143,35 @@ class PageTranslator(
         var blocksDoneAt = startedAt
         val (boxes, recognized) = localWork.withLock {
             lockedAt = System.currentTimeMillis()
+
+            // Simple lettering needs two facts — where the dialogue is and what it says — and reading
+            // the page once produces both. The three stages below produce them too, at four times the
+            // cost: a bubble model proposes balloons, ML Kit reads the page to find the lettering the
+            // model cannot see, and then every proposed region is cropped and read *again*. On the
+            // strip this was measured against that came to 10.6s + 38.4s + 79.5s, most of it spent
+            // re-reading text the page pass had already read correctly.
+            if (preferences.simpleRender.get()) {
+                val read = simpleReader.read(source, translationContext.sourceLanguage)
+                detectDoneAt = System.currentTimeMillis()
+                blocksDoneAt = detectDoneAt
+                read.language
+                    .takeIf { it != translationContext.sourceLanguage }
+                    ?.let { pageLanguage ->
+                        logcat { "Reading this page as '$pageLanguage' rather than the configured source" }
+                        translationContext = translationContext.copy(sourceLanguage = pageLanguage)
+                    }
+                val usable = read.boxes.indices.filterNot { index ->
+                    read.boxes[index].isEdgeSliver(source.width) ||
+                        isDecorativeDisplayText(read.boxes[index], read.texts[index], source.width)
+                }
+                if (usable.isEmpty()) throw NothingToTranslate()
+                read.boxes.indices.filterNot(usable::contains).forEach { index ->
+                    logcat { "Dropped ${read.boxes[index]} as an edge sliver or decoration: ${read.texts[index].text}" }
+                }
+                localDoneAt = System.currentTimeMillis()
+                return@withLock usable.map(read.boxes::get) to usable.map(read.texts::get)
+            }
+
             val detected = detector.detect(source, horizontalSeams)
             detectDoneAt = System.currentTimeMillis()
             // The bubble model only knows speech bubbles. Status windows, captions and narration
@@ -406,7 +437,13 @@ class PageTranslator(
         logcat { "$diagnosticLabel rendering ${bubbles.size}/${boxes.size} translated bubbles" }
 
         val providerDoneAt = System.currentTimeMillis()
-        val rendered = renderer.render(source, bubbles, preferences.font.get(), horizontalSeams)
+        val rendered = renderer.render(
+            source,
+            bubbles,
+            preferences.font.get(),
+            horizontalSeams,
+            simple = preferences.simpleRender.get(),
+        )
         // Stage timings, because "translation is slow" is not actionable without them: waiting for
         // the single-lane local stages, running them, waiting on the network, and drawing are four
         // very different problems with four different fixes.

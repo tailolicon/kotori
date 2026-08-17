@@ -46,6 +46,505 @@ class BubbleRenderer(private val context: Context) {
         bubbles: List<TranslatedBubble>,
         fontName: String,
         horizontalSeams: IntArray = intArrayOf(),
+        simple: Boolean = false,
+    ): Bitmap {
+        if (simple) return renderSimple(source, bubbles, fontName)
+        return renderBubbleAware(source, bubbles, fontName, horizontalSeams)
+    }
+
+    /**
+     * The straightforward mode: erase the recognised lettering, write the translation in its place.
+     *
+     * This is deliberately the way a human letterer works — find the dialogue, remove it, write
+     * over it — and deliberately nothing more. The bubble-aware mode earns nicer results when its
+     * dozen guards all judge correctly (fills matched to the bubble, text centred in the balloon,
+     * larger type), and each of those guards is also a way to be wrong: patches over artwork, text
+     * stamped far from its balloon, outlines eaten. Here the erase can only touch the recognised
+     * glyphs, and the translation can only sit in the original lettering's own footprint, so the
+     * whole class of "the renderer redecorated my page" failures is structurally impossible.
+     *
+     * The trade is accepted openly: no reflowing into the full balloon, so long translations run
+     * smaller, and a bubble whose text OCR could not read is left entirely alone.
+     */
+    private fun renderSimple(
+        source: Bitmap,
+        bubbles: List<TranslatedBubble>,
+        fontName: String,
+    ): Bitmap {
+        val output = source.copy(Bitmap.Config.ARGB_8888, true)
+        if (bubbles.isEmpty()) return output
+        val typeface = resolveTypeface(fontName)
+        val canvas = Canvas(output)
+        val painted = mutableListOf<Rect>()
+        val written = mutableListOf<Pair<Rect, String>>()
+
+        for (bubble in bubbles.sortedByDescending { it.box.width.toLong() * it.box.height }) {
+            if (bubble.translated.isBlank()) {
+                logcat { "Simple: ${bubble.box} has no translation" }
+                continue
+            }
+            val lines = bubble.lines
+                .map { Rect(it.rect) }
+                .filter { it.width() > 2 && it.height() > 2 }
+            // No measured lettering means nothing can be erased, so nothing may be written either —
+            // stamping without erasing is the overprint defect, and stamping where nothing was read
+            // is the stray-text defect. Both end here.
+            if (lines.isEmpty()) {
+                logcat { "Simple: ${bubble.box} has no measured lettering to erase" }
+                continue
+            }
+
+            val lineHeight = lines.sumOf { it.height() } / lines.size
+            val slot = Rect(lines[0])
+            lines.drop(1).forEach { slot.union(it) }
+            slot.inset(
+                -max(6, (lineHeight * SIMPLE_SLOT_PAD_X).roundToInt()),
+                -max(4, (lineHeight * SIMPLE_SLOT_PAD_Y).roundToInt()),
+            )
+            slot.left = slot.left.coerceIn(0, output.width - 1)
+            slot.top = slot.top.coerceIn(0, output.height - 1)
+            slot.right = slot.right.coerceIn(slot.left + 1, output.width)
+            slot.bottom = slot.bottom.coerceIn(slot.top + 1, output.height)
+
+            val duplicate = written.any { (rect, text) ->
+                Rect.intersects(rect, slot) && looksLikeSameLine(text, bubble.translated)
+            }
+            if (duplicate) {
+                logcat { "Simple: ${bubble.box} repeats text already lettered nearby" }
+                continue
+            }
+            // Slots may touch without being in conflict: consecutive lines of one balloon that the
+            // reader grouped separately sit a few pixels apart, and their padding overlaps. Only a
+            // slot mostly inside one already lettered is the same region detected twice. Carving the
+            // overlap away instead — which the bubble-aware mode does, where slots are whole balloons
+            // — silently dropped the middle line of a three-line balloon on the page that exposed it.
+            if (paintedFraction(slot, painted) > SIMPLE_MAX_OVERLAP) {
+                logcat { "Skipping ${bubble.box}: $slot is already lettered" }
+                continue
+            }
+            val free = Rect(slot)
+            if (free.width() < MIN_DRAW_WIDTH) {
+                logcat { "Simple: $slot is too narrow to letter" }
+                continue
+            }
+
+            // Work on a crop with context around it, so the inpainter has real background on every
+            // side of the strokes it fills.
+            val crop = Rect(slot).apply {
+                inset(-SIMPLE_INPAINT_CONTEXT, -SIMPLE_INPAINT_CONTEXT)
+                left = left.coerceAtLeast(0)
+                top = top.coerceAtLeast(0)
+                right = right.coerceAtMost(output.width)
+                bottom = bottom.coerceAtMost(output.height)
+            }
+            val width = crop.width()
+            val height = crop.height()
+            if (width < MIN_REGION_SIDE || height < MIN_REGION_SIDE) {
+                logcat { "Simple: crop $crop is too small to work in" }
+                continue
+            }
+            val pixels = IntArray(width * height)
+            output.getPixels(pixels, 0, width, crop.left, crop.top, width, height)
+            val originalPixels = pixels.copyOf()
+
+            val areas = lines.map { line ->
+                Rect(line).apply {
+                    offset(-crop.left, -crop.top)
+                    inset(
+                        -max(4, (line.height() * SIMPLE_LINE_PAD_X).roundToInt()),
+                        -max(3, (line.height() * SIMPLE_LINE_PAD_Y).roundToInt()),
+                    )
+                    left = left.coerceIn(0, width - 1)
+                    top = top.coerceIn(0, height - 1)
+                    right = right.coerceIn(left + 1, width)
+                    bottom = bottom.coerceIn(top + 1, height)
+                }
+            }
+            val letters = analyseLettering(pixels, width, height, areas, lineHeight)
+            if (letters == null) {
+                logcat { "Simple: ${bubble.box} paper and lettering were not separable" }
+                continue
+            }
+            // Erased nothing → write nothing. The page stays exactly as drawn.
+            if (letters.covered < SIMPLE_MIN_GLYPH_PIXELS) {
+                logcat { "Simple: ${bubble.box} had only ${letters.covered} px of lettering to erase" }
+                continue
+            }
+
+            val inkColor = letters.inkColor
+            if (letters.flatPaper) {
+                // The lettering sits on one flat colour, so paint that colour back over it. This is
+                // the whole job on an ordinary speech balloon, it cannot leave a ghost, and it costs
+                // a fraction of reconstructing each stroke from its surroundings.
+                paintPaper(pixels, width, height, areas, letters)
+            } else {
+                Inpainter.fill(pixels, width, height, letters.ink)
+            }
+            output.setPixels(pixels, 0, width, crop.left, crop.top, width, height)
+
+            // The letterer's glance back at their own work: outlined lettering routinely leaves its
+            // rim behind the first pass, and writing over a survivor is the one defect this mode
+            // must never produce. The gate erases what still stands, and if lettering survives even
+            // that, this bubble keeps its original text untouched.
+            val linesLocal = lines.map { Rect(it).apply { offset(-crop.left, -crop.top) } }
+            if (!ensureErased(
+                    output, pixels, originalPixels, width, height, crop.left, crop.top,
+                    linesLocal, bubble.box,
+                )
+            ) {
+                continue
+            }
+
+            val paperColor = letters.paperColor
+
+            var lettered = false
+            runCatching {
+                canvas.save()
+                canvas.clipRect(free.left, free.top, free.right, free.bottom)
+                lettered = drawText(
+                    canvas = canvas,
+                    text = bubble.translated,
+                    left = free.left,
+                    top = free.top,
+                    width = free.width(),
+                    height = free.height(),
+                    inkColor = inkColor,
+                    paperColor = paperColor,
+                    typeface = typeface,
+                    alignLeft = false,
+                )
+                canvas.restore()
+            }.onFailure { logcat { "Simple lettering failed at $free: ${it.message}" } }
+            if (lettered) {
+                painted += free
+                written += slot to bubble.translated
+            } else {
+                logcat { "Simple: ${bubble.translated.take(24)} did not fit $free at any size" }
+            }
+        }
+        return output
+    }
+
+    /** Share of [slot] that already-lettered slots cover, counting each pixel once. */
+    private fun paintedFraction(slot: Rect, painted: List<Rect>): Float {
+        val area = slot.width().toLong() * slot.height()
+        if (area <= 0) return 1f
+        var covered = 0L
+        for (y in slot.top until slot.bottom) {
+            var x = slot.left
+            while (x < slot.right) {
+                val inside = painted.firstOrNull { it.top <= y && y < it.bottom && it.left <= x && x < it.right }
+                if (inside == null) {
+                    x++
+                } else {
+                    val run = min(slot.right, inside.right) - x
+                    covered += run
+                    x += run
+                }
+            }
+        }
+        return covered.toFloat() / area
+    }
+
+    /** What the lettering inside one bubble's OCR line boxes turned out to be made of. */
+    private class SimpleLettering(
+        /** Glyph pixels, their contrasting rim and the antialiased fringe, in crop coordinates. */
+        val ink: BooleanArray,
+        val covered: Int,
+        val paperColor: Int,
+        val inkColor: Int,
+        /** Colour distance from paper at which a pixel stops being paper. */
+        val rimLevel: Int,
+        /** The paper behind the lettering is one flat colour, so it can simply be painted back. */
+        val flatPaper: Boolean,
+    )
+
+    /**
+     * Measures paper and ink inside the recognised line boxes.
+     *
+     * The median colour of a line box is its paper. Lettering never fills half of its own bounding
+     * box once the counters, the inter-letter gaps and the line's padding are counted, so this holds
+     * for pale dialogue and heavy display type alike — and it needs no polarity search.
+     *
+     * That search is what the bubble-aware mask runs, and it is what got bold sound effects exactly
+     * backwards: on a black "HAAAAAP!!!" it decided the thin white gaps between the strokes were the
+     * ink, reconstructed those, and then drew the translation white-on-black over lettering that had
+     * never been erased. Taking the median instead cannot invert, because it does not choose.
+     */
+    private fun analyseLettering(
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        areas: List<Rect>,
+        lineHeight: Int,
+    ): SimpleLettering? {
+        val luma = IntArray(256)
+        var total = 0
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    luma[luminanceOf(pixels[base + x]).roundToInt().coerceIn(0, 255)]++
+                    total++
+                }
+            }
+        }
+        if (total < SIMPLE_MIN_ANALYSIS_PIXELS) return null
+        val medianLuma = percentileOf(luma, total, 0.5f)
+
+        // Take the paper's actual colour from the pixels at that median, so a tinted balloon is
+        // repainted in its own tint rather than in grey of the same brightness.
+        var pr = 0L
+        var pg = 0L
+        var pb = 0L
+        var paperCount = 0
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    val p = pixels[base + x]
+                    if (kotlin.math.abs(luminanceOf(p) - medianLuma) > SIMPLE_PAPER_BAND) continue
+                    pr += (p shr 16) and 0xFF
+                    pg += (p shr 8) and 0xFF
+                    pb += p and 0xFF
+                    paperCount++
+                }
+            }
+        }
+        if (paperCount == 0) return null
+        val paperColor = Color.rgb((pr / paperCount).toInt(), (pg / paperCount).toInt(), (pb / paperCount).toInt())
+
+        // Ink is what stands away from the paper. Otsu over the distance-from-paper histogram splits
+        // the two populations without a tuned threshold; the floor keeps grain and JPEG ringing on
+        // the paper side when a box happens to hold no lettering at all.
+        val distance = IntArray(256)
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) distance[channelDistance(pixels[base + x], paperColor)]++
+            }
+        }
+        val level = otsu(distance, total).coerceIn(SIMPLE_MIN_INK_DISTANCE, SIMPLE_MAX_INK_DISTANCE)
+
+        val core = BooleanArray(pixels.size)
+        var coreCount = 0
+        var inkLumaTotal = 0L
+        var ir = 0L
+        var ig = 0L
+        var ib = 0L
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    val p = pixels[base + x]
+                    if (channelDistance(p, paperColor) <= level) continue
+                    core[base + x] = true
+                    coreCount++
+                    inkLumaTotal += luminanceOf(p).roundToInt()
+                    ir += (p shr 16) and 0xFF
+                    ig += (p shr 8) and 0xFF
+                    ib += p and 0xFF
+                }
+            }
+        }
+        if (coreCount == 0) return null
+        // More than half the box being "ink" means the two populations were never separable here —
+        // lettering over busy artwork, most often. Refusing is the honest outcome: the bubble keeps
+        // its original text rather than getting a smear with a translation on top.
+        if (coreCount.toFloat() > total * SIMPLE_MAX_INK_FRACTION) return null
+
+        // Display lettering is usually drawn twice: a dark core inside a light rim, or the reverse,
+        // so that it stays legible over artwork. Only the core clears Otsu's split, and erasing the
+        // core alone leaves the rim — a complete outline of every letter, which is the whole original
+        // paragraph surviving as a legible ghost with the translation printed across it. Whatever
+        // stands away from the paper and touches a core belongs to the same lettering.
+        val rimLevel = max(SIMPLE_MIN_RIM_DISTANCE, (level * SIMPLE_RIM_LEVEL_RATIO).roundToInt())
+        val rimRadius = max(SIMPLE_MIN_RIM_RADIUS, (lineHeight * SIMPLE_RIM_RADIUS_RATIO).roundToInt())
+        val nearCore = dilateMask(core, width, height, rimRadius)
+        val lettering = core.copyOf()
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    val index = base + x
+                    if (lettering[index] || !nearCore[index]) continue
+                    if (channelDistance(pixels[index], paperColor) > rimLevel) lettering[index] = true
+                }
+            }
+        }
+
+        val ink = dilateMask(lettering, width, height, SIMPLE_INK_DILATE)
+        var covered = 0
+        for (value in ink) if (value) covered++
+
+        // Flatness is decided on the paper that is left once the lettering and its fringe are out of
+        // the way: if what remains is one colour, painting that colour back is exact. Screentone,
+        // gradients and artwork fail this and fall through to stroke-by-stroke reconstruction.
+        var paperPixels = 0
+        var nearPaper = 0
+        for (area in areas) {
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    if (ink[base + x]) continue
+                    paperPixels++
+                    if (channelDistance(pixels[base + x], paperColor) <= SIMPLE_FLAT_TOLERANCE) nearPaper++
+                }
+            }
+        }
+        val flatPaper = paperPixels > 0 && nearPaper.toFloat() >= paperPixels * SIMPLE_FLAT_FRACTION
+
+        val lightOnDark = inkLumaTotal / coreCount > medianLuma
+        return SimpleLettering(
+            ink = ink,
+            covered = covered,
+            paperColor = paperColor,
+            inkColor = Color.rgb((ir / coreCount).toInt(), (ig / coreCount).toInt(), (ib / coreCount).toInt())
+                .takeIf { luminanceDistance(it, paperColor) >= MIN_CONTRAST } ?: fallbackInk(lightOnDark),
+            rimLevel = rimLevel,
+            flatPaper = flatPaper,
+        )
+    }
+
+    /**
+     * Paints the paper colour back over the lettering.
+     *
+     * The fill hugs the ink rather than covering the whole padded line box: the padding exists so the
+     * measurement sees enough paper to be sure of it, and a rectangle that wide would reach past the
+     * balloon on a line that ends against its edge.
+     */
+    private fun paintPaper(
+        pixels: IntArray,
+        width: Int,
+        height: Int,
+        areas: List<Rect>,
+        letters: SimpleLettering,
+    ) {
+        for (area in areas) {
+            var left = area.right
+            var top = area.bottom
+            var right = area.left
+            var bottom = area.top
+            for (y in area.top until area.bottom) {
+                val base = y * width
+                for (x in area.left until area.right) {
+                    if (!letters.ink[base + x]) continue
+                    if (x < left) left = x
+                    if (x > right) right = x
+                    if (y < top) top = y
+                    if (y > bottom) bottom = y
+                }
+            }
+            if (right < left || bottom < top) continue
+            val fill = Rect(left, top, right + 1, bottom + 1).apply {
+                inset(-SIMPLE_FILL_MARGIN, -SIMPLE_FILL_MARGIN)
+                this.left = this.left.coerceIn(0, width)
+                this.top = this.top.coerceIn(0, height)
+                this.right = this.right.coerceIn(this.left, width)
+                this.bottom = this.bottom.coerceIn(this.top, height)
+            }
+            // A recognised line box hugs the x-height, so the tail of a descender or the overshoot of
+            // a slanted display capital can fall outside it — and a row of surviving glyph tips under
+            // the translation is as obvious a defect as a surviving word. Follow the lettering out of
+            // the box for a bounded distance, stopping at the first clean row or column.
+            val reach = max(SIMPLE_FILL_MARGIN, (area.height() * SIMPLE_FILL_REACH_RATIO).roundToInt())
+            while (fill.top > 0 && fill.top > area.top - reach &&
+                rowHasInk(pixels, width, fill.top - 1, fill.left, fill.right, letters)
+            ) {
+                fill.top--
+            }
+            while (fill.bottom < height && fill.bottom < area.bottom + reach &&
+                rowHasInk(pixels, width, fill.bottom, fill.left, fill.right, letters)
+            ) {
+                fill.bottom++
+            }
+            for (y in fill.top until fill.bottom) {
+                val base = y * width
+                for (x in fill.left until fill.right) pixels[base + x] = letters.paperColor
+            }
+        }
+    }
+
+    private fun rowHasInk(
+        pixels: IntArray,
+        width: Int,
+        y: Int,
+        left: Int,
+        right: Int,
+        letters: SimpleLettering,
+    ): Boolean {
+        val base = y * width
+        for (x in left until right) {
+            if (channelDistance(pixels[base + x], letters.paperColor) > letters.rimLevel) return true
+        }
+        return false
+    }
+
+    /** Max per-channel difference, in 0..255. */
+    private fun channelDistance(color: Int, other: Int): Int = max(
+        kotlin.math.abs(((color shr 16) and 0xFF) - ((other shr 16) and 0xFF)),
+        max(
+            kotlin.math.abs(((color shr 8) and 0xFF) - ((other shr 8) and 0xFF)),
+            kotlin.math.abs((color and 0xFF) - (other and 0xFF)),
+        ),
+    )
+
+    private fun percentileOf(histogram: IntArray, total: Int, fraction: Float): Int {
+        val target = (total * fraction).toInt().coerceIn(0, total - 1)
+        var seen = 0
+        for (value in histogram.indices) {
+            seen += histogram[value]
+            if (seen > target) return value
+        }
+        return histogram.size - 1
+    }
+
+    /** Otsu's threshold over a 256-bin histogram; returns the last value still on the low side. */
+    private fun otsu(histogram: IntArray, total: Int): Int {
+        if (total <= 0) return 0
+        val weightedTotal = histogram.indices.sumOf { it.toLong() * histogram[it] }
+        var lowWeight = 0L
+        var lowSum = 0L
+        var best = -1.0
+        var threshold = 0
+        for (value in histogram.indices) {
+            lowWeight += histogram[value]
+            if (lowWeight == 0L) continue
+            val highWeight = total - lowWeight
+            if (highWeight <= 0L) break
+            lowSum += value.toLong() * histogram[value]
+            val lowMean = lowSum.toDouble() / lowWeight
+            val highMean = (weightedTotal - lowSum).toDouble() / highWeight
+            val variance = lowWeight.toDouble() * highWeight * (lowMean - highMean) * (lowMean - highMean)
+            if (variance > best) {
+                best = variance
+                threshold = value
+            }
+        }
+        return threshold
+    }
+
+    private fun dilateMask(mask: BooleanArray, width: Int, height: Int, radius: Int): BooleanArray {
+        if (radius <= 0) return mask.copyOf()
+        val out = BooleanArray(mask.size)
+        for (y in 0 until height) {
+            val base = y * width
+            for (x in 0 until width) {
+                if (!mask[base + x]) continue
+                for (ny in max(0, y - radius)..min(height - 1, y + radius)) {
+                    val row = ny * width
+                    for (nx in max(0, x - radius)..min(width - 1, x + radius)) out[row + nx] = true
+                }
+            }
+        }
+        return out
+    }
+
+    private fun renderBubbleAware(
+        source: Bitmap,
+        bubbles: List<TranslatedBubble>,
+        fontName: String,
+        horizontalSeams: IntArray,
     ): Bitmap {
         val output = source.copy(Bitmap.Config.ARGB_8888, true)
         if (bubbles.isEmpty()) return output
@@ -2228,6 +2727,48 @@ class BubbleRenderer(private val context: Context) {
         const val TEXT_BLOCK_PAD_RATIO = 0.35f
         const val TEXT_BLOCK_PAD_MAX = 220
         const val MIN_REGION_SIDE = 10
+
+        // ── Simple mode ───────────────────────────────────────────────────────────────────────────
+        /** Outset around the lettering's own footprint that the translation may occupy. */
+        const val SIMPLE_SLOT_PAD_X = 0.35f
+        const val SIMPLE_SLOT_PAD_Y = 0.22f
+
+        /** Outset around each OCR line the glyph search may look in. */
+        const val SIMPLE_LINE_PAD_X = 0.30f
+        const val SIMPLE_LINE_PAD_Y = 0.15f
+
+        /** Context margin so the inpainter always has known pixels around the strokes. */
+        const val SIMPLE_INPAINT_CONTEXT = 28
+
+        /** Fewer erased glyph pixels than this means the erase failed; nothing is written. */
+        const val SIMPLE_MIN_GLYPH_PIXELS = 24
+
+        /** A line box smaller than this cannot say anything reliable about paper or ink. */
+        const val SIMPLE_MIN_ANALYSIS_PIXELS = 200
+        /** Luminance either side of the median that still counts as paper when sampling its colour. */
+        const val SIMPLE_PAPER_BAND = 10f
+        /** Colour distance bounds for the ink split, around whatever Otsu proposes. */
+        const val SIMPLE_MIN_INK_DISTANCE = 42
+        const val SIMPLE_MAX_INK_DISTANCE = 150
+        /** Above this share of the box being ink, paper and lettering were never separable. */
+        const val SIMPLE_MAX_INK_FRACTION = 0.52f
+        /** Grown around the glyph core so the antialiased fringe goes with it. */
+        const val SIMPLE_INK_DILATE = 2
+        /** A contrasting rim clears a lower bar than the core, since it lies between core and paper. */
+        const val SIMPLE_RIM_LEVEL_RATIO = 0.40f
+        const val SIMPLE_MIN_RIM_DISTANCE = 22
+        /** How far from a core a rim can be and still belong to the same letter. */
+        const val SIMPLE_RIM_RADIUS_RATIO = 0.12f
+        const val SIMPLE_MIN_RIM_RADIUS = 3
+        /** How far past its line box the paper may follow a descender, as a fraction of box height. */
+        const val SIMPLE_FILL_REACH_RATIO = 0.30f
+        /** Colour distance within which the remaining paper counts as one flat colour. */
+        const val SIMPLE_FLAT_TOLERANCE = 20
+        const val SIMPLE_FLAT_FRACTION = 0.94f
+        /** Margin left around the lettering when painting the paper back over it. */
+        const val SIMPLE_FILL_MARGIN = 3
+        /** Share of a slot already lettered above which it is the same region detected twice. */
+        const val SIMPLE_MAX_OVERLAP = 0.55f
         const val BOX_INSET_RATIO = 0.06f
         const val OCR_SEARCH_PAD_RATIO = 0.22f
         const val OCR_SEARCH_PAD_MIN = 2
