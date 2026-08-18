@@ -164,13 +164,67 @@ class PageTranslator(
                     read.boxes[index].isEdgeSliver(source.width) ||
                         isDecorativeDisplayText(read.boxes[index], read.texts[index], source.width)
                 }
-                if (usable.isEmpty()) throw NothingToTranslate()
                 read.boxes.indices.filterNot(usable::contains).forEach { index ->
                     logcat { "Dropped ${read.boxes[index]} as an edge sliver or decoration: ${read.texts[index].text}" }
                 }
+                var blocks = usable.map(read.boxes::get)
+                var blockTexts = usable.map(read.texts::get)
 
-                localDoneAt = detectDoneAt
-                return@withLock usable.map(read.boxes::get) to usable.map(read.texts::get)
+                // Where the lettering *may go* is a different question from where it is, and only the
+                // balloon answers it. Japanese runs in columns: the recognised footprint of a line is
+                // a tall sliver, and a sentence written into that sliver comes out one or two words
+                // per row - translated, and unreadable. The balloon around it is a wide oval with
+                // room for the sentence.
+                val balloons = suppressOverlaps(
+                    runCatching { detector.detect(source, horizontalSeams) }
+                        .onFailure { logcat { "Bubble detection failed: ${it.message}" } }
+                        .getOrDefault(emptyList())
+                        .filterNot { it.isEdgeSliver(source.width) },
+                )
+
+                // Read the page once, but do not accept "once" as the last word on a balloon the page
+                // pass got nothing usable out of. Reading a whole page in bands is what makes this
+                // pipeline thirty times faster than cropping and reading every region separately, and
+                // it costs exactly this: a balloon whose lettering the band pass misreads is simply
+                // lost, where the old per-region path would have rescued it by cropping tight,
+                // enlarging and raising contrast. On the page that exposed it, four lines of dialogue
+                // came back as "iSNOH ONo)" - mirrored fragments of one word - which the decoration
+                // guard then correctly discarded, leaving the balloon in its source language.
+                //
+                // So: keep the single pass, and pay the old cost only for the balloons that need it.
+                val unread = balloons
+                    .filter { it.confidence >= MIN_RESCUE_CONFIDENCE }
+                    .filter { balloon ->
+                        blocks.withIndex().none { (index, block) ->
+                            containedFraction(block, balloon) >= MIN_BALLOON_CONTAINMENT &&
+                                blockTexts[index].text.isNotBlank()
+                        }
+                    }
+                    .sortedByDescending { it.confidence }
+                    .take(MAX_RESCUE_BALLOONS)
+                if (unread.isNotEmpty()) {
+                    logcat { "Re-reading ${unread.size} balloon(s) the page pass could not read" }
+                    val rescued = runCatching {
+                        recognizer.recognize(source, unread, translationContext.sourceLanguage)
+                    }
+                        .onFailure { logcat { "Balloon re-read failed: ${it.message}" } }
+                        .getOrDefault(emptyList())
+                    val recovered = unread.indices.filter { index ->
+                        val text = rescued.getOrNull(index)?.text.orEmpty()
+                        text.isNotBlank() &&
+                            !isDecorativeDisplayText(unread[index], rescued[index], source.width)
+                    }
+                    recovered.forEach { index ->
+                        logcat { "Recovered ${unread[index].toRect()}: ${rescued[index].text.lines().joinToString(" / ")}" }
+                    }
+                    blocks = blocks + recovered.map(unread::get)
+                    blockTexts = blockTexts + recovered.map(rescued::get)
+                }
+
+                if (blocks.isEmpty()) throw NothingToTranslate()
+                val placed = placeInBalloons(blocks, blockTexts, balloons)
+                localDoneAt = System.currentTimeMillis()
+                return@withLock placed
             }
 
             val detected = detector.detect(source, horizontalSeams)
@@ -510,6 +564,36 @@ class PageTranslator(
                 if (joined > 0) ", joining $joined that shared one" else ""
         }
         return outBoxes to outTexts
+    }
+
+    /**
+     * Drops detections that name a balloon another, more confident detection already names.
+     *
+     * The model routinely returns four or five boxes around one balloon, each a slightly different
+     * crop of it. Left alone they cost real time — every one of them is re-read when the page pass
+     * missed that balloon — and they cost correctness: the same sentence comes back five times, in
+     * five slightly clipped readings, and the renderer letters all five on top of each other.
+     *
+     * Intersection over union at [BALLOON_IOU], the same threshold the reference implementation uses.
+     */
+    private fun suppressOverlaps(boxes: List<BubbleBox>): List<BubbleBox> {
+        if (boxes.size < 2) return boxes
+        val kept = ArrayList<BubbleBox>(boxes.size)
+        for (box in boxes.sortedByDescending { it.confidence }) {
+            if (kept.none { intersectionOverUnion(it, box) >= BALLOON_IOU }) kept += box
+        }
+        if (kept.size < boxes.size) {
+            logcat { "Merged ${boxes.size - kept.size} overlapping balloon detection(s)" }
+        }
+        return kept
+    }
+
+    private fun intersectionOverUnion(a: BubbleBox, b: BubbleBox): Float {
+        val overlap = Rect(a.toRect())
+        if (!overlap.intersect(b.toRect())) return 0f
+        val intersection = overlap.width().toLong() * overlap.height()
+        val union = a.width.toLong() * a.height + b.width.toLong() * b.height - intersection
+        return if (union <= 0) 0f else intersection.toFloat() / union
     }
 
     /** Fraction of [inner] that lies inside [outer]. */
@@ -872,6 +956,13 @@ class PageTranslator(
 
         /** Share of a block that must lie inside a balloon before that balloon owns it. */
         const val MIN_BALLOON_CONTAINMENT = 0.75f
+
+        /** Overlap above which two detections are the same balloon. */
+        const val BALLOON_IOU = 0.5f
+        /** Below this the model is guessing, and re-reading its guess costs more than it returns. */
+        const val MIN_RESCUE_CONFIDENCE = 0.35f
+        /** Ceiling on re-reads per page, so a page of false positives cannot dominate its own cost. */
+        const val MAX_RESCUE_BALLOONS = 8
 
         /** How much better a swap must score before it is trusted over the model's own ordering. */
         const val SWAP_MARGIN = 0.30f
