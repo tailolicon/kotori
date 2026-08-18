@@ -209,10 +209,30 @@ class PageTranslator(
                     }
                         .onFailure { logcat { "Balloon re-read failed: ${it.message}" } }
                         .getOrDefault(emptyList())
+                    // Accept a recovery only where nothing is being lettered already. A status panel
+                    // is covered by several overlapping detections, each of which re-reads a
+                    // different fragment of it — "NATIONAL", "LEADE", "MILLION" — and lettering all
+                    // of them puts three half-sentences on top of each other across the panel. One
+                    // region per piece of page, and the first one wins.
+                    val taken = blocks.toMutableList()
                     val recovered = unread.indices.filter { index ->
                         val text = rescued.getOrNull(index)?.text.orEmpty()
-                        text.isNotBlank() &&
-                            !isDecorativeDisplayText(unread[index], rescued[index], source.width)
+                        if (text.isBlank()) return@filter false
+                        if (isDecorativeDisplayText(unread[index], rescued[index], source.width)) {
+                            return@filter false
+                        }
+                        // A detection much narrower than the page is not a balloon the reader was
+                        // meant to read; it is a scrap of one. Re-reading those recovered fragments
+                        // of a status panel — "NATIONAL / LEADE", "MILLON / ON" — and each fragment
+                        // was then lettered into its own thin strip, four half-sentences scattered
+                        // across the panel. Every recovery worth keeping so far has been at least a
+                        // third of the page wide.
+                        if (unread[index].width < source.width * MIN_RESCUE_WIDTH_RATIO) {
+                            return@filter false
+                        }
+                        val clashes = taken.any { containedFraction(unread[index], it) >= MAX_RESCUE_OVERLAP }
+                        if (!clashes) taken += unread[index]
+                        !clashes
                     }
                     recovered.forEach { index ->
                         logcat { "Recovered ${unread[index].toRect()}: ${rescued[index].text.lines().joinToString(" / ")}" }
@@ -580,7 +600,15 @@ class PageTranslator(
         if (boxes.size < 2) return boxes
         val kept = ArrayList<BubbleBox>(boxes.size)
         for (box in boxes.sortedByDescending { it.confidence }) {
-            if (kept.none { intersectionOverUnion(it, box) >= BALLOON_IOU }) kept += box
+            // Overlap alone misses the common shape of a duplicate: a small box sitting wholly
+            // inside a larger one scores a low IoU precisely because it is small, so both survived
+            // and the same banner was read and lettered twice — once whole, once as "S EN: /
+            // ANLATION.COM". Anything almost entirely inside a box already kept is that box again.
+            val duplicate = kept.any { other ->
+                intersectionOverUnion(other, box) >= BALLOON_IOU ||
+                    containedFraction(box, other) >= BALLOON_CONTAINED
+            }
+            if (!duplicate) kept += box
         }
         if (kept.size < boxes.size) {
             logcat { "Merged ${boxes.size - kept.size} overlapping balloon detection(s)" }
@@ -959,7 +987,26 @@ class PageTranslator(
 
         /** Overlap above which two detections are the same balloon. */
         const val BALLOON_IOU = 0.5f
-        /** Below this the model is guessing, and re-reading its guess costs more than it returns. */
+        /** Share of a detection lying inside a better one above which it is that one again. */
+        const val BALLOON_CONTAINED = 0.8f
+        /** Share of a re-read region already spoken for above which it is not lettered again. */
+        const val MAX_RESCUE_OVERLAP = 0.3f
+        /**
+         * Narrower than this share of the page, a detection is a scrap rather than a balloon.
+         *
+         * The two recoveries worth having measured 36% and 69% of their page; the fragment of a
+         * status panel that had to be refused measured 23%. A balloon carrying a sentence is a
+         * quarter of the page wide as a rule, and a detection well under that is part of something
+         * bigger that re-reading can only damage.
+         */
+        const val MIN_RESCUE_WIDTH_RATIO = 0.25f
+        /**
+         * Confidence floor for a re-read.
+         *
+         * Measured both ways. Dropping it to 0.10 bought one extra recovery on one page and cost
+         * fifty percent more time on every page, plus duplicate readings of the same banner. The
+         * floor stays.
+         */
         const val MIN_RESCUE_CONFIDENCE = 0.35f
         /** Ceiling on re-reads per page, so a page of false positives cannot dominate its own cost. */
         const val MAX_RESCUE_BALLOONS = 8
