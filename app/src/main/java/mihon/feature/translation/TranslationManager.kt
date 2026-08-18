@@ -197,7 +197,6 @@ class TranslationManager(
         mangaId: Long,
         chapterId: Long,
         pages: List<Pair<Int, () -> InputStream>>,
-        joinContinuousPages: Boolean,
     ) {
         if (pages.isEmpty() || isRateLimited() || !isEnabled(mangaId)) return
         // Do not begin() here: leftover work from a series the reader already left would
@@ -220,8 +219,13 @@ class TranslationManager(
             val batch = group
             group = mutableListOf()
             groupPixels = 0
-            val continuous = joinContinuousPages &&
-                ContinuousPageClassifier.shouldJoin(batch.map { it.second })
+            // The images themselves decide this, not the viewer setting. Gating it on "the reader is
+            // in webtoon mode" meant a batch never held more than one page in any other mode, so the
+            // classifier never saw a seam to judge — and a source that cuts every page into two files
+            // had every balloon straddling a cut translated as two halves, one of them discarded as
+            // an edge sliver. ContinuousPageClassifier measures the pixels either side of the seam;
+            // unrelated full pages have blank or mismatched edges and are still translated singly.
+            val continuous = ContinuousPageClassifier.shouldJoin(batch.map { it.second })
             if (continuous) {
                 translateGroup(mangaId, chapterId, stamp, batch)
             } else {
@@ -241,8 +245,7 @@ class TranslationManager(
                 if (groupPixels > 0 && groupPixels + pixels > MAX_STRIP_PIXELS) flush()
                 group += index to bitmap
                 groupPixels += pixels
-                val maxPages = PageBatchPolicy.maxPages(joinContinuousPages, MAX_STRIP_PAGES)
-                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= maxPages) flush()
+                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= MAX_STRIP_PAGES) flush()
             }
             if (workGate.allows(mangaId, generation) && isEnabled(mangaId) && !isRateLimited()) {
                 flush()
