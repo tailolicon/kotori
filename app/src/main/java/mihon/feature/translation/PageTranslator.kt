@@ -572,15 +572,27 @@ class PageTranslator(
             }
             if (!done.add(balloon)) return@forEach
             val shared = regions.indices.filter { host[it] === balloon }
-            outBoxes += balloon
-            outTexts += BubbleText(
+            val merged = BubbleText(
                 text = shared.joinToString("\n") { texts[it].text }.trim(),
                 lines = shared.flatMap { texts[it].lines },
             )
+            // Hand the renderer the balloon only where the lettering's own footprint cannot hold a
+            // translation: columns of vertical Japanese, where that footprint is a sliver a few
+            // characters wide and a horizontal sentence written into it comes out one word per row.
+            //
+            // Horizontal lettering does not have that problem, and giving it the balloon instead
+            // makes the page worse, not better: the type is set to fill a box larger than the words
+            // it replaces, and the erase reaches the balloon's own outline. On the page that showed
+            // it, a balloon lost its outline entirely and its last line ran off the panel below.
+            val vertical = merged.lines.isNotEmpty() &&
+                merged.lines.count { it.rect.height() > it.rect.width() * VERTICAL_ASPECT } * 2 >
+                merged.lines.size
+            outBoxes += if (vertical) balloon else regions[shared.first()]
+            outTexts += merged
         }
         val joined = regions.size - outBoxes.size
         logcat {
-            "Placed ${outBoxes.count { !it.isTextBlock }} block(s) in balloons" +
+            "Grouped ${outBoxes.size} region(s) by balloon" +
                 if (joined > 0) ", joining $joined that shared one" else ""
         }
         return outBoxes to outTexts
@@ -1000,6 +1012,9 @@ class PageTranslator(
          * bigger that re-reading can only damage.
          */
         const val MIN_RESCUE_WIDTH_RATIO = 0.25f
+
+        /** Height-to-width ratio above which a recognised line is a column, not a row. */
+        const val VERTICAL_ASPECT = 1.5f
         /**
          * Confidence floor for a re-read.
          *

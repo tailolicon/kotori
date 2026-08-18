@@ -106,9 +106,17 @@ class BubbleRenderer(private val context: Context) {
             // confidences of 0.05 to 0.28 and matched almost none of the real balloons. Flooding
             // costs nothing extra and answers the only question that matters: how much room, all of
             // one colour, surrounds this text.
+            //
+            // Only for columns, though. Horizontal lettering has room in its own footprint, and
+            // handing it the balloon instead makes the page worse: the type is set to fill a box far
+            // larger than the words it replaces, and repainting the interior reaches the balloon's
+            // own outline. On the page that showed it, a balloon lost its outline entirely and the
+            // last line of its translation ran off the panel below — where the footprint erase had
+            // set the same sentence neatly inside it.
             val textBounds = Rect(lines[0])
             lines.drop(1).forEach { textBounds.union(it) }
-            if (paintedFraction(textBounds, painted) <= SIMPLE_MAX_OVERLAP) {
+            val vertical = lines.count { it.height() > it.width() * SIMPLE_VERTICAL_ASPECT } * 2 > lines.size
+            if (vertical && paintedFraction(textBounds, painted) <= SIMPLE_MAX_OVERLAP) {
                 val area = letterInBalloon(output, canvas, bubble, lines, textBounds, typeface)
                 if (area != null) {
                     painted += area
@@ -2953,6 +2961,8 @@ class BubbleRenderer(private val context: Context) {
         const val SIMPLE_FLAT_FRACTION = 0.94f
         /** Share of a slot already lettered above which it is the same region detected twice. */
         const val SIMPLE_MAX_OVERLAP = 0.55f
+        /** Height-to-width ratio above which a recognised line is a column, not a row. */
+        const val SIMPLE_VERTICAL_ASPECT = 1.5f
 
         // ── Lettering into a balloon ──────────────────────────────────────────────────────────────
         // Taken from the reference implementation rather than tuned here: a tenth of the balloon as
