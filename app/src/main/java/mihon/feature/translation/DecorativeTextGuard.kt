@@ -40,6 +40,19 @@ internal object DecorativeTextGuard {
     }
 
     private fun looksLikeDialogue(raw: String): Boolean {
+        // Scripts that do not put spaces between words cannot be judged by counting words, and the
+        // Latin normalisation below deletes them outright: every Korean and Japanese balloon arrived
+        // here as the empty string, counted zero words, and was discarded as decoration. That is one
+        // guard silently refusing to translate two whole languages — a page of sharp, obvious Korean
+        // dialogue came back untouched, and so did every Japanese manga.
+        //
+        // Length is the honest test for those scripts. A decorative title or a drawn sound effect is
+        // two or three characters; a line of dialogue is longer. Erring towards translating is right
+        // here anyway: lettering a title is a small blemish, and leaving dialogue in a language the
+        // reader cannot read is the whole failure the feature exists to prevent.
+        val ideographs = raw.count(::isIdeographic)
+        if (ideographs >= MIN_IDEOGRAPHIC_DIALOGUE) return true
+
         val normalized = raw
             .uppercase()
             .replace('’', '\'')
@@ -56,6 +69,15 @@ internal object DecorativeTextGuard {
         return hasSentencePunctuation || hasConversationCue
     }
 
+    /** Hangul, kana and Han — the scripts that carry a sentence without spaces. */
+    private fun isIdeographic(ch: Char): Boolean = ch.code.let { cp ->
+        cp in 0x1100..0x11FF || // Hangul jamo
+            cp in 0x3040..0x30FF || // hiragana and katakana
+            cp in 0x3400..0x9FFF || // Han
+            cp in 0xAC00..0xD7AF || // Hangul syllables
+            cp in 0xF900..0xFAFF // Han compatibility
+    }
+
     private val WORD = Regex("[A-Z0-9]+(?:'[A-Z]+)?")
     private val TITLE_PREFIX = Regex("^(?:CHAPTER|EPISODE|VOLUME|SEASON|PROLOGUE|EPILOGUE)\\b.*")
     private val CONVERSATION_CUES = setOf(
@@ -69,6 +91,9 @@ internal object DecorativeTextGuard {
         "CAN", "CAN'T", "COULD", "COULDN'T", "WILL", "WON'T", "WOULD", "WOULDN'T",
         "THEN", "PLEASE", "SORRY", "THANKS", "THANK",
     )
+
+    /** Characters of a spaceless script above which the region is a sentence, not an ornament. */
+    private const val MIN_IDEOGRAPHIC_DIALOGUE = 4
 
     private const val MIN_DISPLAY_TEXT_HEIGHT = 42
     private const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f
