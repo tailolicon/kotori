@@ -171,7 +171,7 @@ class TranslationPreferences(
          * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
          * reader had already seen came back with the defect intact.
          */
-        const val RENDERER_VERSION = "r99"
+        const val RENDERER_VERSION = "r100"
     }
 
     /**
