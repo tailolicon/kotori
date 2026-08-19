@@ -10,18 +10,25 @@ import mihon.feature.translation.detect.LowConfidenceSpeechGuard
 import mihon.feature.translation.detect.OversizedSpeechRefiner
 import mihon.feature.translation.detect.SimplePageReader
 import mihon.feature.translation.detect.TextBlockDetector
+import mihon.feature.translation.manga.MangaPageTranslator
+import mihon.feature.translation.manga.MangaPipeline
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
 import mihon.feature.translation.model.TextLineBox
 import mihon.feature.translation.model.TranslatedBubble
 import mihon.feature.translation.ocr.BubbleTextRecognizer
 import mihon.feature.translation.provider.BubbleTranslation
+import mihon.feature.translation.provider.ProviderRateLimited
+import mihon.feature.translation.provider.ProviderRejected
 import mihon.feature.translation.provider.TranslationContext
 import mihon.feature.translation.provider.TranslationProvider
 import mihon.feature.translation.provider.TranslationProviders
+import mihon.feature.translation.render.BubbleFill
 import mihon.feature.translation.render.BubbleRenderer
+import mihon.feature.translation.render.PaperBalloonFinder
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Translates a single manga page end to end: detect bubbles, read them, translate, repaint.
@@ -39,6 +46,7 @@ class PageTranslator(
     private val simpleReader by lazy { SimplePageReader() }
     private val recognizer by lazy { BubbleTextRecognizer(context) }
     private val renderer by lazy { BubbleRenderer(context) }
+    private val mangaTranslator by lazy { MangaPageTranslator(context, localWork) }
 
     /**
      * Guards the on-device stages only: the ONNX detector session and the ML Kit recogniser
@@ -128,6 +136,29 @@ class PageTranslator(
             styleHint = preferences.styleHint.get(),
         )
 
+        if (
+            MangaPipeline.shouldHandle(
+                source.width,
+                source.height,
+                translationContext.sourceLanguage,
+                currentProvider().displayName,
+            )
+        ) {
+            val manga = try {
+                mangaTranslator.translate(source, translationContext, currentProvider(), diagnosticLabel)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: ProviderRateLimited) {
+                throw error
+            } catch (error: ProviderRejected) {
+                throw error
+            } catch (error: Exception) {
+                logcat { "$diagnosticLabel manga pipeline failed: ${error.message}; using original path" }
+                null
+            }
+            if (manga != null) return@withIOContext manga
+        }
+
         val startedAt = System.currentTimeMillis()
         var lockedAt = startedAt
         var localDoneAt = startedAt
@@ -150,8 +181,14 @@ class PageTranslator(
             // model cannot see, and then every proposed region is cropped and read *again*. On the
             // strip this was measured against that came to 10.6s + 38.4s + 79.5s, most of it spent
             // re-reading text the page pass had already read correctly.
-            if (preferences.simpleRender.get()) {
+            val renderStyle = preferences.renderStyle()
+            if (renderStyle != TranslationRenderStyle.BUBBLE) {
                 val read = simpleReader.read(source, translationContext.sourceLanguage)
+                val pageFormat = PageFormatDetector.detect(
+                    source.width,
+                    source.height,
+                    ScriptKindDetector.ofLanguage(read.language),
+                )
                 detectDoneAt = System.currentTimeMillis()
                 blocksDoneAt = detectDoneAt
                 read.language
@@ -227,7 +264,12 @@ class PageTranslator(
                         // was then lettered into its own thin strip, four half-sentences scattered
                         // across the panel. Every recovery worth keeping so far has been at least a
                         // third of the page wide.
-                        if (unread[index].width < source.width * MIN_RESCUE_WIDTH_RATIO) {
+                        if (PageFormatDetector.refuseNarrowRescue(
+                                pageFormat,
+                                unread[index].width,
+                                source.width,
+                            )
+                        ) {
                             return@filter false
                         }
                         val clashes = taken.any { containedFraction(unread[index], it) >= MAX_RESCUE_OVERLAP }
@@ -242,7 +284,19 @@ class PageTranslator(
                 }
 
                 if (blocks.isEmpty()) throw NothingToTranslate()
-                val placed = placeInBalloons(blocks, blockTexts, balloons)
+                // Manga needs the balloon interior: vertical columns are slivers. Webtoon
+                // lettering already sits in a readable footprint; typeset fill on colour
+                // strips is how neon ovals used to get painted over. Picking TYPESET still
+                // forces that path on a strip.
+                val typeset = renderStyle == TranslationRenderStyle.TYPESET
+                var placed = placeInBalloons(blocks, blockTexts, balloons, preferBalloon = typeset)
+                if (typeset) {
+                    placed = recoverPaperBalloons(source, placed.first, placed.second)
+                }
+                placed = rereadMismatchedScripts(source, placed.first, placed.second, translationContext.sourceLanguage)
+                if (translationContext.sourceLanguage == "ja") {
+                    placed = inJapaneseReadingOrder(placed.first, placed.second)
+                }
                 localDoneAt = System.currentTimeMillis()
                 return@withLock placed
             }
@@ -288,7 +342,9 @@ class PageTranslator(
                 }
             }
 
-            val ordered = (refinedDetected + extras).filterNot { it.isEdgeSliver(source.width) }.inReadingOrder()
+            val ordered = (refinedDetected + extras)
+                .filterNot { it.isEdgeSliver(source.width) }
+                .inReadingOrder(rightToLeft = translationContext.sourceLanguage == "ja")
             if (ordered.size < refinedDetected.size + extras.size) {
                 logcat { "Dropped ${refinedDetected.size + extras.size - ordered.size} edge-sliver box(es)" }
             }
@@ -363,7 +419,9 @@ class PageTranslator(
         }
 
         val readForTranslation = recognized.map { bubbleText ->
-            bubbleText.copy(text = ShortDialogueNormalizer.normalize(bubbleText.text))
+            bubbleText.copy(
+                text = ShortDialogueNormalizer.normalize(JapaneseOcrCleaner.clean(bubbleText.text)),
+            )
         }
         val provider = currentProvider()
 
@@ -479,7 +537,7 @@ class PageTranslator(
 
         val bubbles = boxes.mapIndexedNotNull { index, box ->
             val ocrText = recognized.getOrNull(index)?.text.orEmpty()
-            if (NoisyVocalizationGuard.shouldLeaveUntouched(ocrText)) {
+            if (NoisyVocalizationGuard.shouldLeaveUntouched(ocrText) || JapaneseSfxGuard.shouldDrop(ocrText)) {
                 logcat { "Leaving non-lexical vocalization untouched in bubble ${index + 1}" }
                 return@mapIndexedNotNull null
             }
@@ -517,7 +575,7 @@ class PageTranslator(
             bubbles,
             preferences.font.get(),
             horizontalSeams,
-            simple = preferences.simpleRender.get(),
+            style = preferences.renderStyle(),
         )
         // Stage timings, because "translation is slow" is not actionable without them: waiting for
         // the single-lane local stages, running them, waiting on the network, and drawing are four
@@ -548,6 +606,7 @@ class PageTranslator(
         regions: List<BubbleBox>,
         texts: List<BubbleText>,
         balloons: List<BubbleBox>,
+        preferBalloon: Boolean = false,
     ): Pair<List<BubbleBox>, List<BubbleText>> {
         if (balloons.isEmpty()) return regions to texts
 
@@ -587,7 +646,17 @@ class PageTranslator(
             val vertical = merged.lines.isNotEmpty() &&
                 merged.lines.count { it.rect.height() > it.rect.width() * VERTICAL_ASPECT } * 2 >
                 merged.lines.size
-            outBoxes += if (vertical) balloon else regions[shared.first()]
+            val textBounds = regions[shared.first()]
+            val balloonArea = balloon.width.toLong() * balloon.height
+            val textArea = textBounds.width.toLong() * textBounds.height
+            // A detector box that covers most of a panel is not a balloon. Handing it to the
+            // letterer stamps a sentence across the artwork (the chandelier case). Recover the
+            // real interior from the paper instead.
+            val oversized = textArea > 0 && balloonArea > textArea * MAX_BALLOON_TO_TEXT
+            if (oversized) {
+                logcat { "Ignoring oversized balloon ${balloon.toRect()} for ${textBounds.toRect()}" }
+            }
+            outBoxes += if ((vertical || preferBalloon) && !oversized) balloon else textBounds
             outTexts += merged
         }
         val joined = regions.size - outBoxes.size
@@ -959,10 +1028,197 @@ class PageTranslator(
      * Boxes within one band are treated as the same row so a left-hand bubble sitting a few pixels
      * lower than its neighbour does not jump ahead of it.
      */
-    private fun List<BubbleBox>.inReadingOrder(): List<BubbleBox> {
+    private fun List<BubbleBox>.inReadingOrder(rightToLeft: Boolean = false): List<BubbleBox> {
         if (size < 2) return this
         val band = maxOf(MIN_READING_BAND, (sumOf { it.bottom - it.top } / size) / 2)
-        return sortedWith(compareBy({ it.top / band }, { it.left }))
+        return if (rightToLeft) {
+            sortedWith(compareBy({ it.top / band }, { -it.left }))
+        } else {
+            sortedWith(compareBy({ it.top / band }, { it.left }))
+        }
+    }
+
+    /**
+     * Japanese manga is read right-to-left within a row of panels. Reordering here is what keeps
+     * the vision prompt and the translator walking the page the way a reader does.
+     */
+    private fun inJapaneseReadingOrder(
+        boxes: List<BubbleBox>,
+        texts: List<BubbleText>,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        if (boxes.size < 2) return boxes to texts
+        val order = boxes.indices.toList().let { indices ->
+            val band = maxOf(MIN_READING_BAND, (boxes.sumOf { it.bottom - it.top } / boxes.size) / 2)
+            indices.sortedWith(compareBy({ boxes[it].top / band }, { -boxes[it].left }))
+        }
+        return order.map(boxes::get) to order.map(texts::get)
+    }
+
+    /**
+     * Expands a text-block box to the paper balloon around it when the detector missed that balloon.
+     *
+     * Typeset lettering needs the balloon, not the glyph sliver. Growing anisotropically and
+     * flooding the paper is how the reference implementation finds a hand-drawn manga balloon that
+     * YOLO never saw.
+     */
+    private fun recoverPaperBalloons(
+        source: Bitmap,
+        boxes: List<BubbleBox>,
+        texts: List<BubbleText>,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        val recovered = boxes.indices.map { index ->
+            val box = boxes[index]
+            val text = texts[index]
+            if (!box.isTextBlock) return@map box to text
+            val lines = text.lines.map { it.rect }
+            if (lines.isEmpty()) return@map box to text
+            val bounds = Rect(lines[0])
+            lines.drop(1).forEach { bounds.union(it) }
+            val vertical = PaperBalloonFinder.isVertical(bounds.width(), bounds.height())
+            val search = PaperBalloonFinder.searchArea(
+                bounds.left,
+                bounds.top,
+                bounds.right,
+                bounds.bottom,
+                source.width,
+                source.height,
+                vertical,
+            )
+            val fill = detectPaperFill(source, search, lines) ?: return@map box to text
+            val balloon = BubbleBox(
+                left = fill.bounds.left,
+                top = fill.bounds.top,
+                right = fill.bounds.right,
+                bottom = fill.bounds.bottom,
+                confidence = box.confidence,
+                isTextBlock = false,
+            )
+            logcat { "Recovered paper balloon ${balloon.toRect()} around ${box.toRect()}" }
+            balloon to text
+        }
+        return mergeOverlappingBalloons(recovered)
+    }
+
+    private fun detectPaperFill(
+        source: Bitmap,
+        search: PaperBalloonFinder.Area,
+        lines: List<Rect>,
+    ): BubbleFill.Result? {
+        val width = search.width
+        val height = search.height
+        if (width < MIN_REGION_SIDE || height < MIN_REGION_SIDE) return null
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, search.left, search.top, width, height)
+        val localSearch = Rect(0, 0, width, height)
+        val localLines = lines.map { Rect(it).apply { offset(-search.left, -search.top) } }
+        val fill = BubbleFill.detect(pixels, width, height, localSearch, localLines) ?: return null
+        fill.bounds.offset(search.left, search.top)
+        return fill
+    }
+
+    private fun mergeOverlappingBalloons(
+        items: List<Pair<BubbleBox, BubbleText>>,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        if (items.size < 2) return items.map { it.first } to items.map { it.second }
+        val used = BooleanArray(items.size)
+        val outBoxes = ArrayList<BubbleBox>(items.size)
+        val outTexts = ArrayList<BubbleText>(items.size)
+        for (index in items.indices) {
+            if (used[index]) continue
+            var box = items[index].first
+            val members = mutableListOf(index)
+            var grew = true
+            while (grew) {
+                grew = false
+                for (other in items.indices) {
+                    if (used[other] || other in members) continue
+                    val candidate = items[other].first
+                    val overlap = containedFraction(box, candidate)
+                    val reverse = containedFraction(candidate, box)
+                    val iou = intersectionOverUnion(box, candidate)
+                    val shares = overlap >= MERGE_BALLOON_CONTAINED ||
+                        reverse >= MERGE_BALLOON_CONTAINED ||
+                        iou >= MERGE_BALLOON_IOU
+                    if (!shares) continue
+                    val united = unionBox(box, candidate)
+                    val unitedArea = united.width.toLong() * united.height
+                    val larger = maxOf(
+                        box.width.toLong() * box.height,
+                        candidate.width.toLong() * candidate.height,
+                    )
+                    // Two neighbouring balloons that barely touch must not become one panel.
+                    if (larger > 0 && unitedArea > larger * 3) continue
+                    box = united
+                    members += other
+                    grew = true
+                }
+            }
+            members.forEach { used[it] = true }
+            val merged = BubbleText(
+                text = members.joinToString("\n") { items[it].second.text }.trim(),
+                lines = members.flatMap { items[it].second.lines },
+            )
+            outBoxes += box
+            outTexts += merged
+        }
+        val joined = items.size - outBoxes.size
+        if (joined > 0) logcat { "Merged $joined region(s) that share a recovered balloon" }
+        return outBoxes to outTexts
+    }
+
+    private fun unionBox(a: BubbleBox, b: BubbleBox): BubbleBox = a.copy(
+        left = minOf(a.left, b.left),
+        top = minOf(a.top, b.top),
+        right = maxOf(a.right, b.right),
+        bottom = maxOf(a.bottom, b.bottom),
+        isTextBlock = a.isTextBlock && b.isTextBlock,
+    )
+
+    /**
+     * A mixed-language page is read once in the page script, then any region that came back as
+     * junk — or as a different script — is cropped and read again with the matching recogniser.
+     * That is how a Spanish balloon on a Korean page (or the reverse) survives.
+     */
+    private fun rereadMismatchedScripts(
+        source: Bitmap,
+        boxes: List<BubbleBox>,
+        texts: List<BubbleText>,
+        pageLanguage: String,
+    ): Pair<List<BubbleBox>, List<BubbleText>> {
+        val expected = ScriptKindDetector.ofLanguage(pageLanguage)
+        val mismatched = boxes.indices.filter { index ->
+            ScriptKindDetector.looksLikeJunk(texts[index].text, expected)
+        }
+        if (mismatched.isEmpty()) return boxes to texts
+        val outTexts = texts.toMutableList()
+        val candidates = listOf("ja", "ko", "zh", "en").filter { it != pageLanguage }
+        for (index in mismatched) {
+            val box = boxes[index]
+            var best = outTexts[index]
+            var bestKind = ScriptKindDetector.of(best.text)
+            for (language in candidates) {
+                val reread = runCatching {
+                    recognizer.recognize(source, listOf(box), language).firstOrNull()
+                }.getOrNull() ?: continue
+                val cleaned = reread.copy(text = JapaneseOcrCleaner.clean(reread.text))
+                val kind = ScriptKindDetector.of(cleaned.text)
+                val letters = cleaned.text.count { it.isLetter() }
+                val previous = best.text.count { it.isLetter() }
+                val matches = kind != ScriptKind.NONE &&
+                    ScriptKindDetector.languageCode(kind) == language
+                if (matches && letters > previous) {
+                    best = cleaned
+                    bestKind = kind
+                }
+            }
+            if (best !== outTexts[index]) {
+                logcat {
+                    "Re-read ${box.toRect()} as ${bestKind.name}: ${best.text.lines().joinToString(" / ")}"
+                }
+                outTexts[index] = best
+            }
+        }
+        return boxes to outTexts
     }
 
     /**
@@ -983,6 +1239,7 @@ class PageTranslator(
     fun close() {
         runCatching { detector.close() }
         runCatching { recognizer.close() }
+        runCatching { mangaTranslator.close() }
     }
 
     private companion object {
@@ -996,6 +1253,16 @@ class PageTranslator(
 
         /** Share of a block that must lie inside a balloon before that balloon owns it. */
         const val MIN_BALLOON_CONTAINMENT = 0.75f
+
+        /** Recovered paper balloons that overlap this much are the same balloon. */
+        const val MERGE_BALLOON_IOU = 0.4f
+        const val MERGE_BALLOON_CONTAINED = 0.6f
+        const val MIN_REGION_SIDE = 10
+        /**
+         * A detector box this many times larger than the lettering is a panel, not a balloon.
+         * Measured: a real oval is 2–5× the text; the chandelier false positive was ~20×.
+         */
+        const val MAX_BALLOON_TO_TEXT = 8
 
         /** Overlap above which two detections are the same balloon. */
         const val BALLOON_IOU = 0.5f

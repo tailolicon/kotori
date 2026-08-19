@@ -48,8 +48,27 @@ class DecorativeTextGuardTest {
     }
 
     @Test
+    fun `spanish dialogue is not a title`() {
+        assertKept("No puedo creer esto")
+        assertKept("¿Qué estás haciendo aquí?")
+        assertKept("Hola, ¿qué tal?")
+        assertKept("Te quiero mucho")
+    }
+
+    @Test
+    fun `short hangul dialogue is kept`() {
+        assertKept("안녕")
+        assertKept("뭐야")
+    }
+
+    @Test
     fun `a two-character japanese sound effect is still dropped`() {
         assertDropped("\u30C9\u30C9")
+    }
+
+    @Test
+    fun `repeated katakana display lettering is a sound effect`() {
+        assertDropped("\u30D0\u30A2\u30A2\u30A2")
     }
 
     private fun assertKept(text: String) = assertFalse(candidate(text))

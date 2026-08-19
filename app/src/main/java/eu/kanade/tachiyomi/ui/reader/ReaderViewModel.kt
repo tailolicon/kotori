@@ -328,11 +328,13 @@ class ReaderViewModel @JvmOverloads constructor(
      */
     fun setTranslationEnabled(enabled: Boolean) {
         val manga = manga ?: return
+        android.util.Log.e("KotoriTL", "setTranslationEnabled=$enabled manga=${manga.id}")
         translationManager.setEnabled(manga.id, enabled)
         if (!enabled) {
             translationPrefetchJob?.cancel()
         } else {
-            translationManager.beginSession(manga.id)
+            translationManager.clearBackoff()
+            translationManager.claim(manga.id)
         }
 
         viewModelScope.launchIO {
@@ -343,10 +345,20 @@ class ReaderViewModel @JvmOverloads constructor(
             val newLoader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
             loader = newLoader
 
+            // Neighbours already loaded without the translation wrapper stay original forever
+            // if we only reset the page on screen — prefetch then skips them as "already ready".
+            for (readerChapter in chapterList) {
+                if (readerChapter.pageLoader == null &&
+                    readerChapter.state !is ReaderChapter.State.Loaded
+                ) {
+                    continue
+                }
+                readerChapter.pageLoader?.recycle()
+                readerChapter.pageLoader = null
+                readerChapter.state = ReaderChapter.State.Wait
+            }
+
             val chapter = chapterList.firstOrNull { it.chapter.id == current } ?: return@launchIO
-            chapter.pageLoader?.recycle()
-            chapter.pageLoader = null
-            chapter.state = ReaderChapter.State.Wait
 
             try {
                 loadChapter(newLoader, chapter)
@@ -392,11 +404,20 @@ class ReaderViewModel @JvmOverloads constructor(
                 val pages = readerChapter.pages.orEmpty()
                 total += pages.size
 
+                // Translate the page on screen first. Starting at 0 on a 200-page chapter left the
+                // reader staring at an untranslated page while prefetch chewed the cover.
+                val start = if (readerChapter === current) {
+                    (state.value.currentPage - 1).coerceIn(0, pages.lastIndex.coerceAtLeast(0))
+                } else {
+                    0
+                }
+                val ordered = if (pages.isEmpty()) pages else pages.drop(start) + pages.take(start)
+
                 // Pages are fetched one at a time but translated in runs: the provider charges per
                 // image sent, so a manhwa chapter split into dozens of short images costs dozens of
                 // times what the same content costs joined. Collect a run, hand it over whole.
                 val run = mutableListOf<Pair<Int, () -> java.io.InputStream>>()
-                for (page in pages) {
+                for (page in ordered) {
                     // A rate-limited provider fails every page from here on; marching through the
                     // rest of the window would just spend the recovering quota on more failures.
                     if (translationManager.isRateLimited()) break@prefetch
@@ -404,7 +425,21 @@ class ReaderViewModel @JvmOverloads constructor(
                         TranslationStatus.Working(completed, total, readerChapter.chapter.name),
                     )
                     fetchPage(readerChapter, page)
-                    (page as? TranslatedReaderPage)?.originalStream()?.let { run += page.index to it }
+                    val source = (page as? TranslatedReaderPage)?.originalStream() ?: page.stream
+                    if (page.index < start + 3) {
+                        android.util.Log.e(
+                            "KotoriTL",
+                            "prefetch page=${page.index} class=${page.javaClass.simpleName} " +
+                                "stream=${source != null} status=${page.status}",
+                        )
+                    }
+                    if (source != null) {
+                        run += page.index to source
+                    } else {
+                        logcat(LogPriority.WARN) {
+                            "Translation skip page ${page.index}: no source bytes (${page.javaClass.simpleName})"
+                        }
+                    }
                     completed++
                     if (run.size >= TRANSLATION_RUN_PAGES) {
                         translateRun(readerChapter, run.toList())
@@ -423,7 +458,9 @@ class ReaderViewModel @JvmOverloads constructor(
 
     /** Downloads a page so its bytes are on disk, without translating it yet. */
     private suspend fun fetchPage(chapter: ReaderChapter, page: ReaderPage) {
-        if (page.status == Page.State.Ready) return
+        val hasBytes = (page as? TranslatedReaderPage)?.originalStream() != null ||
+            (page !is TranslatedReaderPage && page.stream != null)
+        if (page.status == Page.State.Ready && hasBytes) return
         val loaderJob = viewModelScope.launchIO {
             runCatching { chapter.pageLoader?.loadPage(page) }
         }
@@ -1152,7 +1189,9 @@ class ReaderViewModel @JvmOverloads constructor(
          * small enough that the reader sees translated pages early instead of waiting for a
          * whole chapter. The translator splits the run again by pixel budget.
          */
-        const val TRANSLATION_RUN_PAGES = 8
+        // Large enough that a manhwa balloon split across two source slices stays in one run.
+        // Eight was cheap and cut those balloons in half; the translator then lettered each half.
+        const val TRANSLATION_RUN_PAGES = 40
 
         /** How long to wait for a page to arrive before skipping it during translation prefetch. */
         const val PAGE_FETCH_TIMEOUT_MS = 45_000L

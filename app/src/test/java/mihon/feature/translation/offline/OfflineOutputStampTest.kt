@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import mihon.feature.translation.TranslationPreferences
 import mihon.feature.translation.TranslationProviderType
+import mihon.feature.translation.TranslationRenderStyle
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -54,6 +55,22 @@ class OfflineOutputStampTest {
         prefs.offlineModelReady.set(true)
         assertTrue(prefs.hasCredentialsFor(TranslationProviderType.OFFLINE))
         assertTrue(prefs.hasCredentialsFor(TranslationProviderType.GOOGLE))
+    }
+
+    @Test
+    fun `render style is part of outputStamp`() {
+        val store = InMemoryPreferenceStore()
+        val prefs = TranslationPreferences(store)
+        val simple = prefs.outputStamp()
+        prefs.setRenderStyle(TranslationRenderStyle.TYPESET)
+        val typeset = prefs.outputStamp()
+        prefs.setRenderStyle(TranslationRenderStyle.BUBBLE)
+        val bubble = prefs.outputStamp()
+        assertTrue(simple.contains("simple"))
+        assertTrue(typeset.contains("typeset"))
+        assertTrue(bubble.contains("bubble"))
+        assertFalse(simple == typeset)
+        assertFalse(typeset == bubble)
     }
 
     @Test

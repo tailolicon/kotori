@@ -31,6 +31,9 @@ internal object TranslationPrompts {
             appendLine("- Chỉ bỏ hiệu ứng âm thanh vẽ trực tiếp trên tranh, KHÔNG nằm trong khung thoại.")
             appendLine("- Ô không có thoại (tranh, credit nhà xuất bản, chữ trang trí) → \"text\": \"\", \"translation\": \"\".")
             appendLine("- TUYỆT ĐỐI không điền lời của ô khác vào một ô. Thà bỏ trống còn hơn điền sai.")
+            appendLine("- Trang có thể trộn nhiều ngôn ngữ (Nhật/Hàn/Tây Ban Nha/Anh). Đọc đúng ngôn ngữ của TỪNG ô, rồi dịch sang tiếng Việt.")
+            appendLine("- Manga Nhật: chữ dọc đọc từ trên xuống, cột từ phải sang trái. Bỏ furigana (kana nhỏ cạnh/trên kanji), chỉ dịch câu chính.")
+            appendLine("- SFX kana lặp (バアアア, ドオオ) vẽ trên tranh có thể bỏ. Lời thoại trong bóng thoại thì phải dịch.")
             appendLine()
             append(VIETNAMESE_DIALOGUE_RULES)
             appendStyle(context)
@@ -49,6 +52,9 @@ internal object TranslationPrompts {
             appendLine("TASK: for each number, read the text INSIDE that numbered bubble, then translate it.")
             appendLine("- A region with no dialogue (artwork, publisher credits, decorations) → \"text\": \"\", \"translation\": \"\".")
             appendLine("- NEVER fill a bubble with another bubble's line. An empty answer beats a wrong one.")
+            appendLine("- A page may mix languages. Read each bubble in whatever language it is written in.")
+            appendLine("- Japanese manga: vertical text is top-to-bottom, columns right-to-left. Ignore furigana (small kana beside/above kanji).")
+            appendLine("- Skip drawn sound-effect kana outside balloons. Translate every spoken line inside a balloon.")
             appendLine()
             append(GENERIC_DIALOGUE_RULES)
             appendStyle(context)
@@ -225,6 +231,8 @@ internal object TranslationPrompts {
            dấu thanh cùng dấu mũ. Từ mất dấu hoặc sai dấu là lỗi nghiêm trọng — "khả năng" không được
            thành "kh năng", "như vậy" không được thành "như thậy", "được" không được thành "đuợc".
         9. Chỉ dùng chữ cái tiếng Việt tiền tổ hợp. Không chèn ký tự lạ, không bỏ trống giữa từ.
+        10. Trang có thể trộn Nhật/Hàn/Tây Ban Nha/Anh. Dịch từng ô từ đúng ngôn ngữ của ô đó.
+        11. Bỏ furigana (kana nhỏ chú thích kanji). SFX kana lặp trên tranh có thể bỏ; lời trong bóng thoại thì dịch.
     """.trimIndent() + "\n"
 
     private val GENERIC_DIALOGUE_RULES = """

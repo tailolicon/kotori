@@ -25,6 +25,13 @@ class LowConfidenceSpeechGuardTest {
     }
 
     @Test
+    fun `two hangul syllables are enough to keep a weak detector box`() {
+        assertTrue(LowConfidenceSpeechGuard.shouldKeep(0.10f, "안녕"))
+        assertTrue(LowConfidenceSpeechGuard.shouldKeep(0.10f, "뭐야"))
+        assertFalse(LowConfidenceSpeechGuard.shouldKeep(0.10f, "아"))
+    }
+
+    @Test
     fun `long strips reject short unpunctuated credit fragments even at high confidence`() {
         assertFalse(LowConfidenceSpeechGuard.shouldKeep(0.48f, "DO", strictShortFragment = true))
         assertFalse(LowConfidenceSpeechGuard.shouldKeep(0.48f, "J DO E:", strictShortFragment = true))

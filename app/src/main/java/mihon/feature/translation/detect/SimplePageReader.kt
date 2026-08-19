@@ -11,6 +11,12 @@ import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import mihon.feature.translation.FuriganaGuard
+import mihon.feature.translation.JapaneseOcrCleaner
+import mihon.feature.translation.JapaneseSfxGuard
+import mihon.feature.translation.PageFormat
+import mihon.feature.translation.PageFormatDetector
+import mihon.feature.translation.ScriptKindDetector
 import mihon.feature.translation.ShortDialogueNormalizer
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
@@ -99,21 +105,32 @@ class SimplePageReader {
             }
         }
 
-        val groups = groupIntoParagraphs(lines, bitmap)
+        val format = PageFormatDetector.detect(bitmap.width, bitmap.height, ScriptKindDetector.ofLanguage(language))
+        val mergedLines = mergeCompanionScripts(bitmap, lines, language, format)
+        val groups = dropFurigana(groupIntoParagraphs(mergedLines, bitmap))
         val boxes = ArrayList<BubbleBox>(groups.size)
         val texts = ArrayList<BubbleText>(groups.size)
         for (group in groups) {
             val characters = group.sumOf { line -> line.text.count { it.isLetterOrDigit() } }
-            val text = group.joinToString("\n") { it.text.trim() }.trim()
+            val cjkLetters = group.sumOf { line -> line.text.count(::isCjkLetter) }
+            val text = JapaneseOcrCleaner.clean(group.joinToString("\n") { it.text.trim() }.trim())
             // A stray glyph or two recognised off artwork is noise, and turning it into a region means
             // erasing a piece of the drawing to letter nonsense over it. Real dialogue clears one of
             // three bars: enough letters to be a sentence, more than one line, or the shape of a
             // spoken interjection — which is how "NO!" survives without "Lk" surviving with it.
+            //
+            // CJK is different: two kanji is a word (何故, 本当, 私だ). The Latin floor of three
+            // letters would drop the first column of a balloon after furigana was peeled off.
             val meaningful = characters >= MIN_STANDALONE_CHARACTERS ||
+                cjkLetters >= MIN_CJK_STANDALONE ||
                 (group.size > 1 && characters >= MIN_MULTILINE_CHARACTERS) ||
                 ShortDialogueNormalizer.isLikelyUtterance(text)
             if (!meaningful) {
                 logcat { "Dropping $text as noise rather than dialogue" }
+                continue
+            }
+            if (JapaneseSfxGuard.shouldDrop(text)) {
+                logcat { "Dropping $text as Japanese sound-effect lettering" }
                 continue
             }
             val bounds = Rect(group[0].rect)
@@ -324,6 +341,10 @@ class SimplePageReader {
                     // white over the sky, one rectangle per line of it.
                     val samePaper =
                         channelDistance(paperOf(members, bitmap), paperOf(candidate, bitmap)) <= MERGE_PAPER_DISTANCE
+                    val sameScript = ScriptKindDetector.sameWritingSystem(
+                        ScriptKindDetector.of(members.joinToString("") { it.text }),
+                        ScriptKindDetector.of(candidate.joinToString("") { it.text }),
+                    )
                     val overlaps = across > narrower * MERGE_OVERLAP_RATIO
                     // Narrate only near misses. A page has hundreds of obviously unrelated pairs and
                     // none of them explains anything; the pairs worth seeing are the ones that were
@@ -334,7 +355,7 @@ class SimplePageReader {
                                 "type $lineHeight vs $candidateSize, same paper: $samePaper"
                         }
                     }
-                    if (closeEnough && sameType && samePaper && overlaps) {
+                    if (closeEnough && sameType && samePaper && sameScript && overlaps) {
                         members += candidate
                         bounds.union(candidateBounds)
                         iterator.remove()
@@ -351,9 +372,105 @@ class SimplePageReader {
                 members.sortedWith(compareBy({ it.rect.top }, { it.rect.left }))
             }
         }
-        // Reading order: down the page, left to right within a row of comparable height.
+        // Reading order: down the page. Japanese manga is right-to-left within a row of panels;
+        // everything else is left-to-right. The language is not known here — the caller reorders
+        // after the page script is settled — so this stays left-to-right and [inJapaneseOrder]
+        // is applied once we know.
         val band = max(MIN_READING_BAND, groups.sumOf { it[0].rect.height() } / groups.size)
         return groups.sortedWith(compareBy({ it[0].rect.top / band }, { it[0].rect.left }))
+    }
+
+    /**
+     * A mixed-language strip (Korean + Spanish is the case that showed this) is read first in the
+     * winning script. The other script's balloons then arrive as two junk glyphs and are discarded
+     * as noise. Reading the companions and keeping any line that is clearly the other script is
+     * how those balloons survive.
+     */
+    private fun mergeCompanionScripts(
+        bitmap: Bitmap,
+        primary: List<ReadLine>,
+        language: String,
+        format: PageFormat,
+    ): List<ReadLine> {
+        val companions = PageFormatDetector.companionScripts(format, language)
+        if (companions.isEmpty()) return primary
+        // Always try the other script on a webtoon: a Korean page with three Spanish balloons
+        // already has enough Hangul to skip the page-level fallback.
+        if (format != PageFormat.WEBTOON && !primaryLikelyMixed(primary)) return primary
+        val merged = primary.toMutableList()
+        var added = 0
+        var replaced = 0
+        for (companion in companions.take(MAX_COMPANION_SCRIPTS)) {
+            val expected = ScriptKindDetector.ofLanguage(companion)
+            val alt = readPage(bitmap, companion)
+            for (line in alt) {
+                val kind = ScriptKindDetector.of(line.line.text)
+                if (kind != expected) continue
+                if (line.line.text.count { it.isLetter() } < MIN_COMPANION_LETTERS) continue
+                val overlap = merged.indexOfFirst { other ->
+                    overlapFraction(other.line.rect, line.line.rect) >= DUPLICATE_OVERLAP
+                }
+                if (overlap < 0) {
+                    merged += line
+                    added++
+                    continue
+                }
+                val incumbent = merged[overlap]
+                val incumbentKind = ScriptKindDetector.of(incumbent.line.text)
+                // The primary recogniser often reports two junk glyphs on a balloon written in
+                // the other script. Those occupy the same rectangle; keep the real reading.
+                if (incumbentKind != expected &&
+                    (incumbentKind != ScriptKindDetector.ofLanguage(language) ||
+                        ScriptKindDetector.looksLikeJunk(incumbent.line.text, expected))
+                ) {
+                    merged[overlap] = line
+                    replaced++
+                }
+            }
+        }
+        if (added == 0 && replaced == 0) return primary
+        logcat { "Companion '$language' pass: +$added line(s), replaced $replaced junk reading(s)" }
+        return merged
+    }
+
+    private fun primaryLikelyMixed(lines: List<ReadLine>): Boolean {
+        var latin = 0
+        var cjk = 0
+        for (line in lines) {
+            for (ch in line.line.text) {
+                if (!ch.isLetter()) continue
+                if (ch.code < 0x0250) latin++ else cjk++
+            }
+        }
+        return latin >= MIN_COMPANION_LETTERS && cjk >= MIN_COMPANION_LETTERS
+    }
+
+    /**
+     * Drops ruby lines that sit beside a larger Japanese host so they are not lettered as dialogue.
+     *
+     * Furigana is reported as its own paragraph because it is set at half the type size; leaving it
+     * in produces a second translation next to the sentence it annotates.
+     */
+    private fun dropFurigana(groups: List<List<TextLineBox>>): List<List<TextLineBox>> {
+        if (groups.size < 2) return groups
+        val described = groups.map { group ->
+            val bounds = Rect(group[0].rect)
+            group.drop(1).forEach { bounds.union(it.rect) }
+            FuriganaGuard.Line(
+                text = group.joinToString("") { it.text },
+                left = bounds.left,
+                top = bounds.top,
+                right = bounds.right,
+                bottom = bounds.bottom,
+                stroke = typeSize(group),
+            )
+        }
+        val dropped = FuriganaGuard.dropIndices(described)
+        if (dropped.isEmpty()) return groups
+        dropped.forEach { index ->
+            logcat { "Dropping furigana ${described[index].text} at ${groups[index][0].rect}" }
+        }
+        return groups.filterIndexed { index, _ -> index !in dropped }
     }
 
     private fun charactersIn(lines: List<ReadLine>): Int =
@@ -427,6 +544,11 @@ class SimplePageReader {
             kotlin.math.abs((color and 0xFF) - (other and 0xFF)),
         ),
     )
+
+    private fun isCjkLetter(ch: Char): Boolean = ch.code.let { cp ->
+        cp in 0x3040..0x30FF || cp in 0x3400..0x9FFF || cp in 0xF900..0xFAFF ||
+            cp in 0xAC00..0xD7AF || cp in 0x1100..0x11FF
+    }
 
     /** True when this paragraph is set in columns rather than rows — manga, and vertical signage. */
     private fun isVertical(lines: List<TextLineBox>): Boolean =
@@ -547,7 +669,11 @@ class SimplePageReader {
 
         /** Letters or digits a lone line needs before it counts as dialogue rather than noise. */
         const val MIN_STANDALONE_CHARACTERS = 3
+        /** Two CJK letters is a word; the Latin floor of three would drop 何故 after its ruby. */
+        const val MIN_CJK_STANDALONE = 2
         const val MIN_MULTILINE_CHARACTERS = 2
+        const val MAX_COMPANION_SCRIPTS = 2
+        const val MIN_COMPANION_LETTERS = 3
 
         const val BLOCK_PAD_RATIO = 0.04f
         const val MIN_READING_BAND = 24

@@ -116,6 +116,52 @@ class GeminiTranslationProvider(
         GeminiResponse.parseBubbles(call(payload), boxes.size)
     }
 
+    /**
+     * Manga-Translator Gemini batch: JSON array of bubble strings, spoken-Vietnamese prompt.
+     * Returns null when the model does not give a same-length array so the caller can fall back.
+     */
+    suspend fun translateMangaBatch(
+        texts: List<String>,
+        context: TranslationContext,
+    ): List<String>? = withIOContext {
+        if (texts.isEmpty()) return@withIOContext emptyList()
+        val indexed = texts.withIndex().filter { it.value.isNotBlank() }
+        if (indexed.isEmpty()) return@withIOContext texts
+        val toTranslate = indexed.map { it.value }
+        val translated = translateMangaBatchInternal(toTranslate, context) ?: return@withIOContext null
+        val result = texts.toMutableList()
+        indexed.forEachIndexed { position, (orig, _) ->
+            result[orig] = translated.getOrNull(position).orEmpty()
+        }
+        result
+    }
+
+    private fun translateMangaBatchInternal(texts: List<String>, context: TranslationContext): List<String>? {
+        val payload = textPayload(
+            prompt = mihon.feature.translation.manga.MangaPrompts.batchPrompt(texts, context),
+            temperature = 0.2,
+            thinkingBudget = 512,
+        )
+        repeat(3) { attempt ->
+            try {
+                val body = call(payload)
+                val text = GeminiResponse.candidateText(body) ?: return@repeat
+                val parsed = mihon.feature.translation.manga.MangaPrompts.parseBatch(text, texts.size)
+                if (parsed != null) return parsed
+                logcat { "Manga Gemini batch attempt ${attempt + 1} had wrong shape" }
+            } catch (error: kotlin.coroutines.cancellation.CancellationException) {
+                throw error
+            } catch (error: ProviderRateLimited) {
+                throw error
+            } catch (error: ProviderRejected) {
+                throw error
+            } catch (error: Exception) {
+                logcat { "Manga Gemini batch attempt ${attempt + 1} failed: ${error.message}" }
+            }
+        }
+        return null
+    }
+
     override suspend fun translateLines(
         texts: List<String>,
         context: TranslationContext,

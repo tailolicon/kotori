@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import mihon.feature.translation.TranslationRenderStyle
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.TextLineBox
 import mihon.feature.translation.model.TranslatedBubble
@@ -46,10 +47,15 @@ class BubbleRenderer(private val context: Context) {
         bubbles: List<TranslatedBubble>,
         fontName: String,
         horizontalSeams: IntArray = intArrayOf(),
+        style: TranslationRenderStyle = TranslationRenderStyle.SIMPLE,
         simple: Boolean = false,
     ): Bitmap {
-        if (simple) return renderSimple(source, bubbles, fontName)
-        return renderBubbleAware(source, bubbles, fontName, horizontalSeams)
+        val resolved = if (simple) TranslationRenderStyle.SIMPLE else style
+        return when (resolved) {
+            TranslationRenderStyle.SIMPLE -> renderSimple(source, bubbles, fontName)
+            TranslationRenderStyle.TYPESET -> renderTypeset(source, bubbles, fontName)
+            TranslationRenderStyle.BUBBLE -> renderBubbleAware(source, bubbles, fontName, horizontalSeams)
+        }
     }
 
     /**
@@ -116,6 +122,10 @@ class BubbleRenderer(private val context: Context) {
             val textBounds = Rect(lines[0])
             lines.drop(1).forEach { textBounds.union(it) }
             val vertical = lines.count { it.height() > it.width() * SIMPLE_VERTICAL_ASPECT } * 2 > lines.size
+            logcat {
+                "Simple: ${bubble.box.toRect()} textBlock=${bubble.box.isTextBlock} vertical=$vertical " +
+                    "lines=${lines.size} bounds=$textBounds"
+            }
             if (vertical && paintedFraction(textBounds, painted) <= SIMPLE_MAX_OVERLAP) {
                 val area = letterInBalloon(output, canvas, bubble, lines, textBounds, typeface)
                 if (area != null) {
@@ -291,6 +301,59 @@ class BubbleRenderer(private val context: Context) {
     }
 
     /**
+     * Letterer's path: fill the balloon, set the translation in the whole interior.
+     *
+     * This is what the reference implementation does on every balloon, not only on vertical
+     * Japanese. The detector box is used when it contains the lettering; otherwise the paper
+     * flood grows along the short axis so a column finds its balloon without escaping into the
+     * next panel. Glyph-erase is the fallback when no interior can be established.
+     */
+    private fun renderTypeset(
+        source: Bitmap,
+        bubbles: List<TranslatedBubble>,
+        fontName: String,
+    ): Bitmap {
+        val output = source.copy(Bitmap.Config.ARGB_8888, true)
+        if (bubbles.isEmpty()) return output
+        val typeface = resolveTypeface(fontName)
+        val canvas = Canvas(output)
+        val painted = mutableListOf<Rect>()
+        val written = mutableListOf<Pair<Rect, String>>()
+
+        for (bubble in bubbles.sortedByDescending { it.box.width.toLong() * it.box.height }) {
+            if (bubble.translated.isBlank()) continue
+            val lines = bubble.lines
+                .map { Rect(it.rect) }
+                .filter { it.width() > 2 && it.height() > 2 }
+            if (lines.isEmpty()) {
+                logcat { "Typeset: ${bubble.box} has no measured lettering to erase" }
+                continue
+            }
+            val textBounds = Rect(lines[0])
+            lines.drop(1).forEach { textBounds.union(it) }
+            if (paintedFraction(textBounds, painted) > SIMPLE_MAX_OVERLAP) {
+                logcat { "Typeset: ${bubble.box} overlaps an already lettered region" }
+                continue
+            }
+            val duplicate = written.any { (rect, text) ->
+                Rect.intersects(rect, textBounds) && looksLikeSameLine(text, bubble.translated)
+            }
+            if (duplicate) continue
+
+            val area = letterInBalloon(output, canvas, bubble, lines, textBounds, typeface)
+            if (area != null) {
+                painted += area
+                written += textBounds to bubble.translated
+                continue
+            }
+            // No recoverable balloon: still letter into the recognised footprint rather than
+            // leaving the source language sitting there. Same erase-then-write contract as simple.
+            logcat { "Typeset: ${bubble.box} could not be lettered without overprint; leaving source" }
+        }
+        return output
+    }
+
+    /**
      * Repaints a balloon's interior and sets the translation inside it.
      *
      * This is what the reference implementation does and what the stroke-by-stroke erase cannot: the
@@ -310,14 +373,34 @@ class BubbleRenderer(private val context: Context) {
         textBounds: Rect,
         typeface: Typeface,
     ): Rect? {
-        // How far to look for the balloon's edge. Bounded on purpose: a bubble outline is not
-        // watertight, and an unbounded flood escapes through the first broken pixel and paints a slab
-        // across the artwork.
-        val reach = Rect(textBounds).apply {
-            inset(
-                -(textBounds.width() * BALLOON_SEARCH_GROWTH).roundToInt(),
-                -(textBounds.height() * BALLOON_SEARCH_GROWTH).roundToInt(),
+        // How far to look for the balloon's edge.
+        //
+        // Prefer the detected balloon, which is the whole of it. Growing outward from the lettering
+        // instead only ever finds a little more room than the words already occupy, and on a manga
+        // balloon — tall, narrow, drawn for a column of Japanese — that is most of why the
+        // translation came out so small: the reference implementation letters into the detector's
+        // whole box, and its text fills those balloons where ours sat as a few tiny words.
+        //
+        // The growth remains for lettering with no balloon detected around it, and stays bounded on
+        // purpose: a bubble outline is not watertight, and an unbounded flood escapes through the
+        // first broken pixel and paints a slab across the artwork.
+        val detected = bubble.box.toRect()
+        val useDetected = !bubble.box.isTextBlock && detected.contains(textBounds)
+        val reach = if (useDetected) {
+            Rect(detected)
+        } else {
+            val vertical = PaperBalloonFinder.isVertical(textBounds.width(), textBounds.height())
+            val search = PaperBalloonFinder.searchArea(
+                textBounds.left,
+                textBounds.top,
+                textBounds.right,
+                textBounds.bottom,
+                output.width,
+                output.height,
+                vertical,
             )
+            Rect(search.left, search.top, search.right, search.bottom)
+        }.apply {
             left = left.coerceAtLeast(0)
             top = top.coerceAtLeast(0)
             right = right.coerceAtMost(output.width)
@@ -342,12 +425,49 @@ class BubbleRenderer(private val context: Context) {
 
         val search = Rect(box.toRect()).apply { offset(-crop.left, -crop.top) }
         val linesLocal = lines.map { Rect(it).apply { offset(-crop.left, -crop.top) } }
-        val fill = BubbleFill.detect(pixels, width, height, search, linesLocal) ?: run {
-            logcat { "Simple: ${bubble.box} has no readable balloon interior" }
-            return null
+        val fill = BubbleFill.detect(pixels, width, height, search, linesLocal)
+        val inkColor: Int
+        val paperColor: Int
+        if (fill != null) {
+            for (i in pixels.indices) if (fill.region[i]) pixels[i] = fill.fillColor
+            inkColor = fill.textColor
+            paperColor = fill.fillColor
+        } else {
+            // Screentone, sparkles or a broken outline: the interior is not one flat colour, so
+            // flooding it would paint a slab. Erase the recognised strokes instead and still
+            // letter into the balloon — leaving the source sitting there is the worse page.
+            logcat { "Simple: ${bubble.box} has no flat interior; erasing glyphs" }
+            val lineHeight = (lines.sumOf { min(it.height(), it.width()) } / lines.size).coerceAtLeast(1)
+            val areas = linesLocal.map { line ->
+                Rect(line).apply {
+                    val thickness = min(line.height(), line.width())
+                    inset(
+                        -max(4, (thickness * SIMPLE_LINE_PAD_X).roundToInt()),
+                        -max(3, (thickness * SIMPLE_LINE_PAD_Y).roundToInt()),
+                    )
+                    left = left.coerceIn(0, width - 1)
+                    top = top.coerceIn(0, height - 1)
+                    right = right.coerceIn(left + 1, width)
+                    bottom = bottom.coerceIn(top + 1, height)
+                }
+            }
+            val seeds = linesLocal.map { line ->
+                Rect(line).apply {
+                    val margin = max(2, (min(line.height(), line.width()) * SIMPLE_ERASE_SEED_RATIO).roundToInt())
+                    inset(-margin, -margin)
+                    left = left.coerceIn(0, width - 1)
+                    top = top.coerceIn(0, height - 1)
+                    right = right.coerceIn(left + 1, width)
+                    bottom = bottom.coerceIn(top + 1, height)
+                }
+            }
+            val letters = analyseLettering(pixels, width, height, areas, seeds, lineHeight)
+                ?: return null
+            if (letters.covered < SIMPLE_MIN_GLYPH_PIXELS) return null
+            if (letters.flatPaper) paintPaper(pixels, letters) else Inpainter.fill(pixels, width, height, letters.ink)
+            inkColor = letters.inkColor
+            paperColor = letters.paperColor
         }
-
-        for (i in pixels.indices) if (fill.region[i]) pixels[i] = fill.fillColor
         output.setPixels(pixels, 0, width, crop.left, crop.top, width, height)
 
         // The same gate every other erase path answers to: if the original lettering survived the
@@ -356,7 +476,23 @@ class BubbleRenderer(private val context: Context) {
             return null
         }
 
-        val area = Rect(fill.bounds).apply { offset(crop.left, crop.top) }
+        // Where the text goes. With a detected balloon that is the balloon itself, inset a little,
+        // which is what the reference implementation letters into and why its type fills these tall
+        // manga balloons where ours sat as a few tiny words. The flooded interior still decides what
+        // gets *repainted* — that must never exceed the balloon — but it is a poor guide to how much
+        // room a sentence has, because the flood stops at every screentone and gradient inside.
+        val area = if (useDetected) {
+            Rect(reach).apply {
+                inset(
+                    (reach.width() * BALLOON_INSET_RATIO).roundToInt(),
+                    (reach.height() * BALLOON_INSET_RATIO).roundToInt(),
+                )
+            }
+        } else if (fill != null) {
+            Rect(fill.bounds).apply { offset(crop.left, crop.top) }
+        } else {
+            Rect(textBounds)
+        }
         if (area.width() < MIN_DRAW_WIDTH) return null
         // A "balloon" no bigger than the lettering is not a balloon — it is the text's own footprint
         // with a hair of paper round it. Lettering into that gains nothing over erasing the strokes,
@@ -377,8 +513,8 @@ class BubbleRenderer(private val context: Context) {
                 top = area.top,
                 width = area.width(),
                 height = area.height(),
-                inkColor = fill.textColor,
-                paperColor = fill.fillColor,
+                inkColor = inkColor,
+                paperColor = paperColor,
                 typeface = typeface,
                 alignLeft = false,
                 paddingRatio = BALLOON_PADDING_RATIO,
@@ -389,6 +525,7 @@ class BubbleRenderer(private val context: Context) {
         }.onFailure { logcat { "Simple: lettering balloon $area failed: ${it.message}" } }
         if (!lettered) {
             logcat { "Simple: ${bubble.translated.take(24)} did not fit balloon $area" }
+            output.setPixels(originalPixels, 0, width, crop.left, crop.top, width, height)
             return null
         }
         return area
@@ -2970,6 +3107,8 @@ class BubbleRenderer(private val context: Context) {
         const val BALLOON_PADDING_RATIO = 0.1f
         const val BALLOON_LINE_HEIGHT_RATIO = 1.3f
         const val BALLOON_MAX_FONT_SIZE = 60
+        /** Pulled in from the detected balloon before lettering, so type never touches the outline. */
+        const val BALLOON_INSET_RATIO = 0.08f
         /** Context around the search box so the interior flood sees the outline on every side. */
         const val BALLOON_CONTEXT = 12
         /** How far past the lettering to look for the balloon's edge, as a fraction of its size. */

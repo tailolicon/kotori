@@ -17,6 +17,8 @@ import mihon.feature.translation.provider.ProviderRejected
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import tachiyomi.decoder.ImageDecoder
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 
@@ -61,6 +63,24 @@ class TranslationManager(
      */
     fun beginSession(mangaId: Long) {
         workGate.begin(mangaId)
+    }
+
+    /**
+     * The reader is looking at [mangaId]. If a previous series still owns the gate, every page
+     * of the one on screen would be skipped with no error — that is the "I pressed translate and
+     * nothing moved" failure.
+     */
+    fun claim(mangaId: Long) {
+        if (workGate.activeMangaId != mangaId) {
+            logcat { "Claiming translation session for $mangaId (was ${workGate.activeMangaId})" }
+            workGate.begin(mangaId)
+        }
+    }
+
+    /** User asked again: drop the circuit breaker so a stale 429 cannot silence the new run. */
+    fun clearBackoff() {
+        backoffUntilMillis = 0L
+        consecutiveFailures = 0
     }
 
     /**
@@ -198,10 +218,13 @@ class TranslationManager(
         chapterId: Long,
         pages: List<Pair<Int, () -> InputStream>>,
     ) {
+        android.util.Log.e(
+            "KotoriTL",
+            "translatePageRun manga=$mangaId chapter=$chapterId pages=${pages.size} " +
+                "enabled=${isEnabled(mangaId)} limited=${isRateLimited()}",
+        )
         if (pages.isEmpty() || isRateLimited() || !isEnabled(mangaId)) return
-        // Do not begin() here: leftover work from a series the reader already left would
-        // reclaim the session and keep occupying the page slots. The reader starts the session.
-        if (workGate.activeMangaId != mangaId) return
+        claim(mangaId)
         val generation = workGate.generation
         val stamp = preferences.outputStamp()
 
@@ -209,6 +232,7 @@ class TranslationManager(
             val target = cache.pageFile(mangaId, chapterId, index, stamp)
             cache.isCached(target) || noneMarker(target).exists()
         }
+        android.util.Log.e("KotoriTL", "pending=${pending.size} stamp=$stamp")
         if (pending.isEmpty()) return
 
         var group = mutableListOf<Pair<Int, Bitmap>>()
@@ -326,7 +350,7 @@ class TranslationManager(
         val noneMarker = noneMarker(target)
         if (noneMarker.exists()) return null
         if (isRateLimited() || !isEnabled(mangaId)) return null
-        if (workGate.activeMangaId != mangaId) return null
+        claim(mangaId)
         val generation = workGate.generation
 
         val pageKey = "$mangaId/$chapterId/$pageIndex/$stamp"
@@ -511,24 +535,27 @@ class TranslationManager(
      * only genuinely enormous images are touched.
      */
     private fun decode(openSource: () -> InputStream): Bitmap? {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        runCatching { openSource().use { BitmapFactory.decodeStream(it, null, bounds) } }
-            .onFailure { logcat { "Could not read page bounds: ${it.message}" } }
-
-        val megapixels = bounds.outWidth.toLong() * bounds.outHeight
-        var sampleSize = 1
-        while (megapixels / (sampleSize.toLong() * sampleSize) > MAX_WORKING_PIXELS) sampleSize *= 2
-        if (sampleSize > 1) {
-            logcat { "Page is ${bounds.outWidth}x${bounds.outHeight}; subsampling by $sampleSize" }
-        }
-
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-        return runCatching { openSource().use { BitmapFactory.decodeStream(it, null, options) } }
-            .onFailure { logcat { "Could not decode page: ${it.message}" } }
+        val bytes = runCatching { openSource().use { it.readBytes() } }
+            .onFailure { android.util.Log.e("KotoriTL", "read failed: ${it.message}") }
             .getOrNull()
+        if (bytes == null || bytes.isEmpty()) {
+            android.util.Log.e("KotoriTL", "empty page bytes")
+            return null
+        }
+        val factory = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        if (factory != null) return factory
+        val decoder = runCatching {
+            ImageDecoder.newInstance(ByteArrayInputStream(bytes))
+        }.getOrNull()
+        val decoded = decoder?.decode()
+        decoder?.recycle()
+        if (decoded == null) {
+            android.util.Log.e(
+                "KotoriTL",
+                "decode failed bytes=${bytes.size} magic=${bytes.take(8).joinToString()}",
+            )
+        }
+        return decoded
     }
 
     private companion object {

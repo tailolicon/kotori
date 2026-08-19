@@ -108,12 +108,31 @@ class TranslationPreferences(
 
     /**
      * Simple lettering: erase the recognised text, write the translation in its footprint, and do
-     * nothing else. Defaults on — it is what a human letterer does, and every extra ambition of the
-     * bubble-aware mode (fills matched to the balloon, text recentred, larger type) is also a way
-     * for a page to come out redecorated. The bubble-aware renderer remains available behind this
-     * switch for readers who prefer its look.
+     * nothing else. Kept so installs that never opened the new style picker keep their previous
+     * choice; [renderStyle] is what the pipeline and the cache stamp read.
      */
     val simpleRender: Preference<Boolean> = preferenceStore.getBoolean("pref_translation_simple_render", true)
+
+    /**
+     * How dialogue is painted back. Defaults to [TranslationRenderStyle.SIMPLE] so the regression
+     * corpus and existing installs stay on the footprint path until the reader picks another.
+     *
+     * [TranslationRenderStyle.TYPESET] is the letterer's path: recover the balloon, fill it, set
+     * the translation in the whole interior. That is what vertical Japanese (and any page whose
+     * detector misses the balloon) needs.
+     */
+    val renderStylePref: Preference<TranslationRenderStyle> =
+        preferenceStore.getEnum("pref_translation_render_style", TranslationRenderStyle.SIMPLE)
+
+    fun renderStyle(): TranslationRenderStyle {
+        if (renderStylePref.isSet()) return renderStylePref.get()
+        return if (simpleRender.get()) TranslationRenderStyle.SIMPLE else TranslationRenderStyle.BUBBLE
+    }
+
+    fun setRenderStyle(style: TranslationRenderStyle) {
+        renderStylePref.set(style)
+        simpleRender.set(style == TranslationRenderStyle.SIMPLE)
+    }
 
     /** Upper bound for the on-disk translated-page cache, in mebibytes. */
     val cacheSizeMb: Preference<Int> = preferenceStore.getInt("pref_translation_cache_mb", 1024)
@@ -157,7 +176,7 @@ class TranslationPreferences(
         },
         font.get(),
         styleHint.get(),
-        if (simpleRender.get()) "simple" else "bubble",
+        renderStyle().name.lowercase(),
     ).joinToString("|")
 
     companion object {
@@ -171,7 +190,7 @@ class TranslationPreferences(
          * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
          * reader had already seen came back with the defect intact.
          */
-        const val RENDERER_VERSION = "r100"
+        const val RENDERER_VERSION = "r105"
     }
 
     /**

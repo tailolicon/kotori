@@ -58,8 +58,46 @@ internal object ContinuousPageClassifier {
             x += step
         }
 
-        val blank = isBlankWhite(upperLuma) && isBlankWhite(lowerLuma)
-        return SeamMetric(cross / count, within / count, blank)
+        // A cut through a white balloon is a white *row* with lettering a few pixels in. Treating
+        // that row as a gutter left the two halves of the balloon as two pages, and each half was
+        // then translated as a sentence. Ink in the edge band is the balloon continuing.
+        val cutThroughLettering = hasInkNearBottom(upper) || hasInkNearTop(lower)
+        val blank = isBlankWhite(upperLuma) && isBlankWhite(lowerLuma) && !cutThroughLettering
+        val crossMean = cross / count
+        return if (cutThroughLettering && blank.not()) {
+            SeamMetric(minOf(crossMean, MAX_ABSOLUTE_SEAM_DIFFERENCE), within / count, blankEdge = false)
+        } else if (cutThroughLettering) {
+            SeamMetric(0f, within / count, blankEdge = false)
+        } else {
+            SeamMetric(crossMean, within / count, blankEdge = blank)
+        }
+    }
+
+    private fun hasInkNearBottom(bitmap: Bitmap): Boolean =
+        bandHasInk(bitmap, (bitmap.height - EDGE_BAND).coerceAtLeast(0), bitmap.height)
+
+    private fun hasInkNearTop(bitmap: Bitmap): Boolean =
+        bandHasInk(bitmap, 0, EDGE_BAND.coerceAtMost(bitmap.height))
+
+    private fun bandHasInk(bitmap: Bitmap, top: Int, bottom: Int): Boolean {
+        if (bottom <= top || bitmap.width <= 0) return false
+        val stepX = maxOf(1, bitmap.width / MAX_SAMPLES)
+        val stepY = maxOf(1, (bottom - top) / 4)
+        val luma = ArrayList<Float>()
+        var y = top
+        while (y < bottom) {
+            var x = 0
+            while (x < bitmap.width) {
+                luma += luminance(bitmap.getPixel(x, y))
+                x += stepX
+            }
+            y += stepY
+        }
+        if (luma.size < 8) return false
+        val sorted = luma.sorted()
+        val paper = sorted[sorted.size / 2]
+        val ink = luma.count { kotlin.math.abs(it - paper) >= INK_LUMA_GAP }
+        return ink * INK_DENOMINATOR >= luma.size
     }
 
     private fun colourDifference(a: Int, b: Int): Float =
@@ -91,4 +129,10 @@ internal object ContinuousPageClassifier {
     private const val RELATIVE_SLOP = 4f
     private const val REQUIRED_NUMERATOR = 2
     private const val REQUIRED_DENOMINATOR = 3
+    /** How far into a page to look for lettering at a suspected cut. */
+    private const val EDGE_BAND = 28
+    /** Luma distance from the band's median that counts as ink, not paper. */
+    private const val INK_LUMA_GAP = 28f
+    /** Share of the band that must be ink before the cut is treated as going through a balloon. */
+    private const val INK_DENOMINATOR = 12
 }

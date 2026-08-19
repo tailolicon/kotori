@@ -34,6 +34,16 @@ class ContinuousPageClassifierTest {
     }
 
     @Test
+    fun `a cut through a balloon is not a blank gutter`() {
+        // hasInkNearEdge is tested via shouldJoinMetrics: a non-blank, low-cross seam joins.
+        assertTrue(
+            ContinuousPageClassifier.shouldJoinMetrics(
+                listOf(metric(4f, 5f, blank = false)),
+            ),
+        )
+    }
+
+    @Test
     fun `blank gutters are ignored when real seams prove continuity`() {
         assertTrue(
             ContinuousPageClassifier.shouldJoinMetrics(

@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mihon.feature.translation.PageTranslator
 import mihon.feature.translation.TranslationPreferences
+import mihon.feature.translation.TranslationRenderStyle
 import mihon.feature.translation.provider.TranslationProviders
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
@@ -47,7 +48,8 @@ class RegressionReceiver : BroadcastReceiver() {
         // — but checking a new target language end to end otherwise means driving the reader by
         // hand, and the thing worth checking is exactly what the real provider sends back.
         val live = intent.getBooleanExtra("live", false)
-        scope.launch { runSuite(app, live) }
+        val style = intent.getStringExtra("style")
+        scope.launch { runSuite(app, live, style) }
     }
 
     /**
@@ -59,10 +61,10 @@ class RegressionReceiver : BroadcastReceiver() {
      * from under it, and every remaining fixture fails with "no Gemini API key" after having done all
      * of its detection and OCR work.
      */
-    private suspend fun runSuite(context: Context, live: Boolean) =
-        suiteLock.withLock { runSuiteLocked(context, live) }
+    private suspend fun runSuite(context: Context, live: Boolean, style: String?) =
+        suiteLock.withLock { runSuiteLocked(context, live, style) }
 
-    private suspend fun runSuiteLocked(context: Context, live: Boolean) {
+    private suspend fun runSuiteLocked(context: Context, live: Boolean, style: String?) {
         val base = context.getExternalFilesDir(null)?.resolve("regression") ?: return
         val input = File(base, "in")
         // Create it ourselves rather than relying on `adb push` to. A directory adb creates belongs
@@ -78,7 +80,18 @@ class RegressionReceiver : BroadcastReceiver() {
         val fixtures = input.listFiles { f -> f.isFile }?.sortedBy { it.name }.orEmpty()
         val summary = StringBuilder("fixtures=${fixtures.size}\n")
 
-        val translator = PageTranslator(context, Injekt.get<TranslationPreferences>())
+        val preferences = Injekt.get<TranslationPreferences>()
+        val styleWasSet = preferences.renderStylePref.isSet()
+        val previousStyle = if (styleWasSet) preferences.renderStylePref.get() else null
+        val previousSimple = preferences.simpleRender.get()
+        val requested = when (style?.lowercase()) {
+            "typeset" -> TranslationRenderStyle.TYPESET
+            "bubble" -> TranslationRenderStyle.BUBBLE
+            "simple" -> TranslationRenderStyle.SIMPLE
+            else -> null
+        }
+        if (requested != null) preferences.setRenderStyle(requested)
+        val translator = PageTranslator(context, preferences)
         TranslationProviders.overrideForTesting = if (live) null else DeterministicTranslationProvider()
         try {
             for (fixture in fixtures) {
@@ -108,6 +121,14 @@ class RegressionReceiver : BroadcastReceiver() {
             }
         } finally {
             TranslationProviders.overrideForTesting = null
+            if (requested != null) {
+                if (styleWasSet && previousStyle != null) {
+                    preferences.setRenderStyle(previousStyle)
+                } else {
+                    preferences.renderStylePref.delete()
+                    preferences.simpleRender.set(previousSimple)
+                }
+            }
         }
         File(output, "DONE.txt").writeText(summary.toString())
         logcat { "Regression run complete: ${fixtures.size} fixtures" }

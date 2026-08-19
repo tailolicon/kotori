@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -179,6 +180,8 @@ internal object GeminiResponse {
         return emptyList()
     }
 
+    fun candidateText(body: String): String? = extractText(body)
+
     private fun extractText(body: String): String? = runCatching {
         json.parseToJsonElement(body)
             .jsonObject["candidates"]
@@ -189,10 +192,18 @@ internal object GeminiResponse {
             ?.jsonObject
             ?.get("parts")
             ?.jsonArray
-            ?.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull }
+            ?.mapNotNull { part ->
+                val obj = part.jsonObject
+                if (isThoughtPart(obj)) null else obj["text"]?.jsonPrimitive?.contentOrNull
+            }
             ?.joinToString("")
             ?.takeIf { it.isNotBlank() }
     }.getOrNull()
+
+    private fun isThoughtPart(part: JsonObject): Boolean {
+        val flag = part["thought"] as? JsonPrimitive ?: return false
+        return flag.booleanOrNull == true || flag.content.equals("true", ignoreCase = true)
+    }
 
     private fun stripFence(text: String): String = text.trim()
         .removePrefix("```json")

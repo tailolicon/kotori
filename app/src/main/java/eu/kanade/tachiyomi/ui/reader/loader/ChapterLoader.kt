@@ -37,8 +37,15 @@ class ChapterLoader(
      * is already loaded.
      */
     suspend fun loadChapter(chapter: ReaderChapter) {
-        if (chapterIsReady(chapter)) {
+        val needsTranslationWrap = translationManager.isEnabled(manga.id) &&
+            chapter.pageLoader !is TranslatingPageLoader
+        if (chapterIsReady(chapter) && !needsTranslationWrap) {
             return
+        }
+        if (chapterIsReady(chapter) && needsTranslationWrap) {
+            chapter.pageLoader?.recycle()
+            chapter.pageLoader = null
+            chapter.state = ReaderChapter.State.Wait
         }
 
         chapter.state = ReaderChapter.State.Loading
@@ -82,7 +89,12 @@ class ChapterLoader(
      */
     private fun getPageLoader(chapter: ReaderChapter): PageLoader {
         val base = getBasePageLoader(chapter)
-        if (!translationManager.isEnabled(manga.id)) return base
+        val enabled = translationManager.isEnabled(manga.id)
+        android.util.Log.e(
+            "KotoriTL",
+            "getPageLoader manga=${manga.id} chapter=${chapter.chapter.id} enabled=$enabled base=${base.javaClass.simpleName}",
+        )
+        if (!enabled) return base
 
         return TranslatingPageLoader(
             delegate = base,

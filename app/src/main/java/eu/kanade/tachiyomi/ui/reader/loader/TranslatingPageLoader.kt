@@ -48,31 +48,31 @@ internal class TranslatingPageLoader(
  * and only ever used as the translation input, or as the fallback when a page has no dialogue.
  */
 internal class TranslatedReaderPage(
-    source: ReaderPage,
+    private val sourcePage: ReaderPage,
     private val mangaId: Long,
     private val chapterId: Long,
     private val manager: TranslationManager,
-) : ReaderPage(source.index, source.url, source.imageUrl) {
-
-    private var original: (() -> InputStream)? = source.stream
+) : ReaderPage(sourcePage.index, sourcePage.url, sourcePage.imageUrl) {
 
     init {
-        status = source.status
+        status = sourcePage.status
+        imageUrl = sourcePage.imageUrl
     }
 
     /**
-     * The untranslated bytes, for callers that want to translate a run of pages together rather than
-     * one at a time. Reading [stream] would translate this page on its own and defeat the point.
+     * The untranslated bytes. Always read from the inner page so a late [stream] assignment
+     * by the HTTP loader is not lost — copying the lambda at wrap time left it null, prefetch
+     * skipped every page, and the viewer decoded the original artwork.
      */
-    fun originalStream(): (() -> InputStream)? = original
+    fun originalStream(): (() -> InputStream)? = sourcePage.stream
 
     override var stream: (() -> InputStream)?
         get() {
-            val source = original ?: return null
-            return { translatedOrOriginal(source) }
+            val raw = sourcePage.stream ?: return null
+            return { translatedOrOriginal(raw) }
         }
         set(value) {
-            original = value
+            sourcePage.stream = value
         }
 
     private fun translatedOrOriginal(source: () -> InputStream): InputStream {

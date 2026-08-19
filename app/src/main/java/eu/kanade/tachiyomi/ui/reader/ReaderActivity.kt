@@ -387,6 +387,20 @@ class ReaderActivity : BaseActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (redirectToNovelReaderIfNeeded()) return
+        val newManga = intent.extras?.getLong("manga", -1) ?: -1L
+        val currentManga = viewModel.manga?.id
+        if (newManga != -1L && currentManga != null && newManga != currentManga) {
+            // singleTask keeps the old ViewModel (and its chapter list). Recreate so the
+            // series on screen is the one the user just opened.
+            finish()
+            startActivity(intent)
+        }
+    }
+
     /**
      * Called when the activity is destroyed. Cleans up the viewer, configuration and any view.
      */

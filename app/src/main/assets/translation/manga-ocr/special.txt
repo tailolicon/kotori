@@ -1,0 +1,7 @@
+decoder_start=2
+eos=3
+pad=0
+unk=1
+cls=2
+sep=3
+max_length=300

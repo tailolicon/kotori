@@ -50,8 +50,12 @@ internal object DecorativeTextGuard {
         // two or three characters; a line of dialogue is longer. Erring towards translating is right
         // here anyway: lettering a title is a small blemish, and leaving dialogue in a language the
         // reader cannot read is the whole failure the feature exists to prevent.
+        if (JapaneseSfxGuard.shouldDrop(raw)) return false
         val ideographs = raw.count(::isIdeographic)
         if (ideographs >= MIN_IDEOGRAPHIC_DIALOGUE) return true
+        // Two Hangul syllables is already a spoken word. The ideograph floor of four is for
+        // titles and drawn SFX; applying it to Korean dropped short, sharp dialogue.
+        if (raw.count(::isHangul) >= MIN_HANGUL_DIALOGUE) return true
 
         val normalized = raw
             .uppercase()
@@ -64,10 +68,17 @@ internal object DecorativeTextGuard {
         val title = words.joinToString(" ")
         if (TITLE_PREFIX.matches(title) || title == "THE END") return false
 
-        val hasSentencePunctuation = raw.any { it == '.' || it == '?' || it == '!' || it == '…' }
+        val hasSentencePunctuation = raw.any { it == '.' || it == '?' || it == '!' || it == '…' || it == '¿' || it == '¡' }
         val hasConversationCue = words.any(CONVERSATION_CUES::contains)
-        return hasSentencePunctuation || hasConversationCue
+        val hasSpanishCue = words.any(SPANISH_CUES::contains) || raw.any(::isSpanishLetter)
+        return hasSentencePunctuation || hasConversationCue || hasSpanishCue
     }
+
+    private fun isHangul(ch: Char): Boolean = ch.code.let { cp ->
+        cp in 0x1100..0x11FF || cp in 0xAC00..0xD7AF
+    }
+
+    private fun isSpanishLetter(ch: Char): Boolean = ch in SPANISH_LETTERS
 
     /** Hangul, kana and Han — the scripts that carry a sentence without spaces. */
     private fun isIdeographic(ch: Char): Boolean = ch.code.let { cp ->
@@ -92,8 +103,29 @@ internal object DecorativeTextGuard {
         "THEN", "PLEASE", "SORRY", "THANKS", "THANK",
     )
 
+    /**
+     * High-frequency Spanish function words. The English cue list above never matches a balloon
+     * that says "No puedo creer esto", so those balloons were dropped as titles even when they
+     * filled the panel and were perfectly sharp.
+     */
+    private val SPANISH_CUES = setOf(
+        "QUE", "COMO", "POR", "PARA", "ESTO", "ESTA", "ESTE", "ESO", "ESA",
+        "PERO", "PORQUE", "CUANDO", "DONDE", "QUIEN", "HOLA", "GRACIAS", "PERDON",
+        "YO", "TU", "NOS", "MI", "SU", "CON", "SIN", "MAS", "YA", "AHORA", "AQUI",
+        "MUY", "TAN", "BIEN", "MAL", "QUIERO", "QUIERES", "PUEDO", "PUEDES",
+        "TIENE", "TIENES", "HACE", "VAS", "VOY", "SOY", "ERES", "ESTOY", "ESTAS",
+        "NADA", "NUNCA", "SIEMPRE", "TAMBIEN", "DESPUES", "ANTES", "ENTONCES",
+        "VAMOS", "VEN", "MIRA", "AMOR", "VIDA", "TIEMPO", "SOLO", "TODO", "TODOS",
+        "HAY", "SER", "ESTAR", "NECESITO", "SIENTO", "PERDONA", "DIOS",
+        "UNA", "UNO", "LOS", "LAS", "DEL", "AL",
+    )
+    private val SPANISH_LETTERS = setOf(
+        'á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', 'Á', 'É', 'Í', 'Ó', 'Ú', 'Ü', 'Ñ',
+    )
+
     /** Characters of a spaceless script above which the region is a sentence, not an ornament. */
     private const val MIN_IDEOGRAPHIC_DIALOGUE = 4
+    private const val MIN_HANGUL_DIALOGUE = 2
 
     private const val MIN_DISPLAY_TEXT_HEIGHT = 42
     private const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f

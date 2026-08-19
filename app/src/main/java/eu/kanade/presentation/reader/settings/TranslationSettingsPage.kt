@@ -34,6 +34,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import kotlinx.coroutines.launch
 import mihon.feature.translation.TRANSLATION_PREFETCH_CHAPTERS
 import mihon.feature.translation.TranslationProviderType
+import mihon.feature.translation.TranslationRenderStyle
 import mihon.feature.translation.TranslationStatus
 import mihon.feature.translation.offline.OfflineLicenseText
 import mihon.feature.translation.offline.OfflineModelSpec
@@ -145,11 +146,20 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (enabled) {
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { screenModel.onToggleTranslation(false) },
-                ) {
-                    Text("Tắt dịch cho truyện này")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = mangaId != null && !missingKey,
+                        onClick = { screenModel.onToggleTranslation(true) },
+                    ) {
+                        Text("Dịch lại chương đang mở")
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { screenModel.onToggleTranslation(false) },
+                    ) {
+                        Text("Tắt dịch cho truyện này")
+                    }
                 }
             } else {
                 Button(
@@ -199,7 +209,7 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             TranslationStatus.Idle -> {
                 if (enabled) {
                     Text(
-                        text = "Đã dịch xong phần đang đọc. Chương tiếp theo được dịch sẵn ở chế độ nền.",
+                        text = "Trang đang mở được dịch khi xem. Nếu vẫn tiếng gốc, nhấn Dịch lại.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -249,16 +259,29 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         }
     }
 
+    val renderStyle by preferences.renderStylePref.collectAsState()
     val simpleRender by preferences.simpleRender.collectAsState()
+    val currentStyle = if (preferences.renderStylePref.isSet()) {
+        renderStyle
+    } else if (simpleRender) {
+        TranslationRenderStyle.SIMPLE
+    } else {
+        TranslationRenderStyle.BUBBLE
+    }
     LabelledChipRow(label = "Kiểu vẽ chữ") {
         FilterChip(
-            selected = simpleRender,
-            onClick = { preferences.simpleRender.set(true) },
-            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ (nhanh hơn nhiều)") },
+            selected = currentStyle == TranslationRenderStyle.SIMPLE,
+            onClick = { preferences.setRenderStyle(TranslationRenderStyle.SIMPLE) },
+            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ") },
         )
         FilterChip(
-            selected = !simpleRender,
-            onClick = { preferences.simpleRender.set(false) },
+            selected = currentStyle == TranslationRenderStyle.TYPESET,
+            onClick = { preferences.setRenderStyle(TranslationRenderStyle.TYPESET) },
+            label = { Text("Sắp chữ — tô bóng thoại, căn giữa (manga Nhật)") },
+        )
+        FilterChip(
+            selected = currentStyle == TranslationRenderStyle.BUBBLE,
+            onClick = { preferences.setRenderStyle(TranslationRenderStyle.BUBBLE) },
             label = { Text("Theo bóng thoại (cũ, chậm)") },
         )
     }

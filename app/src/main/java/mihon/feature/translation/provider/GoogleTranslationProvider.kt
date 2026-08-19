@@ -79,7 +79,9 @@ class GoogleTranslationProvider : TranslationProvider {
     private fun translateOne(text: String, context: TranslationContext): String {
         val url = ENDPOINT.toHttpUrl().newBuilder()
             .addQueryParameter("client", "gtx")
-            .addQueryParameter("sl", context.sourceLanguage)
+            // Auto-detect: a manhwa chapter routinely mixes Korean and Spanish in the same strip,
+            // and pinning sl to the page language leaves the other script untranslated.
+            .addQueryParameter("sl", "auto")
             .addQueryParameter("tl", context.targetLanguage)
             .addQueryParameter("dt", "t")
             .addQueryParameter("q", text)
