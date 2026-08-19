@@ -32,6 +32,14 @@ class TranslationPreferences(
     val provider: Preference<TranslationProviderType> =
         preferenceStore.getEnum("pref_translation_provider", TranslationProviderType.GEMINI)
 
+    /**
+     * One or more Gemini API keys, newline-separated.
+     *
+     * Several because the free tier's daily allowance is what ends a reading session, and a reader
+     * with more than one Google account has more than one allowance. The provider works through
+     * them and parks whichever is spent — see [mihon.feature.translation.provider.GeminiKeyRing].
+     * A single key entered before this existed is still a valid value of this preference.
+     */
     val geminiApiKey: Preference<String> = preferenceStore.getString("pref_translation_gemini_key", "")
 
     val groqApiKey: Preference<String> = preferenceStore.getString("pref_translation_groq_key", "")
@@ -96,7 +104,16 @@ class TranslationPreferences(
         )
     }
 
-    val sourceLanguage: Preference<String> = preferenceStore.getString("pref_translation_source_lang", "ja")
+    /**
+     * Legacy setting, now always [SOURCE_AUTO] for new installs and never shown in the reader.
+     *
+     * It is kept because it still keys [outputStamp] — an install that had it pinned to a language
+     * must not go on serving pages translated under that pin — and because the light-novel path can
+     * still be handed an explicit language. Nothing in the manga path reads it as an instruction any
+     * more: the page is what decides, which is what stops a Korean series being read as Japanese
+     * because the previous series was.
+     */
+    val sourceLanguage: Preference<String> = preferenceStore.getString("pref_translation_source_lang", SOURCE_AUTO)
 
     val targetLanguage: Preference<String> = preferenceStore.getString("pref_translation_target_lang", "vi")
 
@@ -154,6 +171,34 @@ class TranslationPreferences(
     fun enabledForManga(mangaId: Long): Preference<Boolean> =
         preferenceStore.getBoolean("pref_translation_enabled_$mangaId", false)
 
+    /**
+     * Bumped when the user discards cached pages for [mangaId]. Included in the on-disk key so a
+     * file that failed to delete (still open in the viewer) or was rewritten by in-flight work
+     * cannot be served again.
+     */
+    fun cacheGeneration(mangaId: Long): Preference<Int> =
+        preferenceStore.getInt("pref_translation_cache_gen_$mangaId", 0)
+
+    /**
+     * Bumped by "clear everything". Same job as [cacheGeneration] but across all series, since a
+     * global clear cannot enumerate the per-series counters it would otherwise have to bump.
+     */
+    val globalCacheGeneration: Preference<Int> =
+        preferenceStore.getInt("pref_translation_cache_gen_all", 0)
+
+    fun bumpGlobalCacheGeneration(): Int {
+        val next = globalCacheGeneration.get() + 1
+        globalCacheGeneration.set(next)
+        return next
+    }
+
+    fun bumpCacheGeneration(mangaId: Long): Int {
+        val pref = cacheGeneration(mangaId)
+        val next = pref.get() + 1
+        pref.set(next)
+        return next
+    }
+
     /** Same as [enabledForManga] but for light novels, which use a text-only pipeline. */
     fun novelEnabledForManga(mangaId: Long): Preference<Boolean> =
         preferenceStore.getBoolean("pref_translation_novel_enabled_$mangaId", false)
@@ -180,6 +225,9 @@ class TranslationPreferences(
     ).joinToString("|")
 
     companion object {
+        /** Source language is decided by the page, not by a setting. */
+        const val SOURCE_AUTO = "auto"
+
         /**
          * Bumped whenever anything that shapes the output changes — masking, drawing, *and how the
          * page is read*, since grouping the recognised lines is what decides where a translation goes.
@@ -190,7 +238,7 @@ class TranslationPreferences(
          * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
          * reader had already seen came back with the defect intact.
          */
-        const val RENDERER_VERSION = "r105"
+        const val RENDERER_VERSION = "r106"
     }
 
     /**

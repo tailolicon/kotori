@@ -1,8 +1,19 @@
-D/TextBlockDetector: Text-block pass added 3 region(s) and kept 0 speech fallback(s)
-D/BubbleRenderer: text-block BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
-D/BubbleRenderer: bubble=BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 9780 surviving px of original lettering
-D/BubbleRenderer: text-block=BubbleBox(left=400, top=8274, right=1022, bottom=8350, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=8711 slot=Rect(234, 220 - 823, 292) page=Rect(416, 8276 - 1005, 8348) ink=ff3b2159
-D/BubbleRenderer: text-block BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
-D/BubbleRenderer: bubble=BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 14761 surviving px of original lettering
-D/BubbleRenderer: text-block=BubbleBox(left=632, top=3518, right=1255, bottom=3593, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=9077 slot=Rect(234, 219 - 824, 291) page=Rect(648, 3519 - 1238, 3591) ink=ff4d3a8b
-D/BubbleRenderer: bubble=BubbleBox(left=536, top=8736, right=622, bottom=8785, confidence=0.23367599, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(58, 56 - 94, 74) layout=Rect(50, 6 - 122, 63) slot=Rect(57, 6 - 122, 55) page=Rect(550, 8699 - 615, 8748) fill=ff487176 ink=ffc0e9ee
+D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Dropping V as noise rather than dialogue
+D/SimplePageReader: Read 3 lettering region(s) from 4 line(s) as 'en'
+D/SimplePageReader:   region Rect(129, 298 - 795, 492): SWORD CUT
+D/SimplePageReader:   region Rect(633, 3520 - 1255, 3590): KAISCANS.COM
+D/SimplePageReader:   region Rect(401, 8278 - 1021, 8348): KAISCANS.COM
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=129, top=298, right=795, bottom=492, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: SWORD CUT
+D/PageTranslator: Merged 7 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(633, 3520 - 1255, 3590): best containment 8%
+D/PageTranslator: No balloon for Rect(401, 8278 - 1021, 8348): best containment 11%
+D/PageTranslator: Grouped 2 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg rendering 2/2 translated bubbles
+D/BubbleRenderer: Simple: BubbleBox(left=633, top=3520, right=1255, bottom=3590, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
+D/BubbleRenderer: Typeset: BubbleBox(left=633, top=3520, right=1255, bottom=3590, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
+D/BubbleRenderer: bubble=BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 2875 surviving px of original lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

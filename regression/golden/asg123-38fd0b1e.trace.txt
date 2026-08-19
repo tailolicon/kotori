@@ -1,6 +1,29 @@
-D/TextBlockDetector: Text-block pass added 1 region(s) and kept 0 speech fallback(s)
-D/PageTranslator: Merged 43 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block BubbleBox(left=8, top=839, right=800, bottom=6202, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
-D/BubbleRenderer: text-block=BubbleBox(left=8, top=839, right=800, bottom=6202, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=482292 slot=Rect(0, 0 - 800, 5731) page=Rect(0, 619 - 800, 6350) ink=ff030303
-D/BubbleRenderer: Skipping BubbleBox(left=519, top=2748, right=578, bottom=2797, confidence=0.16507554, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=342, top=5086, right=402, bottom=5116, confidence=0.33047563, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 5); reading as Latin
+D/SimplePageReader: Read 10 lettering region(s) from 44 line(s) as 'en'
+D/SimplePageReader:   region Rect(346, 871 - 778, 1095): BUT THE COUNTRIES / THAT ENTERED EARLIER / HAVE ALREADY FORMED / SOME ALLIANCES/ WE / ABSOLUTELY CANNOT / BE CARELESS!
+D/SimplePageReader:   region Rect(112, 1131 - 627, 1394): BEFORE FACING OUR / ULTIMATE OPPONENT, / Y-COUNTRY WE MUST / PRESERVE OUR STRENGTH! / IT IS SAFEST IE WE CAN / FIND ANOTHER ALLY TO JoIN / FORCES WITH!
+D/SimplePageReader:   region Rect(168, 1660 - 679, 1710): NATIDNAL WAR POINTS LEADERBOARO
+D/SimplePageReader:   region Rect(260, 1759 - 577, 2226): HURXIA: 237 MILLIDN / DNY: L.OB MILLION / HCOUNTRY: OMLLION / KCOUNTRS: 0 MILION / B-EOUNTRY: 0O MILLION / LEOUNTRY: O MILLION / ZWEO MILLION / Y-COUNIRY: 0 MULION
+D/SimplePageReader:   region Rect(343, 3239 - 800, 3325): LOOKING AT THE ENTRY ORDER AND / POINTS OF EACH COUNTRY, IT'S NOT / HARD TO DEDUCE...
+D/SimplePageReader:   region Rect(83, 3424 - 587, 3644): HUAXIA DEFINITELY HID / THEIR COMBAT POWER, AND HAD / BATTLES WITH N-COUNTRY AND / H-COUNTRY SUCCESSIVELY, AND / THEN COOPERATED / SUCCESSIVELY!
+D/SimplePageReader:   region Rect(340, 3934 - 696, 4043): THIS GUESS BY NANDA / IS CURRENTLY THE / MOST ACCURATE...
+D/SimplePageReader:   region Rect(344, 4813 - 784, 4955): BESIDES BEING SMART, / IT'S ALSO POSSIBLE THEY / DIDN'T RECEIVE NEWS FROM / THE TRAITORS BACK HOME..
+D/SimplePageReader:   region Rect(22, 5433 - 465, 5577): AFTER ALL, HUAXIA'S / STRENGTH IN PAST / NATIONAL WARS WAS INDEED / NOT WEAK...
+D/SimplePageReader:   region Rect(94, 6130 - 337, 6166): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=168, top=1660, right=679, bottom=1710, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NATIDNAL WAR POINTS LEADERBOARO
+D/PageTranslator: Merged 28 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(112, 1131 - 627, 1394): best containment 26%
+D/PageTranslator: No balloon for Rect(260, 1759 - 577, 2226): best containment 18%
+D/PageTranslator: Grouped 9 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(75, 755 - 781, 1462) around Rect(112, 1131 - 627, 1394)
+D/PageTranslator: Merged 1 region(s) that share a recovered balloon
+D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg rendering 8/8 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=75, top=755, right=785, bottom=1462, confidence=0.3709213, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: BubbleBox(left=260, top=1759, right=577, bottom=2226, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
+D/BubbleRenderer: Typeset: BubbleBox(left=260, top=1759, right=577, bottom=2226, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=3, top=5426, right=512, bottom=5598, confidence=0.34187472, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=302, top=4813, right=789, bottom=4951, confidence=0.6949142, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=322, top=3202, right=798, bottom=3325, confidence=0.16982898, isTextBlock=false, isFallbackTextBlock=false) overlaps an already lettered region
+D/BubbleRenderer: Typeset: BubbleBox(left=71, top=6126, right=328, bottom=6162, confidence=0.16008332, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

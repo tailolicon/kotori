@@ -1,2 +1,18 @@
-D/BubbleRenderer: bubble=BubbleBox(left=85, top=125, right=427, bottom=324, confidence=0.4595929, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(108, 139 - 404, 310) layout=Rect(108, 126 - 404, 325) slot=Rect(138, 154 - 373, 297) page=Rect(138, 154 - 373, 297) fill=fffdfdfd ink=ff121212
-D/BubbleRenderer: bubble=BubbleBox(left=589, top=175, right=713, bottom=215, confidence=0.76664734, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(71, 66 - 177, 98) layout=Rect(71, 13 - 177, 156) slot=Rect(81, 16 - 166, 156) page=Rect(608, 129 - 693, 269) fill=fffcfcfc ink=ff121212
+D/SimplePageReader: Page reads best as 'ja' (59 ja-script chars on the probe band)
+D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'ja'
+D/SimplePageReader:   region Rect(114, 175 - 395, 267): 巨竜神を前に成す術なし一!?
+D/SimplePageReader:   region Rect(534, 172 - 771, 267): まさか、 / ここまでとは
+D/SimplePageReader:   region Rect(183, 590 - 321, 686): 逃げろ! / 早く!
+D/SimplePageReader:   region Rect(570, 591 - 730, 682): このカは本物だ
+D/SimplePageReader:   region Rect(252, 915 - 654, 1059): 雷鳴竜が目覚めた都市全体が危険だすぐに避難を開始しろ
+D/UndispatchedCoroutine: Reading this page as 'ja' rather than the configured source
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(534, 172 - 771, 267): best containment 22%
+D/PageTranslator: No balloon for Rect(183, 590 - 321, 686): best containment 42%
+D/PageTranslator: No balloon for Rect(570, 591 - 730, 682): best containment 42%
+D/PageTranslator: Grouped 5 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(476, 126 - 825, 325) around Rect(534, 172 - 771, 267)
+D/PageTranslator: Recovered paper balloon Rect(139, 526 - 365, 755) around Rect(183, 590 - 321, 686)
+D/PageTranslator: Recovered paper balloon Rect(519, 526 - 781, 755) around Rect(570, 591 - 730, 682)
+D/UndispatchedCoroutine: regression:jpraw-99877464.jpg rendering 5/5 translated bubbles

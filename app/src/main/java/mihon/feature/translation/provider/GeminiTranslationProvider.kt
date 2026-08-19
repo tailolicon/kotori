@@ -40,6 +40,8 @@ class GeminiTranslationProvider(
     override val supportsVisionOcr: Boolean
         get() = !model().startsWith("gemma", ignoreCase = true)
 
+    private val keyRing = GeminiKeyRing()
+
     private val http by lazy {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -219,10 +221,44 @@ class GeminiTranslationProvider(
         }
     }
 
+    /**
+     * Sends [payload], moving to the next API key rather than giving up when one is spent.
+     *
+     * A daily allowance is the thing that actually ends a reading session, and a reader with two
+     * Google accounts has two allowances. So a quota or credentials refusal parks that key and the
+     * request is tried again on the next one; only when every key has refused does the failure
+     * reach the caller, which is when it genuinely means "stop translating for a while".
+     */
     private fun call(payload: JsonObject): String {
-        val key = apiKey()
-        require(key.isNotBlank()) { "Chưa có Gemini API key. Nhập trong Cài đặt → Dịch." }
+        val keys = keyRing.parse(apiKey())
+        require(keys.isNotEmpty()) { "Chưa có Gemini API key. Nhập trong Cài đặt → Dịch." }
 
+        var lastFailure: Exception? = null
+        for (key in keyRing.available(keys)) {
+            try {
+                val body = callWith(key, payload)
+                keyRing.release(key)
+                return body
+            } catch (limited: ProviderRateLimited) {
+                keyRing.park(
+                    key,
+                    when {
+                        limited.dailyQuota -> GeminiKeyRing.DAILY_PARK_SECONDS
+                        else -> limited.retryAfterSeconds ?: GeminiKeyRing.MINUTE_PARK_SECONDS
+                    },
+                )
+                logcat { "Gemini key ...${key.takeLast(4)} is out of quota; trying the next one" }
+                lastFailure = limited
+            } catch (rejected: ProviderRejected) {
+                keyRing.park(key, GeminiKeyRing.REJECTED_PARK_SECONDS)
+                logcat { "Gemini refused key ...${key.takeLast(4)}; trying the next one" }
+                lastFailure = rejected
+            }
+        }
+        throw lastFailure ?: IllegalStateException("Gemini không trả lời")
+    }
+
+    private fun callWith(key: String, payload: JsonObject): String {
         val request = Request.Builder()
             .url("$ENDPOINT/${model()}:generateContent")
             .header("x-goog-api-key", key)
@@ -239,8 +275,8 @@ class GeminiTranslationProvider(
                     val daily = "PerDay" in body || "free_tier" in body
                     val retryAfter = RETRY_DELAY.find(body)?.groupValues?.get(1)?.toDoubleOrNull()?.toLong()
                     val message = if (daily) {
-                        "Hết hạn mức Gemini miễn phí hôm nay. Hạn mức tự đặt lại sau nửa đêm giờ Mỹ — " +
-                            "hoặc đổi model/API key khác trong Cài đặt → Dịch."
+                        "Hết hạn mức Gemini miễn phí hôm nay trên mọi key đã nhập. Hạn mức tự đặt lại " +
+                            "sau nửa đêm giờ Mỹ — hoặc thêm key khác / đổi model trong Cài đặt → Dịch."
                     } else {
                         "Gemini đang giới hạn tốc độ, tạm nghỉ một chút rồi dịch tiếp."
                     }

@@ -1,33 +1,43 @@
-D/TextBlockDetector: Text-block pass added 5 region(s) and kept 5 speech fallback(s)
-D/PageTranslator: Merged 23 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=130, top=6413, right=660, bottom=6702, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 19677 flood px outside the lettering's neighbourhood Rect(101, 152 - 687, 504)
-D/BubbleRenderer: bubble=BubbleBox(left=130, top=6413, right=660, bottom=6702, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(101, 152 - 687, 504) layout=Rect(101, 152 - 687, 504) slot=Rect(191, 175 - 610, 494) page=Rect(191, 6402 - 610, 6721) fill=ff979797 ink=ff080808
-D/BubbleRenderer: bubble=BubbleBox(left=49, top=3310, right=577, bottom=3596, confidence=0.15807742, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 7988 surviving px of original lettering
-D/BubbleRenderer: bubble=BubbleBox(left=49, top=3310, right=577, bottom=3596, confidence=0.15807742, isTextBlock=false, isFallbackTextBlock=false) region=800x766 search=Rect(81, 257 - 545, 509) stroke=2 core=17851 masked=29876 blocked=24115 glyphBounds=Rect(119, 266 - 512, 439) textArea=Rect(115, 262 - 516, 443) lines=4 ink=ff020202
-D/BubbleRenderer: text-block=BubbleBox(left=156, top=4369, right=681, bottom=4594, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 3849 flood px outside the lettering's neighbourhood Rect(125, 139 - 709, 448)
-D/BubbleRenderer: bubble=BubbleBox(left=156, top=4369, right=681, bottom=4594, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(143, 139 - 703, 448) layout=Rect(143, 139 - 703, 448) slot=Rect(219, 161 - 627, 448) page=Rect(219, 4346 - 627, 4633) fill=ffa9a9a9 ink=ff080808
-D/BubbleRenderer: text-block BubbleBox(left=176, top=8316, right=620, bottom=8528, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
-D/BubbleRenderer: bubble=BubbleBox(left=176, top=8316, right=620, bottom=8528, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 3125 surviving px of original lettering
-D/BubbleRenderer: text-block=BubbleBox(left=176, top=8316, right=620, bottom=8528, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=46613 slot=Rect(147, 146 - 607, 375) page=Rect(168, 8307 - 628, 8536) ink=fff3f3f3
-D/BubbleRenderer: text-block BubbleBox(left=206, top=2629, right=586, bottom=2836, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): background is not flat, using the glyph mask instead
-D/BubbleRenderer: bubble=BubbleBox(left=206, top=2629, right=586, bottom=2836, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) ghost gate: erased 2959 surviving px of original lettering
-D/BubbleRenderer: text-block=BubbleBox(left=206, top=2629, right=586, bottom=2836, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) OCR-bounded mask=37382 slot=Rect(124, 126 - 522, 346) page=Rect(197, 2622 - 595, 2842) ink=fff7f7f7
-D/BubbleRenderer: text-block=BubbleBox(left=302, top=13913, right=658, bottom=14130, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 8556 flood px outside the lettering's neighbourhood Rect(88, 84 - 518, 384)
-D/BubbleRenderer: bubble=BubbleBox(left=302, top=13913, right=658, bottom=14130, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(88, 84 - 518, 384) layout=Rect(88, 84 - 518, 384) slot=Rect(129, 105 - 487, 384) page=Rect(306, 13893 - 664, 14172) fill=fffbfbfb ink=ff0a0a0a
-D/BubbleRenderer: bubble=BubbleBox(left=171, top=9699, right=607, bottom=9811, confidence=0.1409576, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(176, 206 - 626, 341) layout=Rect(176, 24 - 626, 398) slot=Rect(176, 24 - 626, 397) page=Rect(176, 9505 - 626, 9878) fill=fff9fcfc ink=ff111615
-D/BubbleRenderer: text-block=BubbleBox(left=171, top=14285, right=439, bottom=14441, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 2259 flood px outside the lettering's neighbourhood Rect(46, 42 - 411, 302)
-D/BubbleRenderer: bubble=BubbleBox(left=171, top=14285, right=439, bottom=14441, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(46, 62 - 411, 282) layout=Rect(46, 62 - 411, 282) slot=Rect(72, 71 - 397, 282) page=Rect(149, 14262 - 474, 14473) fill=fffcfcfc ink=ff090909
-D/BubbleRenderer: text-block BubbleBox(left=358, top=5031, right=594, bottom=5195, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): background is not flat, using the glyph mask instead
-D/BubbleRenderer: text-block=BubbleBox(left=358, top=5031, right=594, bottom=5195, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) OCR-bounded mask=21514 slot=Rect(74, 80 - 309, 250) page=Rect(349, 5028 - 584, 5198) ink=fffcfcfc
-D/BubbleRenderer: text-block=BubbleBox(left=325, top=10906, right=723, bottom=11001, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): caption interior is not one colour (17132/34684 uniform); leaving it to the safer paths
-D/BubbleRenderer: bubble=BubbleBox(left=325, top=10906, right=723, bottom=11001, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(118, 120 - 564, 253) layout=Rect(118, 120 - 564, 253) slot=Rect(118, 120 - 564, 253) page=Rect(304, 10887 - 750, 11020) fill=fffcfcfc ink=ff050505
-D/BubbleRenderer: Skipping BubbleBox(left=492, top=9752, right=622, bottom=9814, confidence=0.11832988, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Erased 56 leftover glyph px outside the flat fill of BubbleBox(left=81, top=1758, right=294, bottom=1789, confidence=0.20923361, isTextBlock=false, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=81, top=1758, right=294, bottom=1789, confidence=0.20923361, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(91, 104 - 289, 134) layout=Rect(91, 98 - 289, 144) slot=Rect(91, 99 - 289, 142) page=Rect(91, 1750 - 289, 1793) fill=ff060606 ink=fff1f1f1
-D/BubbleRenderer: Skipping BubbleBox(left=312, top=3333, right=429, bottom=3377, confidence=0.11797905, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=316, top=3470, right=427, bottom=3516, confidence=0.15228927, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: bubble=BubbleBox(left=106, top=1708, right=204, bottom=1740, confidence=0.09130666, isTextBlock=false, isFallbackTextBlock=false) slot=Rect(85, 59 - 113, 75) covers under half of lettering=Rect(38, 98 - 162, 126); anchoring to the text
-D/BubbleRenderer: bubble=BubbleBox(left=106, top=1708, right=204, bottom=1740, confidence=0.09130666, isTextBlock=false, isFallbackTextBlock=false) region=196x130 search=Rect(36, 51 - 165, 128) stroke=2 core=1376 masked=3804 blocked=0 glyphBounds=Rect(46, 51 - 165, 89) textArea=Rect(34, 95 - 166, 129) lines=2 ink=ffabfaf7
-D/BubbleRenderer: Skipping BubbleBox(left=481, top=1914, right=550, bottom=1944, confidence=0.09293023, isTextBlock=false, isFallbackTextBlock=false): saturated ink ff80fef9 with no bubble — decorative lettering, not dialogue
-D/BubbleRenderer: Skipping BubbleBox(left=760, top=7813, right=794, bottom=7842, confidence=0.13364056, isTextBlock=false, isFallbackTextBlock=false): saturated ink ff637c35 with no bubble — decorative lettering, not dialogue
-D/BubbleRenderer: Skipping Rect(91, 1754 - 223, 1788): same text already lettered in an overlapping bubble
+D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 0 junk reading(s)
+D/SimplePageReader: Dropping N as noise rather than dialogue
+D/SimplePageReader: Read 13 lettering region(s) from 42 line(s) as 'en'
+D/SimplePageReader:   region Rect(209, 1007 - 409, 1067): 中+十十士
+D/SimplePageReader:   region Rect(86, 1756 - 296, 1790): YOU CAN READ THE CHAPTER ON: / EN / |-THUNDERSCANS.COM
+D/SimplePageReader:   region Rect(206, 2629 - 582, 2836): REMEMBER. / YOU MUST NEVER / STEP INTO THIS / FIGHT.
+D/SimplePageReader:   region Rect(104, 3331 - 528, 3513): YOUR ROLE, / YOUNG LADY, IS TO / PREVENT HER'SPIRIT / TRANSFER'.
+D/SimplePageReader:   region Rect(157, 4370 - 681, 4590): WHEN SHE / FEELS THREATENED / WHILE FIGHTING ME, SHE'LL / DEFINITELY TRY TO / SWITCH BODIES.
+D/SimplePageReader:   region Rect(359, 5031 - 591, 5192): THAT'S / WHEN YOu / STEP IN.
+D/SimplePageReader:   region Rect(408, 5851 - 629, 5922): BUT...
+D/SimplePageReader:   region Rect(131, 6414 - 653, 6694): KUGH..!! / IM AN LD BAG / WHO CAN'T GUARANTEE I / WON'T LET A PRETTY GIRL / GET HURT IF YOu GET / TOO CLOSE.
+D/SimplePageReader:   region Rect(176, 8313 - 616, 8528): SO WILL / YOu LISTEN TO / THIS OLD WOMAN'S / REQUEST?
+D/SimplePageReader:   region Rect(167, 9698 - 635, 9816): IM SORRY I CAN'T FIGHT / ALONGSIDE YOU, LIHUA.!
+D/SimplePageReader:   region Rect(325, 10908 - 720, 10999): HAAAAAP!
+D/SimplePageReader:   region Rect(302, 13914 - 658, 14130): KUGH...!! / THIS B*TCH IS / THE ONE WHO WAS / BEHIND THAT OLD / HAG EARLIER...
+D/SimplePageReader:   region Rect(172, 14283 - 440, 14440): SHE / PIPN'TRUN / AWAY?!
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=209, top=1007, right=409, bottom=1067, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 中+十十士
+D/PageTranslator: Merged 27 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(359, 5031 - 591, 5192): best containment 21%
+D/PageTranslator: No balloon for Rect(408, 5851 - 629, 5922): best containment 17%
+D/PageTranslator: No balloon for Rect(176, 8313 - 616, 8528): best containment 21%
+D/PageTranslator: No balloon for Rect(325, 10908 - 720, 10999): best containment 0%
+D/PageTranslator: No balloon for Rect(302, 13914 - 658, 14130): best containment 28%
+D/PageTranslator: No balloon for Rect(172, 14283 - 440, 14440): best containment 45%
+D/PageTranslator: Grouped 12 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(285, 4934 - 665, 5298) around Rect(359, 5031 - 591, 5192)
+D/PageTranslator: Recovered paper balloon Rect(371, 5757 - 674, 6005) around Rect(408, 5851 - 629, 5922)
+D/PageTranslator: Recovered paper balloon Rect(136, 8221 - 640, 8560) around Rect(176, 8313 - 616, 8528)
+D/PageTranslator: Recovered paper balloon Rect(282, 10782 - 752, 11125) around Rect(325, 10908 - 720, 10999)
+D/PageTranslator: Recovered paper balloon Rect(185, 13822 - 723, 14440) around Rect(302, 13914 - 658, 14130)
+D/PageTranslator: Recovered paper balloon Rect(109, 14059 - 527, 14549) around Rect(172, 14283 - 440, 14440)
+D/PageTranslator: Merged 1 region(s) that share a recovered balloon
+D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg rendering 11/11 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=109, top=13822, right=723, bottom=14549, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: bubble=BubbleBox(left=136, top=8221, right=640, bottom=8560, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 6952 surviving px of original lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=136, top=8221, right=640, bottom=8560, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: BubbleBox(left=140, top=2524, right=640, bottom=2795, confidence=0.48361447, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
+D/BubbleRenderer: Typeset: BubbleBox(left=140, top=2524, right=640, bottom=2795, confidence=0.48361447, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: bubble=BubbleBox(left=81, top=1758, right=294, bottom=1789, confidence=0.20923361, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 746 surviving px of original lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=81, top=1758, right=294, bottom=1789, confidence=0.20923361, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

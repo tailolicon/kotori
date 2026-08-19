@@ -1,0 +1,4 @@
+D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read

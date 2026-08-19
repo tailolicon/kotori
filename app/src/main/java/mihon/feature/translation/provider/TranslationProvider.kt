@@ -12,7 +12,29 @@ data class TranslationContext(
     val sourceName: String get() = LANGUAGE_NAMES[sourceLanguage] ?: sourceLanguage
     val targetName: String get() = LANGUAGE_NAMES[targetLanguage] ?: targetLanguage
 
+    /**
+     * No source language was declared — the page decides.
+     *
+     * This is the normal state. A reader moves between a Japanese series and a Korean one without
+     * thinking about it, and a single app-wide "source language" setting cannot follow them: it
+     * kept the last series' answer and read the new one through it. Vision providers detect the
+     * script themselves, and the on-device path probes the page, so nothing needs to be told.
+     */
+    val isSourceAuto: Boolean get() = sourceLanguage.isBlank() || sourceLanguage == AUTO
+
+    /**
+     * "từ tiếng Nhật " / "" — the trailing space is part of it so the caller can drop the clause
+     * entirely when there is nothing to declare, rather than telling the model it is translating
+     * "from auto".
+     */
+    fun sourceClauseVi(): String = if (isSourceAuto) "" else "từ $sourceName "
+
+    /** English twin of [sourceClauseVi]: `"from Japanese "` or `""`. */
+    fun sourceClauseEn(): String = if (isSourceAuto) "" else "from $sourceName "
+
     companion object {
+        const val AUTO = "auto"
+
         val LANGUAGE_NAMES = mapOf(
             "en" to "English",
             "ja" to "Japanese",

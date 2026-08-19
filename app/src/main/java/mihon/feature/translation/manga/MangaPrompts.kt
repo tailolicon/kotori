@@ -26,7 +26,7 @@ internal object MangaPrompts {
     )
 
     fun batchPrompt(texts: List<String>, context: TranslationContext): String {
-        val sourceName = LANG_NAMES[context.sourceLanguage] ?: "Japanese"
+        val sourcePhrase = LANG_NAMES[context.sourceLanguage]?.let { "từ $it " }.orEmpty()
         val targetName = LANG_NAMES[context.targetLanguage] ?: "English"
         val styleText = context.styleHint.takeIf { it.isNotBlank() }?.let { "\nStyle instructions: $it" }.orEmpty()
         val payload = buildString {
@@ -38,7 +38,7 @@ internal object MangaPrompts {
             append(']')
         }
         return """
-Bạn là chuyên gia dịch manga/comic từ $sourceName sang $targetName.
+Bạn là chuyên gia dịch manga/comic ${sourcePhrase}sang $targetName.
 
 QUY TẮC DỊCH:
 1. ĐÂY LÀ HỘI THOẠI NÓI - phải nghe tự nhiên như người thật nói chuyện

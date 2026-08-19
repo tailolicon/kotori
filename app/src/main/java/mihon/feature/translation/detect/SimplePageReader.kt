@@ -47,6 +47,14 @@ import kotlin.math.roundToInt
 class SimplePageReader {
 
     /**
+     * Script the previous page probed as, tried first on the next one.
+     *
+     * Only ever an ordering hint: every candidate is still scored the same way, so a chapter that
+     * genuinely changes script is picked up on the page it changes.
+     */
+    private var lastProbeWinner: String? = null
+
+    /**
      * @param boxes one region per paragraph of lettering, in reading order
      * @param texts the recognised lines for the box at the same index
      * @param language the script the page turned out to be written in
@@ -58,8 +66,17 @@ class SimplePageReader {
     )
 
     fun read(bitmap: Bitmap, sourceLanguage: String): Result {
-        var lines = readPage(bitmap, sourceLanguage)
-        var language = sourceLanguage
+        // "Which language is this" is a question about the page, so answer it from the page. Reading
+        // the whole thing with a guessed recogniser first and correcting afterwards costs a full
+        // page pass, and the guess used to come from a single app-wide setting — which is how a
+        // Korean series carried on being read as Japanese after the reader left a Japanese one.
+        val configured = if (sourceLanguage.isBlank() || sourceLanguage == AUTO) {
+            probeLanguage(bitmap)
+        } else {
+            sourceLanguage
+        }
+        var lines = readPage(bitmap, configured)
+        var language = configured
 
         // A page the configured recogniser barely reads is usually written in another script, not
         // blank: English aggregators mix Japanese raw chapters into the same series, and a reader
@@ -72,13 +89,13 @@ class SimplePageReader {
         val bands = max(1, (bitmap.height + BAND_HEIGHT - BAND_OVERLAP - 1) / (BAND_HEIGHT - BAND_OVERLAP))
         if (charactersIn(lines) < bands * MIN_CHARACTERS_PER_BAND) {
             val probe = probeBand(bitmap)
-            val baseline = withRecognizer(sourceLanguage) {
+            val baseline = withRecognizer(configured) {
                 charactersIn(readBand(it, probe, 0, padEdges = false))
             }
             var best: String? = null
             var bestCount = 0
             for (candidate in SCRIPT_FALLBACK_ORDER) {
-                if (candidate == sourceLanguage) continue
+                if (candidate == configured) continue
                 val count = withRecognizer(candidate) {
                     charactersIn(readBand(it, probe, 0, padEdges = false))
                 }
@@ -97,7 +114,7 @@ class SimplePageReader {
                 if (charactersIn(attempt) > charactersIn(lines)) {
                     logcat {
                         "Page reads as '$best' ($bestCount chars on the probe band) rather than the " +
-                            "configured '$sourceLanguage' ($baseline)"
+                            "first-pass '$configured' ($baseline)"
                     }
                     lines = attempt
                     language = best
@@ -561,6 +578,69 @@ class SimplePageReader {
     }
 
     /** One band worth of page, taken from its middle, for deciding which script it is written in. */
+    /**
+     * Picks the recogniser for a page whose language nobody has declared.
+     *
+     * One band from the middle of the page is read with each CJK recogniser and scored on how much
+     * of *its own script* it found — not on how many characters it returned. Raw character count is
+     * the obvious metric and it is wrong: every CJK recogniser also reads Latin, so an English
+     * scanlation comes back with a healthy character count from the Japanese model and the page is
+     * then read, ordered and typeset as Japanese. Scoring on kana/hangul/han means a Latin page
+     * scores zero everywhere and falls to the Latin recogniser, which is the right answer.
+     *
+     * A band is enough because a page is written in one script, and it is cheap enough — a fraction
+     * of a page — to run before the real pass rather than after a wasted one.
+     */
+    private fun probeLanguage(bitmap: Bitmap): String {
+        val probe = probeBand(bitmap)
+        try {
+            var best = "en"
+            var bestScore = 0
+            // Whatever the last page turned out to be, first. A chapter is written in one script, so
+            // after the first page the early exit below ends the probe on its first read instead of
+            // loading and running all three recognisers — measured at about four seconds a page on a
+            // 2069x2880 raw, which is most of what the probe costs.
+            val order = lastProbeWinner
+                ?.let { listOf(it) + CJK_PROBE_ORDER.filterNot { candidate -> candidate == it } }
+                ?: CJK_PROBE_ORDER
+            for (candidate in order) {
+                val score = withRecognizer(candidate) {
+                    scriptCharactersIn(readBand(it, probe, 0, padEdges = false), candidate)
+                }
+                if (score > bestScore) {
+                    bestScore = score
+                    best = candidate
+                }
+                if (score >= PROBE_CONFIDENT_CHARACTERS) break
+            }
+            if (bestScore < MIN_PROBE_CHARACTERS) {
+                logcat { "Probe found no CJK worth trusting (best $best scored $bestScore); reading as Latin" }
+                lastProbeWinner = null
+                return "en"
+            }
+            logcat { "Page reads best as '$best' ($bestScore ${best}-script chars on the probe band)" }
+            lastProbeWinner = best
+            return best
+        } finally {
+            if (probe !== bitmap) probe.recycle()
+        }
+    }
+
+    /** Characters belonging to [language]'s own script, ignoring anything every recogniser reads. */
+    private fun scriptCharactersIn(lines: List<ReadLine>, language: String): Int =
+        lines.sumOf { read ->
+            read.line.text.count { ch ->
+                val cp = ch.code
+                when (language) {
+                    "ja" -> cp in 0x3040..0x30FF || cp in 0x31F0..0x31FF ||
+                        cp in 0x3400..0x9FFF || cp in 0xF900..0xFAFF
+                    "zh" -> cp in 0x3400..0x9FFF || cp in 0xF900..0xFAFF
+                    "ko" -> cp in 0x1100..0x11FF || cp in 0xAC00..0xD7AF
+                    else -> ch.isLetterOrDigit()
+                }
+            }
+        }
+
     private fun probeBand(bitmap: Bitmap): Bitmap {
         if (bitmap.height <= BAND_HEIGHT) return bitmap
         val top = ((bitmap.height - BAND_HEIGHT) / 2).coerceAtLeast(0)
@@ -613,8 +693,17 @@ class SimplePageReader {
     private companion object {
         const val TIMEOUT_SECONDS = 30L
 
+        /** Source-language value meaning "work it out from the page". */
+        const val AUTO = "auto"
+
         /** Scripts to try when the configured one reads nothing off a page. */
         val SCRIPT_FALLBACK_ORDER = listOf("ja", "zh", "ko", "en")
+
+        /**
+         * Recognisers the up-front probe tries. Latin is absent on purpose: it is the fallback when
+         * no CJK script scores, so probing for it would only be a way to beat a real CJK reading.
+         */
+        val CJK_PROBE_ORDER = listOf("ja", "ko", "zh")
         /** Characters off the probe band that settle the question without trying the rest. */
         const val PROBE_CONFIDENT_CHARACTERS = 40
         /** Below this, per band, the configured recogniser has not really read the page. */

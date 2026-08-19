@@ -1,9 +1,17 @@
-D/TextBlockDetector: Text-block pass added 1 region(s) and kept 3 speech fallback(s)
-D/PageTranslator: Merged 4 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: bubble=BubbleBox(left=32, top=1, right=360, bottom=312, confidence=0.29873586, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(54, 22 - 338, 291) layout=Rect(54, 6 - 338, 317) slot=Rect(64, 18 - 311, 212) page=Rect(64, 18 - 311, 212) fill=fffefefe ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=279, top=963, right=744, bottom=1178, confidence=0.22596425, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(263, 190 - 675, 433) layout=Rect(263, 31 - 675, 454) slot=Rect(323, 89 - 648, 426) page=Rect(369, 819 - 694, 1156) fill=fffdfdfd ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=95, top=5390, right=563, bottom=5598, confidence=0.14092001, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(88, 248 - 533, 446) layout=Rect(88, 222 - 533, 621) slot=Rect(114, 268 - 461, 574) page=Rect(114, 5424 - 461, 5730) fill=fffefefe ink=ff080808
-D/BubbleRenderer: Erased 207 leftover glyph px outside the flat fill of BubbleBox(left=282, top=3858, right=776, bottom=4023, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true)
-D/BubbleRenderer: bubble=BubbleBox(left=282, top=3858, right=776, bottom=4023, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(148, 139 - 689, 372) layout=Rect(148, 139 - 689, 372) slot=Rect(148, 139 - 689, 372) page=Rect(257, 3824 - 798, 4057) fill=fffbfbfb ink=ff080808
-D/BubbleRenderer: text-block=BubbleBox(left=79, top=1384, right=510, bottom=1492, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): caption interior is not one colour (34754/63033 uniform); leaving it to the safer paths
-D/BubbleRenderer: bubble=BubbleBox(left=79, top=1384, right=510, bottom=1492, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(61, 129 - 526, 281) layout=Rect(61, 129 - 526, 281) slot=Rect(61, 129 - 526, 281) page=Rect(61, 1362 - 526, 1514) fill=fffcfcfc ink=ff070707
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Read 5 lettering region(s) from 14 line(s) as 'en'
+D/SimplePageReader:   region Rect(76, 116 - 324, 155): VERY GOOD!
+D/SimplePageReader:   region Rect(334, 919 - 732, 1060): ALL WAR ZONES WILL / HEAD TO THE FINAL / BATTLEFELD IVE SET / UP TONIGHT!
+D/SimplePageReader:   region Rect(79, 1383 - 509, 1490): AT THAT TIME, I WILL / CATCH THEM ALL IN ONE / NET!
+D/SimplePageReader:   region Rect(282, 3860 - 776, 4022): ENDING THE NATIONAL WAR / IN H8 HOURS SHOULD GIVE / THOSE OLD FOGIES BACK / HOME GQUITE A SURPRISE!
+D/SimplePageReader:   region Rect(76, 5528 - 512, 5602): IT REALLY IS SOMETHNG / TO LOOK FORWARD TO!
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/PageTranslator: Merged 1 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(334, 919 - 732, 1060): best containment 68%
+D/PageTranslator: No balloon for Rect(79, 1383 - 509, 1490): best containment 0%
+D/PageTranslator: Grouped 5 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(282, 761 - 778, 1184) around Rect(334, 919 - 732, 1060)
+D/PageTranslator: Recovered paper balloon Rect(48, 1268 - 533, 1604) around Rect(79, 1383 - 509, 1490)
+D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg rendering 5/5 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=79, top=113, right=325, bottom=155, confidence=0.40341008, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

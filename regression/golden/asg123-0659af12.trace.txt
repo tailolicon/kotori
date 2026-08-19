@@ -1,21 +1,46 @@
-D/TextBlockDetector: Text-block pass added 2 region(s) and kept 3 speech fallback(s)
-D/PageTranslator: Merged 26 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=0, top=548, right=800, bottom=1410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 79600 flood px outside the lettering's neighbourhood Rect(0, 132 - 800, 1165)
-D/BubbleRenderer: text-block=BubbleBox(left=0, top=548, right=800, bottom=1410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) cleared outlined dark-caption strip=Rect(0, 104 - 800, 1193) (2914 glyph px)
-D/BubbleRenderer: Erased 47081 leftover glyph px outside the flat fill of BubbleBox(left=0, top=548, right=800, bottom=1410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=0, top=548, right=800, bottom=1410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 15747 surviving px of original lettering
-D/BubbleRenderer: bubble=BubbleBox(left=0, top=548, right=800, bottom=1410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(2, 132 - 798, 765) layout=Rect(2, 132 - 798, 765) slot=Rect(2, 140 - 798, 765) page=Rect(2, 468 - 798, 1093) fill=ff101010 ink=fff6f6f6
-D/BubbleRenderer: text-block=BubbleBox(left=0, top=386, right=800, bottom=484, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) solid uniform-caption strip=Rect(0, 381 - 800, 492)
-D/BubbleRenderer: bubble=BubbleBox(left=159, top=2801, right=603, bottom=2962, confidence=0.2739078, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(188, 234 - 577, 371) layout=Rect(188, 121 - 577, 581) slot=Rect(238, 212 - 561, 517) page=Rect(238, 2791 - 561, 3096) fill=fffbfbf9 ink=ff961b11
-D/BubbleRenderer: bubble=BubbleBox(left=206, top=3821, right=614, bottom=3976, confidence=0.2131834, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(230, 215 - 586, 348) layout=Rect(230, 215 - 586, 348) slot=Rect(249, 215 - 570, 348) page=Rect(251, 3832 - 572, 3965) fill=fffdfdfd ink=ff050505
-D/BubbleRenderer: bubble=BubbleBox(left=382, top=6258, right=762, bottom=6421, confidence=0.55720305, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(215, 202 - 545, 341) layout=Rect(215, 190 - 545, 350) slot=Rect(215, 190 - 545, 350) page=Rect(407, 6258 - 737, 6418) fill=fffdfdfd ink=ff050505
-D/BubbleRenderer: text-block=BubbleBox(left=122, top=4427, right=551, bottom=4539, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): caption interior is not one colour (35400/70975 uniform); leaving it to the safer paths
-D/BubbleRenderer: bubble=BubbleBox(left=122, top=4427, right=551, bottom=4539, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(107, 127 - 555, 285) layout=Rect(107, 127 - 555, 285) slot=Rect(107, 127 - 555, 285) page=Rect(107, 4404 - 555, 4562) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: bubble=BubbleBox(left=171, top=5514, right=591, bottom=5600, confidence=0.305982, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(198, 215 - 564, 289) layout=Rect(198, 24 - 564, 403) slot=Rect(214, 123 - 523, 403) page=Rect(214, 5427 - 523, 5707) fill=fffbfbfb ink=ff070707
-D/BubbleRenderer: bubble=BubbleBox(left=365, top=5957, right=596, bottom=5994, confidence=0.7952665, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(125, 116 - 344, 151) layout=Rect(125, 14 - 344, 255) slot=Rect(125, 53 - 340, 233) page=Rect(374, 5894 - 589, 6074) fill=fffafafa ink=ff080808
-D/BubbleRenderer: Skipping BubbleBox(left=423, top=2850, right=578, bottom=2882, confidence=0.07296312, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=573, top=6319, right=686, bottom=6355, confidence=0.47883514, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=236, top=2856, right=370, bottom=2883, confidence=0.33431256, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=187, top=5547, right=263, bottom=5589, confidence=0.08733353, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=372, top=5957, right=452, bottom=5993, confidence=0.06782824, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=517, top=2846, right=582, bottom=2879, confidence=0.39743745, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
+D/SimplePageReader: Probe found no CJK worth trusting (best zh scored 9); reading as Latin
+D/SimplePageReader: Companion 'en' pass: +2 line(s), replaced 0 junk reading(s)
+D/SimplePageReader: Not one paragraph: Rect(46, 145 - 768, 266) + Rect(29, 392 - 771, 478) — type 121 vs 42, same paper: true
+D/SimplePageReader: Not one paragraph: Rect(160, 2692 - 640, 2864) + Rect(238, 2846 - 569, 2880) — type 172 vs 34, same paper: true
+D/SimplePageReader: Not one paragraph: Rect(160, 2692 - 640, 2864) + Rect(237, 2890 - 591, 2964) — type 172 vs 74, same paper: true
+D/SimplePageReader: Not one paragraph: Rect(238, 2846 - 569, 2880) + Rect(237, 2890 - 591, 2964) — type 34 vs 74, same paper: true
+D/SimplePageReader: Read 14 lettering region(s) from 20 line(s) as 'en'
+D/SimplePageReader:   region Rect(17, 140 - 797, 271): AWARNING!
+D/SimplePageReader:   region Rect(0, 388 - 800, 482): READERTHAT DOES NOT SUPPORT / OUR WEBSITE HAS BEEN DETECTED!
+D/SimplePageReader:   region Rect(50, 576 - 732, 666): PLEASE AEAD THIS SERIES ON DUR WEBSITE / EN-THUNDERSCANS.COM
+D/SimplePageReader:   region Rect(1, 722 - 772, 868): TO SUPPORT US IN CONTINUING TO PUBLISH / MORE AMAZING SERIES WITH THE BEST POSsiBLE / qUALİTY AND TAANSLATION
+D/SimplePageReader:   region Rect(472, 936 - 781, 969): - THUNDERSCANS TEAM
+D/SimplePageReader:   region Rect(39, 1210 - 761, 1383): READ AT EN-THUNDERSCANS.COM / TO SUPPORT US!
+D/SimplePageReader:   region Rect(141, 2685 - 659, 2871): 末日剑神
+D/SimplePageReader:   region Rect(225, 2842 - 582, 2884): DooMSDAY SwORD GoD
+D/SimplePageReader:   region Rect(223, 2886 - 605, 2968): 我震惊全球F
+D/SimplePageReader:   region Rect(309, 3877 - 514, 3910): ZXY UNITED TEAM
+D/SimplePageReader:   region Rect(164, 4431 - 549, 4537): EVERYONE, WE AND / COUNTRY ARE THE LAST / TO ENTER!
+D/SimplePageReader:   region Rect(178, 5519 - 556, 5589): THIS PROVES WE ARE / TIED FOR STRONGEST!
+D/SimplePageReader:   region Rect(370, 5955 - 596, 5994): YES! CAPTAIN!
+D/SimplePageReader:   region Rect(457, 6323 - 689, 6354): ZXY CAPTAIN: NANDA
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=17, top=140, right=797, bottom=271, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AWARNING!
+D/UndispatchedCoroutine: Dropped BubbleBox(left=141, top=2685, right=659, bottom=2871, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 末日剑神
+D/UndispatchedCoroutine: Dropped BubbleBox(left=225, top=2842, right=582, bottom=2884, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: DooMSDAY SwORD GoD
+D/UndispatchedCoroutine: Dropped BubbleBox(left=223, top=2886, right=605, bottom=2968, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 我震惊全球F
+D/PageTranslator: Merged 19 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(0, 388 - 800, 482): best containment 53%
+D/PageTranslator: No balloon for Rect(50, 576 - 732, 666): best containment 13%
+D/PageTranslator: No balloon for Rect(1, 722 - 772, 868): best containment 7%
+D/PageTranslator: No balloon for Rect(472, 936 - 781, 969): best containment 59%
+D/PageTranslator: No balloon for Rect(39, 1210 - 761, 1383): best containment 21%
+D/PageTranslator: Grouped 10 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(2, 257 - 798, 613) around Rect(0, 388 - 800, 482)
+D/PageTranslator: Recovered paper balloon Rect(2, 451 - 798, 791) around Rect(50, 576 - 732, 666)
+D/PageTranslator: Recovered paper balloon Rect(2, 512 - 798, 1078) around Rect(1, 722 - 772, 868)
+D/PageTranslator: Recovered paper balloon Rect(371, 902 - 798, 1003) around Rect(472, 936 - 781, 969)
+D/PageTranslator: Recovered paper balloon Rect(2, 1097 - 798, 1470) around Rect(39, 1210 - 761, 1383)
+D/PageTranslator: Merged 2 region(s) that share a recovered balloon
+D/UndispatchedCoroutine: regression:asg123-0659af12.jpg rendering 8/8 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=2, top=451, right=798, bottom=1078, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=171, top=5514, right=591, bottom=5600, confidence=0.305982, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=454, top=6318, right=691, bottom=6359, confidence=0.78491825, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=365, top=5957, right=596, bottom=5994, confidence=0.7952665, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=299, top=3874, right=513, bottom=3913, confidence=0.92030555, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

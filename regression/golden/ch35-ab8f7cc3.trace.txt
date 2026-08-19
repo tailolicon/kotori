@@ -1,7 +1,16 @@
-D/TextBlockDetector: Text-block pass added 2 region(s) and kept 2 speech fallback(s)
-D/PageTranslator: Merged 2 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: bubble=BubbleBox(left=68, top=14107, right=626, bottom=14291, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(40, 157 - 651, 417) layout=Rect(40, 157 - 651, 417) slot=Rect(40, 157 - 651, 417) page=Rect(40, 14069 - 651, 14329) fill=fffcfcfc ink=ff080808
-D/BubbleRenderer: bubble=BubbleBox(left=417, top=14466, right=845, bottom=14703, confidence=0.4050843, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(242, 190 - 614, 435) layout=Rect(242, 23 - 614, 453) slot=Rect(273, 139 - 585, 395) page=Rect(476, 14391 - 788, 14647) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: text-block=BubbleBox(left=99, top=12690, right=457, bottom=12876, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 211 flood px outside the lettering's neighbourhood Rect(36, 54 - 520, 378)
-D/BubbleRenderer: bubble=BubbleBox(left=99, top=12690, right=457, bottom=12876, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(36, 86 - 520, 350) layout=Rect(36, 86 - 520, 350) slot=Rect(94, 86 - 463, 349) page=Rect(94, 12651 - 463, 12914) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: bubble=BubbleBox(left=218, top=15253, right=682, bottom=15389, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(133, 134 - 656, 326) layout=Rect(133, 134 - 656, 326) slot=Rect(133, 134 - 656, 326) page=Rect(189, 15225 - 712, 15417) fill=fffcfcfc ink=ff080808
+D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Read 4 lettering region(s) from 13 line(s) as 'en'
+D/SimplePageReader:   region Rect(99, 12690 - 451, 12871): VERY / FAINT WIND / MAGIC...
+D/SimplePageReader:   region Rect(68, 14107 - 626, 14291): BUT WITH / DELICATE CONTROL / AND WITHOUT A SINGLE / BIT OF WASTE,
+D/SimplePageReader:   region Rect(463, 14443 - 807, 14589): SHE / EVADED THAT / BARRAGE.
+D/SimplePageReader:   region Rect(219, 15258 - 683, 15388): ON TOP OF / THAT, PRECISE MANA / DETECTION.
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(99, 12690 - 451, 12871): best containment 12%
+D/PageTranslator: No balloon for Rect(219, 15258 - 683, 15388): best containment 7%
+D/PageTranslator: Grouped 4 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(34, 12581 - 523, 12984) around Rect(99, 12690 - 451, 12871)
+D/PageTranslator: Recovered paper balloon Rect(190, 15120 - 711, 15527) around Rect(219, 15258 - 683, 15388)
+D/UndispatchedCoroutine: regression:ch35-ab8f7cc3.jpg rendering 4/4 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=37, top=14114, right=625, bottom=14287, confidence=0.1519221, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

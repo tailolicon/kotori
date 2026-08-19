@@ -19,7 +19,7 @@ internal object TranslationPrompts {
         boxCount: Int,
     ): String = if (context.targetLanguage == "vi") {
         buildString {
-            appendLine("Bạn là dịch giả manga/manhwa/manhua chuyên nghiệp, dịch từ ${context.sourceName} sang tiếng Việt.")
+            appendLine("Bạn là dịch giả manga/manhwa/manhua chuyên nghiệp, dịch ${context.sourceClauseVi()}sang tiếng Việt.")
             appendLine()
             appendLine("Ảnh trang truyện: ${imageWidth}x${imageHeight} pixel.")
             appendLine("Mỗi ô thoại được ĐÁNH SỐ bằng nhãn đỏ vẽ ngay góc trên-trái của ô trong ảnh.")
@@ -42,7 +42,7 @@ internal object TranslationPrompts {
         }
     } else {
         buildString {
-            appendLine("You are a professional comics translator working from ${context.sourceName} into ${context.targetName}.")
+            appendLine("You are a professional comics translator working ${context.sourceClauseEn()}into ${context.targetName}.")
             appendLine()
             appendLine("Page image: ${imageWidth}x${imageHeight} pixels.")
             appendLine("Each bubble is NUMBERED by a red badge drawn at its top-left corner in the image.")
@@ -67,7 +67,7 @@ internal object TranslationPrompts {
         val numbered = texts.withIndex().joinToString("\n") { (index, text) -> "${index + 1}. $text" }
         return if (context.targetLanguage == "vi") {
             buildString {
-                appendLine("Bạn là dịch giả manga chuyên nghiệp, dịch từ ${context.sourceName} sang tiếng Việt.")
+                appendLine("Bạn là dịch giả manga chuyên nghiệp, dịch ${context.sourceClauseVi()}sang tiếng Việt.")
                 appendLine()
                 append(VIETNAMESE_DIALOGUE_RULES)
                 appendStyle(context)
@@ -79,7 +79,7 @@ internal object TranslationPrompts {
             }
         } else {
             buildString {
-                appendLine("You are a professional comics translator from ${context.sourceName} to ${context.targetName}.")
+                appendLine("You are a professional comics translator working ${context.sourceClauseEn()}to ${context.targetName}.")
                 appendLine()
                 append(GENERIC_DIALOGUE_RULES)
                 appendStyle(context)
@@ -145,7 +145,7 @@ internal object TranslationPrompts {
 
         return if (context.targetLanguage == "vi") {
             buildString {
-                appendLine("Bạn là dịch giả light novel chuyên nghiệp, dịch từ ${context.sourceName} sang tiếng Việt.")
+                appendLine("Bạn là dịch giả light novel chuyên nghiệp, dịch ${context.sourceClauseVi()}sang tiếng Việt.")
                 appendLine("Tác phẩm: ${prose.seriesTitle}")
                 appendLine()
                 append(VIETNAMESE_PROSE_RULES)
@@ -175,7 +175,7 @@ internal object TranslationPrompts {
             }
         } else {
             buildString {
-                appendLine("You are a professional light-novel translator from ${context.sourceName} to ${context.targetName}.")
+                appendLine("You are a professional light-novel translator working ${context.sourceClauseEn()}to ${context.targetName}.")
                 appendLine("Work: ${prose.seriesTitle}")
                 appendLine()
                 append(GENERIC_PROSE_RULES)

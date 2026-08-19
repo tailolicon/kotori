@@ -60,7 +60,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import mihon.feature.translation.TRANSLATION_PREFETCH_CHAPTERS
 import mihon.feature.translation.TranslationManager
-import mihon.feature.translation.TranslationStatus
 import logcat.LogPriority
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.util.lang.launchIO
@@ -329,14 +328,46 @@ class ReaderViewModel @JvmOverloads constructor(
     fun setTranslationEnabled(enabled: Boolean) {
         val manga = manga ?: return
         android.util.Log.e("KotoriTL", "setTranslationEnabled=$enabled manga=${manga.id}")
+        val alreadyOn = translationManager.isEnabled(manga.id)
+        translationPrefetchJob?.cancel()
         translationManager.setEnabled(manga.id, enabled)
-        if (!enabled) {
-            translationPrefetchJob?.cancel()
-        } else {
+        if (enabled) {
+            // "Dịch lại" is this same entry point while already on. Skip-if-cached would keep
+            // the bad pages; in-flight writers would put them back after a delete.
+            if (alreadyOn) {
+                translationManager.discardTranslations(manga.id)
+            }
             translationManager.clearBackoff()
             translationManager.claim(manga.id)
         }
+        rebuildChaptersForTranslation("translation toggle")
+    }
 
+    /**
+     * Throws away this series' translated pages and puts the original artwork back on screen.
+     *
+     * Deleting the files is only half of it. The viewer holds pages it has already decoded, and the
+     * page loaders were built to substitute translated bytes — so without this rebuild the reader
+     * kept looking at exactly the pages they had just asked to be rid of, and concluded the delete
+     * had not worked.
+     */
+    fun discardTranslations() {
+        val manga = manga ?: return
+        translationPrefetchJob?.cancel()
+        translationManager.discardTranslations(manga.id)
+        rebuildChaptersForTranslation("translation discard")
+    }
+
+    /**
+     * Rebuilds every loaded chapter so the viewer re-reads its pages through the current path.
+     *
+     * Whether a page is translated is decided when its loader is constructed, so both turning
+     * translation on or off and discarding the cache have to go through here. Neighbours already
+     * loaded are reset too: resetting only the page on screen leaves them wrapped the old way
+     * forever, and prefetch then skips them as "already ready".
+     */
+    private fun rebuildChaptersForTranslation(reason: String) {
+        val manga = manga ?: return
         viewModelScope.launchIO {
             val context = Injekt.get<Application>()
             val source = sourceManager.getOrStub(manga.source)
@@ -345,8 +376,6 @@ class ReaderViewModel @JvmOverloads constructor(
             val newLoader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
             loader = newLoader
 
-            // Neighbours already loaded without the translation wrapper stay original forever
-            // if we only reset the page on screen — prefetch then skips them as "already ready".
             for (readerChapter in chapterList) {
                 if (readerChapter.pageLoader == null &&
                     readerChapter.state !is ReaderChapter.State.Loaded
@@ -365,7 +394,7 @@ class ReaderViewModel @JvmOverloads constructor(
                 eventChannel.send(Event.ReloadViewerChapters)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
-                logcat(LogPriority.ERROR, e) { "Failed to reload chapter after translation toggle" }
+                logcat(LogPriority.ERROR, e) { "Failed to reload chapter after $reason" }
             }
             // No explicit prefetch call here: loadChapter arms the lookahead itself, and doing it
             // twice would only cancel and restart the job that was already running.
@@ -388,9 +417,6 @@ class ReaderViewModel @JvmOverloads constructor(
 
         translationPrefetchJob?.cancel()
         translationPrefetchJob = viewModelScope.launchIO {
-            var completed = 0
-            var total = 0
-
             prefetch@ for (readerChapter in targets) {
                 if (!translationManager.isEnabled(manga?.id ?: return@launchIO)) break@prefetch
                 if (readerChapter !== current) {
@@ -402,7 +428,10 @@ class ReaderViewModel @JvmOverloads constructor(
                         }
                 }
                 val pages = readerChapter.pages.orEmpty()
-                total += pages.size
+                // One chapter at a time, so the fraction the reader sees counts pages of the
+                // chapter in front of them rather than of a look-ahead window that kept growing
+                // under the fraction as further chapters were added to it.
+                translationManager.beginChapterProgress(readerChapter.chapter.name, pages.size)
 
                 // Translate the page on screen first. Starting at 0 on a 200-page chapter left the
                 // reader staring at an untranslated page while prefetch chewed the cover.
@@ -416,34 +445,35 @@ class ReaderViewModel @JvmOverloads constructor(
                 // Pages are fetched one at a time but translated in runs: the provider charges per
                 // image sent, so a manhwa chapter split into dozens of short images costs dozens of
                 // times what the same content costs joined. Collect a run, hand it over whole.
+                //
+                // The run starts at one page and doubles up to that batch size. Fixed at forty, the
+                // loop downloaded forty pages before translating any of them — so the page actually
+                // on screen waited behind thirty-nine the reader would not reach for ten minutes,
+                // and the panel showed a count climbing through pages that were merely fetched.
+                // Ramping makes the first page almost immediate and still reaches the batch size
+                // that keeps a manhwa chapter affordable, for a handful of extra calls per chapter.
                 val run = mutableListOf<Pair<Int, () -> java.io.InputStream>>()
+                var runTarget = 1
                 for (page in ordered) {
                     // A rate-limited provider fails every page from here on; marching through the
                     // rest of the window would just spend the recovering quota on more failures.
                     if (translationManager.isRateLimited()) break@prefetch
-                    translationManager.updateStatus(
-                        TranslationStatus.Working(completed, total, readerChapter.chapter.name),
-                    )
                     fetchPage(readerChapter, page)
                     val source = (page as? TranslatedReaderPage)?.originalStream() ?: page.stream
-                    if (page.index < start + 3) {
-                        android.util.Log.e(
-                            "KotoriTL",
-                            "prefetch page=${page.index} class=${page.javaClass.simpleName} " +
-                                "stream=${source != null} status=${page.status}",
-                        )
-                    }
                     if (source != null) {
                         run += page.index to source
                     } else {
                         logcat(LogPriority.WARN) {
                             "Translation skip page ${page.index}: no source bytes (${page.javaClass.simpleName})"
                         }
+                        // Still one page of this chapter accounted for; otherwise the count stops
+                        // short of the total and the panel looks stuck for the rest of the chapter.
+                        translationManager.reportPagesHandled(1)
                     }
-                    completed++
-                    if (run.size >= TRANSLATION_RUN_PAGES) {
+                    if (run.size >= runTarget) {
                         translateRun(readerChapter, run.toList())
                         run.clear()
+                        runTarget = (runTarget * 2).coerceAtMost(TRANSLATION_RUN_PAGES)
                     }
                 }
                 if (run.isNotEmpty()) translateRun(readerChapter, run.toList())
@@ -451,7 +481,7 @@ class ReaderViewModel @JvmOverloads constructor(
             // The quota message stays visible; "Idle" would overwrite the one line that tells the
             // user why their pages stopped being translated.
             if (!translationManager.isRateLimited()) {
-                translationManager.updateStatus(TranslationStatus.Idle)
+                translationManager.finishProgress()
             }
         }
     }

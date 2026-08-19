@@ -1,17 +1,26 @@
-D/TextBlockDetector: Text-block pass added 3 region(s) and kept 3 speech fallback(s)
-D/PageTranslator: Merged 4 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=139, top=1224, right=672, bottom=1491, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 19593 flood px outside the lettering's neighbourhood Rect(74, 114 - 738, 529)
-D/BubbleRenderer: gradient interior: painted 381 rows per-row (spread 51)
-D/BubbleRenderer: text-block=BubbleBox(left=139, top=1224, right=672, bottom=1491, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) cleared outlined dark-caption strip=Rect(51, 156 - 761, 487) (3 glyph px)
-D/BubbleRenderer: bubble=BubbleBox(left=139, top=1224, right=672, bottom=1491, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(74, 130 - 738, 511) layout=Rect(74, 130 - 738, 511) slot=Rect(188, 200 - 738, 511) page=Rect(188, 1237 - 738, 1548) fill=ff060404 ink=fff7f7f7
-D/BubbleRenderer: text-block=BubbleBox(left=123, top=9968, right=670, bottom=10119, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 15716 flood px outside the lettering's neighbourhood Rect(80, 134 - 713, 399)
-D/BubbleRenderer: bubble=BubbleBox(left=123, top=9968, right=670, bottom=10119, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(85, 160 - 713, 373) layout=Rect(85, 160 - 713, 373) slot=Rect(85, 160 - 713, 373) page=Rect(85, 9937 - 713, 10150) fill=ffeafaf9 ink=ff171d1e
-D/BubbleRenderer: Erased 905 leftover glyph px outside the flat fill of BubbleBox(left=311, top=10646, right=665, bottom=10722, confidence=0.13082239, isTextBlock=false, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=311, top=10646, right=665, bottom=10722, confidence=0.13082239, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(139, 172 - 567, 263) layout=Rect(139, 20 - 567, 317) slot=Rect(167, 20 - 567, 317) page=Rect(301, 10489 - 701, 10786) fill=fffafcfc ink=ff141b1b
-D/BubbleRenderer: bubble=BubbleBox(left=271, top=8654, right=535, bottom=8750, confidence=0.10661575, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(117, 127 - 405, 279) layout=Rect(117, 15 - 405, 345) slot=Rect(117, 33 - 405, 345) page=Rect(256, 8555 - 544, 8867) fill=ffe9faf9 ink=ff131819
+D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Read 7 lettering region(s) from 18 line(s) as 'en'
+D/SimplePageReader:   region Rect(140, 1227 - 672, 1490): WITH THIS POWER, SHE / HAS ESCAPED FATES WHERE / SHE SHOULD HAVE DIED / MULTIPLE TIMES,
+D/SimplePageReader:   region Rect(189, 2793 - 800, 2946): ANDJUST LIKE HASEGAWA'S / STMMORTALITY,
+D/SimplePageReader:   region Rect(215, 3751 - 593, 4050): TISA POWER / THAT DEFIES / PROVIDENCE
+D/SimplePageReader:   region Rect(83, 4271 - 296, 4304): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
+D/SimplePageReader:   region Rect(251, 8645 - 548, 8801): O CREATURE / WHO DEFIES / PROVIDENCE.
+D/SimplePageReader:   region Rect(124, 9969 - 668, 10115): REMAIN IN / THAT VESSEL AND OBEY / PROVIDENCE!
+D/SimplePageReader:   region Rect(87, 10648 - 713, 10726): IDRACONIC VOICE (S:)]
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=189, top=2793, right=800, bottom=2946, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: ANDJUST LIKE HASEGAWA'S
+D/UndispatchedCoroutine: STMMORTALITY,
+D/UndispatchedCoroutine: Dropped BubbleBox(left=215, top=3751, right=593, bottom=4050, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: TISA POWER
+D/UndispatchedCoroutine: THAT DEFIES
+D/UndispatchedCoroutine: PROVIDENCE
+D/UndispatchedCoroutine: Dropped BubbleBox(left=87, top=10648, right=713, bottom=10726, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: IDRACONIC VOICE (S:)]
+D/PageTranslator: Merged 17 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(140, 1227 - 672, 1490): best containment 3%
+D/PageTranslator: No balloon for Rect(251, 8645 - 548, 8801): best containment 54%
+D/PageTranslator: Grouped 4 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(2, 851 - 798, 1866) around Rect(140, 1227 - 672, 1490)
+D/PageTranslator: Recovered paper balloon Rect(154, 8476 - 645, 8949) around Rect(251, 8645 - 548, 8801)
+D/UndispatchedCoroutine: regression:kd53-b6815aef.jpg rendering 4/4 translated bubbles
 D/BubbleRenderer: bubble=BubbleBox(left=78, top=4265, right=289, bottom=4304, confidence=0.2558911, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 448 surviving px of original lettering
-D/BubbleRenderer: bubble=BubbleBox(left=78, top=4265, right=289, bottom=4304, confidence=0.2558911, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(91, 110 - 288, 141) layout=Rect(91, 110 - 288, 141) slot=Rect(91, 110 - 288, 141) page=Rect(91, 4269 - 288, 4300) fill=ff070707 ink=fff1f1f1
-D/BubbleRenderer: Skipping BubbleBox(left=397, top=8701, right=532, bottom=8750, confidence=0.0752188, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=434, top=8653, right=540, bottom=8700, confidence=0.32472205, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=312, top=8654, right=419, bottom=8694, confidence=0.095519304, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
-D/BubbleRenderer: Skipping BubbleBox(left=191, top=4270, right=289, bottom=4304, confidence=0.065144, isTextBlock=false, isFallbackTextBlock=false): its bubble was already prepared for lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=78, top=4265, right=289, bottom=4304, confidence=0.2558911, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

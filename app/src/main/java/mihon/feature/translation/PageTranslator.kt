@@ -46,7 +46,9 @@ class PageTranslator(
     private val simpleReader by lazy { SimplePageReader() }
     private val recognizer by lazy { BubbleTextRecognizer(context) }
     private val renderer by lazy { BubbleRenderer(context) }
-    private val mangaTranslator by lazy { MangaPageTranslator(context, localWork) }
+    private val mangaTranslator by lazy {
+        MangaPageTranslator(context, localWork, simpleReader, renderer) { preferences.font.get() }
+    }
 
     /**
      * Guards the on-device stages only: the ONNX detector session and the ML Kit recogniser
@@ -130,8 +132,14 @@ class PageTranslator(
         horizontalSeams: IntArray,
         diagnosticLabel: String,
     ): Bitmap = withIOContext {
+        // Deliberately not `preferences.sourceLanguage`. A comic page carries its own script and
+        // both readers below can see it — the vision providers detect it in the same call that
+        // translates, and [SimplePageReader] probes a band before it commits. A stored language is
+        // only ever the *previous* series' answer, which is how a Korean series went on being read
+        // as Japanese. (Light novels are different: there is no page to look at, so
+        // [mihon.feature.translation.novel.NovelTranslator] still reads the preference.)
         var translationContext = TranslationContext(
-            sourceLanguage = preferences.sourceLanguage.get(),
+            sourceLanguage = TranslationContext.AUTO,
             targetLanguage = preferences.targetLanguage.get(),
             styleHint = preferences.styleHint.get(),
         )
@@ -140,11 +148,11 @@ class PageTranslator(
             MangaPipeline.shouldHandle(
                 source.width,
                 source.height,
-                translationContext.sourceLanguage,
                 currentProvider().displayName,
+                currentProvider().supportsVisionOcr,
             )
         ) {
-            val manga = try {
+            val outcome = try {
                 mangaTranslator.translate(source, translationContext, currentProvider(), diagnosticLabel)
             } catch (error: CancellationException) {
                 throw error
@@ -154,9 +162,16 @@ class PageTranslator(
                 throw error
             } catch (error: Exception) {
                 logcat { "$diagnosticLabel manga pipeline failed: ${error.message}; using original path" }
-                null
+                MangaPageTranslator.Outcome.NotHandled
             }
-            if (manga != null) return@withIOContext manga
+            when (outcome) {
+                is MangaPageTranslator.Outcome.Rendered -> return@withIOContext outcome.bitmap
+                // The balloons were found and read: "nothing here" is an answer, not a gap to be
+                // filled by running the whole original pipeline over the same page for a second
+                // opinion it would pay for in another provider call.
+                MangaPageTranslator.Outcome.NoDialogue -> throw NothingToTranslate()
+                MangaPageTranslator.Outcome.NotHandled -> Unit
+            }
         }
 
         val startedAt = System.currentTimeMillis()
@@ -288,7 +303,16 @@ class PageTranslator(
                 // lettering already sits in a readable footprint; typeset fill on colour
                 // strips is how neon ovals used to get painted over. Picking TYPESET still
                 // forces that path on a strip.
-                val typeset = renderStyle == TranslationRenderStyle.TYPESET
+                // Japanese *manga* decides this, not a setting. Vertical columns give a recognised
+                // footprint that is a tall sliver, and a sentence written into a sliver comes out
+                // one or two words per row — translated and unreadable. The balloon around it has
+                // the room. A reader should not have to know that, so the page says so.
+                //
+                // Deliberately gated on the page being a page. Forcing balloon fills onto a colour
+                // webtoon strip is how neon ovals used to get painted over, and a strip that merely
+                // happens to read as Japanese must not trigger it.
+                val typeset = renderStyle == TranslationRenderStyle.TYPESET ||
+                    (read.language == "ja" && pageFormat == PageFormat.MANGA)
                 var placed = placeInBalloons(blocks, blockTexts, balloons, preferBalloon = typeset)
                 if (typeset) {
                     placed = recoverPaperBalloons(source, placed.first, placed.second)

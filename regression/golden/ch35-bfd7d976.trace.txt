@@ -1,10 +1,18 @@
-D/TextBlockDetector: Text-block pass added 3 region(s) and kept 1 speech fallback(s)
-D/PageTranslator: Merged 2 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=137, top=132, right=517, bottom=301, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 440 flood px outside the lettering's neighbourhood Rect(67, 56 - 580, 372)
-D/BubbleRenderer: bubble=BubbleBox(left=137, top=132, right=517, bottom=301, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(67, 97 - 580, 336) layout=Rect(67, 97 - 580, 336) slot=Rect(67, 97 - 580, 336) page=Rect(71, 97 - 584, 336) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: text-block=BubbleBox(left=131, top=750, right=526, bottom=872, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 755 flood px outside the lettering's neighbourhood Rect(92, 89 - 561, 307)
-D/BubbleRenderer: bubble=BubbleBox(left=131, top=750, right=526, bottom=872, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(104, 113 - 561, 285) layout=Rect(104, 113 - 561, 285) slot=Rect(104, 113 - 561, 285) page=Rect(104, 725 - 561, 897) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: text-block=BubbleBox(left=473, top=472, right=794, bottom=589, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 882 flood px outside the lettering's neighbourhood Rect(76, 69 - 470, 271)
-D/BubbleRenderer: bubble=BubbleBox(left=473, top=472, right=794, bottom=589, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(76, 88 - 470, 253) layout=Rect(76, 88 - 470, 253) slot=Rect(76, 88 - 470, 253) page=Rect(437, 448 - 831, 613) fill=fffbfbfb ink=ff070707
-D/BubbleRenderer: text-block=BubbleBox(left=424, top=1058, right=678, bottom=1168, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 825 flood px outside the lettering's neighbourhood Rect(24, 19 - 381, 270)
-D/BubbleRenderer: bubble=BubbleBox(left=424, top=1058, right=678, bottom=1168, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(35, 67 - 381, 221) layout=Rect(35, 67 - 381, 221) slot=Rect(35, 67 - 381, 221) page=Rect(370, 1036 - 716, 1190) fill=fffcfcfc ink=ff060606
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Read 4 lettering region(s) from 11 line(s) as 'en'
+D/SimplePageReader:   region Rect(137, 134 - 518, 301): HOW DO YOU / KNOW ABOUT / THAT?!
+D/SimplePageReader:   region Rect(473, 474 - 794, 587): IVE READ IT / SINCE THE FIRST / CHAPTER.
+D/SimplePageReader:   region Rect(132, 752 - 521, 868): THEN THE / PERSON WHO TOLD / DERRICK ABOUT IT
+D/SimplePageReader:   region Rect(425, 1062 - 679, 1164): THAT / WAS ME~
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/PageTranslator: Merged 2 overlapping balloon detection(s)
+D/PageTranslator: No balloon for Rect(137, 134 - 518, 301): best containment 0%
+D/PageTranslator: No balloon for Rect(473, 474 - 794, 587): best containment 0%
+D/PageTranslator: No balloon for Rect(132, 752 - 521, 868): best containment 0%
+D/PageTranslator: No balloon for Rect(425, 1062 - 679, 1164): best containment 65%
+D/PageTranslator: Grouped 4 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(66, 2 - 589, 419) around Rect(137, 134 - 518, 301)
+D/PageTranslator: Recovered paper balloon Rect(369, 369 - 835, 693) around Rect(473, 474 - 794, 587)
+D/PageTranslator: Recovered paper balloon Rect(4, 586 - 649, 1034) around Rect(132, 752 - 521, 868)
+D/PageTranslator: Recovered paper balloon Rect(342, 968 - 728, 1258) around Rect(425, 1062 - 679, 1164)
+D/UndispatchedCoroutine: regression:ch35-bfd7d976.jpg rendering 4/4 translated bubbles

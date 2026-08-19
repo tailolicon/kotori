@@ -37,6 +37,16 @@ class TranslationWorkGate {
         }
     }
 
+    /**
+     * Drops every in-flight page of the current series without leaving the session.
+     *
+     * [begin] does not bump [generation] when the same manga is claimed again, so a clear / Dịch
+     * lại that only deleted files left writers holding the old generation free to recreate them.
+     */
+    fun invalidateInFlight() {
+        generation++
+    }
+
     fun allows(mangaId: Long, generationAtStart: Int): Boolean {
         return activeMangaId == mangaId && generation == generationAtStart
     }

@@ -1,3 +1,8 @@
-D/TextBlockDetector: Text-block pass added 1 region(s) and kept 0 speech fallback(s)
-D/PageTranslator: Merged 2 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: bubble=BubbleBox(left=73, top=918, right=688, bottom=1088, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(24, 180 - 739, 420) layout=Rect(24, 180 - 739, 420) slot=Rect(24, 180 - 739, 420) page=Rect(24, 883 - 739, 1123) fill=fffcfcfc ink=ff060606
+D/SimplePageReader: Probe found no CJK worth trusting (best ko scored 1); reading as Latin
+D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
+D/SimplePageReader:   region Rect(73, 918 - 689, 1084): AND SHE ALSO / HAS A PERFECT READ / ON MY FATHER.
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/PageTranslator: No balloon for Rect(73, 918 - 689, 1084): best containment 7%
+D/PageTranslator: Grouped 1 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(24, 680 - 739, 1277) around Rect(73, 918 - 689, 1084)
+D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg rendering 1/1 translated bubbles

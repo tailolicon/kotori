@@ -1,9 +1,22 @@
-D/TextBlockDetector: Text-block pass added 3 region(s) and kept 0 speech fallback(s)
-D/PageTranslator: Merged 2 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=532, top=5605, right=1018, bottom=5797, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 15659 flood px outside the lettering's neighbourhood Rect(110, 100 - 716, 434)
-D/BubbleRenderer: bubble=BubbleBox(left=532, top=5605, right=1018, bottom=5797, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(110, 130 - 716, 402) layout=Rect(110, 130 - 716, 402) slot=Rect(110, 130 - 716, 402) page=Rect(472, 5565 - 1078, 5837) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: Erased 1943 leftover glyph px outside the flat fill of BubbleBox(left=466, top=3097, right=1249, bottom=3188, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=466, top=3097, right=1249, bottom=3188, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 12699 surviving px of original lettering
-D/BubbleRenderer: bubble=BubbleBox(left=466, top=3097, right=1249, bottom=3188, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(388, 202 - 1024, 329) layout=Rect(388, 202 - 1024, 329) slot=Rect(388, 202 - 1024, 329) page=Rect(634, 3079 - 1270, 3206) fill=ff49286d ink=ffd6d8dd
-D/BubbleRenderer: text-block=BubbleBox(left=211, top=5180, right=991, bottom=5270, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 268 flood px outside the lettering's neighbourhood Rect(122, 109 - 1079, 421)
-D/BubbleRenderer: bubble=BubbleBox(left=211, top=5180, right=991, bottom=5270, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(122, 202 - 1079, 328) layout=Rect(122, 202 - 1079, 328) slot=Rect(131, 202 - 1071, 328) page=Rect(131, 5162 - 1071, 5288) fill=ff4d3275 ink=ffd2d4db
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
+D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 0 junk reading(s)
+D/SimplePageReader: Dropping !! as noise rather than dialogue
+D/SimplePageReader: Read 4 lettering region(s) from 6 line(s) as 'en'
+D/SimplePageReader:   region Rect(411, 3092 - 1251, 3194): KAISCANS.COM
+D/SimplePageReader:   region Rect(209, 5182 - 991, 5268): KAISCANS.COM
+D/SimplePageReader:   region Rect(532, 5605 - 1018, 5797): DAMN IT! I STILL / ENDED UP FIGHTING / TWO AT ONCE!!
+D/SimplePageReader:   region Rect(885, 7305 - 1280, 7379): R0决看漫可
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=885, top=7305, right=1280, bottom=7379, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: R0决看漫可
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(411, 3092 - 1251, 3194): best containment 6%
+D/PageTranslator: No balloon for Rect(209, 5182 - 991, 5268): best containment 8%
+D/PageTranslator: No balloon for Rect(532, 5605 - 1018, 5797): best containment 12%
+D/PageTranslator: Grouped 3 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(599, 2948 - 1250, 3227) around Rect(411, 3092 - 1251, 3194)
+D/PageTranslator: Recovered paper balloon Rect(418, 5420 - 1112, 6072) around Rect(532, 5605 - 1018, 5797)
+D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg rendering 3/3 translated bubbles
+D/BubbleRenderer: bubble=BubbleBox(left=599, top=2948, right=1250, bottom=3227, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 17087 surviving px of original lettering
+D/BubbleRenderer: Simple: BubbleBox(left=209, top=5182, right=991, bottom=5268, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
+D/BubbleRenderer: Typeset: BubbleBox(left=209, top=5182, right=991, bottom=5268, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

@@ -87,4 +87,94 @@ class DecorativeTextGuardTest {
         boxHeight = 220,
         pageWidth = 900,
     )
+
+    @Test
+    fun `a short chinese logo in title type is artwork, not dialogue`() {
+        // 末日剑神 drawn across the top of a chapter: four Han characters at 186px on an 800px page.
+        // At body size four characters is a sentence, which is why the floor rises with the type.
+        assertTrue(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "末日剑神",
+                lineHeights = listOf(186),
+                boxWidth = 518,
+                boxHeight = 186,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
+    fun `a logo subtitle strip is artwork even though it covers little area`() {
+        // 我震惊全球！ under the series logo: display type, but a wide shallow strip rather than a
+        // caption box, so the area test alone let it through and the logo got repainted.
+        assertTrue(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "我震惊全球",
+                lineHeights = listOf(74),
+                boxWidth = 382,
+                boxHeight = 82,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
+    fun `short korean in title type is still dialogue`() {
+        // Korean captions carry very short spoken lines at display size; the raised floor is for
+        // Han on its own, never for Hangul.
+        assertFalse(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "안녕",
+                lineHeights = listOf(186),
+                boxWidth = 518,
+                boxHeight = 186,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
+    fun `short japanese with kana in title type is still dialogue`() {
+        assertFalse(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "大丈夫か",
+                lineHeights = listOf(186),
+                boxWidth = 518,
+                boxHeight = 186,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
+    fun `a full chinese line in title type is still dialogue`() {
+        assertFalse(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "我震惊全球所有人都在看着我战斗",
+                lineHeights = listOf(186),
+                boxWidth = 518,
+                boxHeight = 186,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
+    fun `short chinese at body size is left alone as dialogue`() {
+        assertFalse(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "末日剑神",
+                lineHeights = listOf(22),
+                boxWidth = 160,
+                boxHeight = 30,
+                pageWidth = 800,
+            ),
+        )
+    }
 }

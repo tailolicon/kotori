@@ -295,6 +295,7 @@ class ReaderActivity : BaseActivity() {
                 onChangeReadingMode = viewModel::setMangaReadingMode,
                 onChangeOrientation = viewModel::setMangaOrientationType,
                 onToggleTranslation = viewModel::setTranslationEnabled,
+                onDiscardTranslations = viewModel::discardTranslations,
             )
         }
 

@@ -1,17 +1,34 @@
-D/TextBlockDetector: Text-block pass added 5 region(s) and kept 3 speech fallback(s)
-D/PageTranslator: Merged 23 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=73, top=5100, right=731, bottom=5459, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 8277 flood px outside the lettering's neighbourhood Rect(34, 162 - 764, 629)
-D/BubbleRenderer: Erased 2174 leftover glyph px outside the flat fill of BubbleBox(left=73, top=5100, right=731, bottom=5459, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=73, top=5100, right=731, bottom=5459, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(37, 162 - 640, 603) layout=Rect(37, 162 - 640, 603) slot=Rect(138, 162 - 547, 508) page=Rect(138, 5042 - 547, 5388) fill=fffdfdfd ink=ff090909
-D/BubbleRenderer: text-block=BubbleBox(left=151, top=3820, right=646, bottom=4141, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 8565 flood px outside the lettering's neighbourhood Rect(94, 116 - 704, 556)
-D/BubbleRenderer: bubble=BubbleBox(left=151, top=3820, right=646, bottom=4141, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(99, 116 - 704, 556) layout=Rect(99, 116 - 704, 556) slot=Rect(132, 116 - 624, 506) page=Rect(132, 3763 - 624, 4153) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: text-block=BubbleBox(left=115, top=11272, right=683, bottom=11419, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 17595 flood px outside the lettering's neighbourhood Rect(44, 116 - 755, 425)
-D/BubbleRenderer: bubble=BubbleBox(left=115, top=11272, right=683, bottom=11419, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(44, 169 - 755, 376) layout=Rect(44, 169 - 755, 376) slot=Rect(44, 169 - 755, 376) page=Rect(44, 11242 - 755, 11449) fill=ff030303 ink=fff8f8f8
-D/BubbleRenderer: text-block=BubbleBox(left=220, top=7019, right=625, bottom=7211, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 4044 flood px outside the lettering's neighbourhood Rect(98, 93 - 588, 384)
-D/BubbleRenderer: bubble=BubbleBox(left=220, top=7019, right=625, bottom=7211, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(98, 102 - 588, 374) layout=Rect(98, 102 - 588, 374) slot=Rect(144, 120 - 553, 374) page=Rect(222, 6997 - 631, 7251) fill=fffcfcfc ink=ff080808
-D/BubbleRenderer: text-block=BubbleBox(left=329, top=4737, right=712, bottom=4920, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 6097 flood px outside the lettering's neighbourhood Rect(98, 92 - 551, 361)
-D/BubbleRenderer: bubble=BubbleBox(left=329, top=4737, right=712, bottom=4920, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(98, 96 - 551, 355) layout=Rect(98, 96 - 551, 355) slot=Rect(123, 125 - 533, 355) page=Rect(318, 4728 - 728, 4958) fill=fffdfdfd ink=ff080808
-D/BubbleRenderer: Erased 165 leftover glyph px outside the flat fill of BubbleBox(left=119, top=2679, right=479, bottom=2798, confidence=0.28248653, isTextBlock=false, isFallbackTextBlock=false)
-D/BubbleRenderer: bubble=BubbleBox(left=119, top=2679, right=479, bottom=2798, confidence=0.28248653, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(143, 169 - 506, 302) layout=Rect(143, 36 - 506, 459) slot=Rect(161, 89 - 472, 395) page=Rect(161, 2588 - 472, 2894) fill=fffbfbfb ink=ff070707
-D/BubbleRenderer: bubble=BubbleBox(left=73, top=2059, right=296, bottom=2087, confidence=0.18004218, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 709 surviving px of original lettering
-D/BubbleRenderer: bubble=BubbleBox(left=73, top=2059, right=296, bottom=2087, confidence=0.18004218, isTextBlock=false, isFallbackTextBlock=false) flat-fill bounds=Rect(88, 114 - 288, 139) layout=Rect(88, 114 - 288, 139) slot=Rect(88, 114 - 288, 139) page=Rect(88, 2061 - 288, 2086) fill=ff070707 ink=fff0f0f0
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Read 11 lettering region(s) from 32 line(s) as 'en'
+D/SimplePageReader:   region Rect(140, 243 - 684, 381): BO0OM!!
+D/SimplePageReader:   region Rect(83, 2058 - 296, 2090): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
+D/SimplePageReader:   region Rect(119, 2676 - 497, 2791): KHEHEHE! / KYAHAHAHAHA!
+D/SimplePageReader:   region Rect(151, 3828 - 646, 4141): BE GRATEFUL / THAT I MATCHED / YoUR BODY TO THAT / SI22LING FRIED FACE / OF YOURS!
+D/SimplePageReader:   region Rect(330, 4739 - 712, 4920): ...HAA, / WHAT A PAIN / DEALING WITH THAT / OLD BAG.
+D/SimplePageReader:   region Rect(78, 5105 - 585, 5325): IF NOT FOR THAT / B*TCH'S INTERFERENCE, / I WOULD'VE REACHED THE / DUNGEON BOSS ROOM / AGES AGO.
+D/SimplePageReader:   region Rect(380, 5358 - 709, 5451): LORD NOAH IS GONNA BE / DISAPPOLNTED
+D/SimplePageReader:   region Rect(220, 7019 - 625, 7213): BESIDES, / ADAPTING TO A / NEW BODY IS SUCH / A HASSLE.
+D/SimplePageReader:   region Rect(147, 8511 - 654, 8597): [SPIRIT TRANSFERI
+D/SimplePageReader:   region Rect(167, 9704 - 633, 9995): AN ABILITY / BRANGH THAT ALOWS / THE USER TO SWITGH / BODIES,
+D/SimplePageReader:   region Rect(115, 11273 - 683, 11418): AND IZEL HALIFA 'S UNIQUE / SHEDDING TECHNIQUE.
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: Dropped BubbleBox(left=140, top=243, right=684, bottom=381, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: BO0OM!!
+D/UndispatchedCoroutine: Dropped BubbleBox(left=147, top=8511, right=654, bottom=8597, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: [SPIRIT TRANSFERI
+D/UndispatchedCoroutine: Dropped BubbleBox(left=167, top=9704, right=633, bottom=9995, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AN ABILITY
+D/UndispatchedCoroutine: BRANGH THAT ALOWS
+D/UndispatchedCoroutine: THE USER TO SWITGH
+D/UndispatchedCoroutine: BODIES,
+D/PageTranslator: Merged 28 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(151, 3828 - 646, 4141): best containment 4%
+D/PageTranslator: No balloon for Rect(330, 4739 - 712, 4920): best containment 61%
+D/PageTranslator: No balloon for Rect(115, 11273 - 683, 11418): best containment 0%
+D/PageTranslator: Grouped 8 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(2, 3928 - 798, 4589) around Rect(151, 3828 - 646, 4141)
+D/PageTranslator: Recovered paper balloon Rect(205, 4646 - 776, 5178) around Rect(330, 4739 - 712, 4920)
+D/PageTranslator: Recovered paper balloon Rect(2, 11069 - 798, 11496) around Rect(115, 11273 - 683, 11418)
+D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg rendering 8/8 translated bubbles
+D/BubbleRenderer: bubble=BubbleBox(left=2, top=3928, right=798, bottom=4589, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 12535 surviving px of original lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=304, top=5363, right=698, bottom=5445, confidence=0.44017372, isTextBlock=false, isFallbackTextBlock=false) overlaps an already lettered region
+D/BubbleRenderer: bubble=BubbleBox(left=73, top=2059, right=296, bottom=2087, confidence=0.18004218, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 761 surviving px of original lettering
+D/BubbleRenderer: Typeset: BubbleBox(left=73, top=2059, right=296, bottom=2087, confidence=0.18004218, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

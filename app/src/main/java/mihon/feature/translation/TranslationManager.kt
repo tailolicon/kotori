@@ -3,11 +3,15 @@ package mihon.feature.translation
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -54,6 +58,16 @@ class TranslationManager(
      * webtoon strip is tens of megabytes.
      */
     private val pageSlots = Semaphore(MAX_PAGES_IN_FLIGHT)
+
+    /**
+     * Second, tighter gate for work that is large enough to matter to the heap.
+     *
+     * A stitched webtoon strip is [MAX_STRIP_PIXELS] pixels — about 48 MB as ARGB_8888, and it is
+     * held twice while it is drawn and sliced. Four of those at once is most of an Android heap, so
+     * strips keep the old limit while ordinary pages get the wider one. Always acquired *after*
+     * [pageSlots] and released before it, so the two can never deadlock against each other.
+     */
+    private val largeWorkSlots = Semaphore(MAX_LARGE_PAGES_IN_FLIGHT)
 
     private val workGate = TranslationWorkGate()
 
@@ -226,56 +240,83 @@ class TranslationManager(
         if (pages.isEmpty() || isRateLimited() || !isEnabled(mangaId)) return
         claim(mangaId)
         val generation = workGate.generation
-        val stamp = preferences.outputStamp()
+        val stamp = cacheKey(mangaId)
 
         val pending = pages.filterNot { (index, _) ->
             val target = cache.pageFile(mangaId, chapterId, index, stamp)
             cache.isCached(target) || noneMarker(target).exists()
         }
         android.util.Log.e("KotoriTL", "pending=${pending.size} stamp=$stamp")
+        reportPagesHandled(pages.size - pending.size)
         if (pending.isEmpty()) return
 
         var group = mutableListOf<Pair<Int, Bitmap>>()
         var groupPixels = 0L
 
-        suspend fun flush() {
-            if (group.isEmpty()) return
-            val batch = group
-            group = mutableListOf()
-            groupPixels = 0
-            // The images themselves decide this, not the viewer setting. Gating it on "the reader is
-            // in webtoon mode" meant a batch never held more than one page in any other mode, so the
-            // classifier never saw a seam to judge — and a source that cuts every page into two files
-            // had every balloon straddling a cut translated as two halves, one of them discarded as
-            // an edge sliver. ContinuousPageClassifier measures the pixels either side of the seam;
-            // unrelated full pages have blank or mismatched edges and are still translated singly.
-            val continuous = ContinuousPageClassifier.shouldJoin(batch.map { it.second })
-            if (continuous) {
-                translateGroup(mangaId, chapterId, stamp, batch)
-            } else {
-                batch.forEach { page -> translateGroup(mangaId, chapterId, stamp, listOf(page)) }
-            }
-        }
+        // Groups are started, not awaited.
+        //
+        // Almost all of a page's wall clock is one HTTP response — measured at 8-10 s against
+        // roughly half a second of on-device work — and the loop used to wait out every one of them
+        // before decoding the next page. [pageSlots] existed to bound how many pages could be in
+        // flight and never had more than one to bound. Launching here is what finally lets the
+        // permit count mean something, and it is the difference between eight seconds a page and
+        // eight seconds for as many pages as the semaphore allows.
+        coroutineScope {
+            val inFlightGroups = mutableListOf<Job>()
 
-        try {
-            for ((index, open) in pending) {
-                currentCoroutineContext().ensureActive()
-                if (isRateLimited() || !workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
-                    break
+            fun flush() {
+                if (group.isEmpty()) return
+                val batch = group
+                group = mutableListOf()
+                groupPixels = 0
+                // The images themselves decide this, not the viewer setting. Gating it on "the reader
+                // is in webtoon mode" meant a batch never held more than one page in any other mode,
+                // so the classifier never saw a seam to judge — and a source that cuts every page
+                // into two files had every balloon straddling a cut translated as two halves, one of
+                // them discarded as an edge sliver. ContinuousPageClassifier measures the pixels
+                // either side of the seam; unrelated full pages have blank or mismatched edges and
+                // are still translated singly.
+                val continuous = ContinuousPageClassifier.shouldJoin(batch.map { it.second })
+                if (continuous) {
+                    inFlightGroups += launch { translateGroup(mangaId, chapterId, stamp, generation, batch) }
+                } else {
+                    batch.forEach { page ->
+                        inFlightGroups += launch {
+                            translateGroup(mangaId, chapterId, stamp, generation, listOf(page))
+                        }
+                    }
                 }
-                val bitmap = decode(open) ?: continue
-                val pixels = bitmap.width.toLong() * bitmap.height
-                // A page that fills the budget by itself simply travels alone, exactly as before.
-                if (groupPixels > 0 && groupPixels + pixels > MAX_STRIP_PIXELS) flush()
-                group += index to bitmap
-                groupPixels += pixels
-                if (groupPixels >= MAX_STRIP_PIXELS || group.size >= MAX_STRIP_PAGES) flush()
             }
-            if (workGate.allows(mangaId, generation) && isEnabled(mangaId) && !isRateLimited()) {
-                flush()
+
+            try {
+                for ((index, open) in pending) {
+                    currentCoroutineContext().ensureActive()
+                    if (isRateLimited() || !workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
+                        break
+                    }
+                    val bitmap = decode(open) ?: continue
+                    val pixels = bitmap.width.toLong() * bitmap.height
+                    // A page that fills the budget by itself simply travels alone, exactly as before.
+                    if (groupPixels > 0 && groupPixels + pixels > MAX_STRIP_PIXELS) flush()
+                    group += index to bitmap
+                    groupPixels += pixels
+                    if (groupPixels >= MAX_STRIP_PIXELS || group.size >= MAX_STRIP_PAGES) flush()
+                    // Decoding runs ahead of translation, and a decoded page is tens of megabytes.
+                    // Without this the loop would read a whole chapter into memory while the first
+                    // few pages were still waiting on the network.
+                    if (inFlightGroups.count { it.isActive } >= MAX_PAGES_IN_FLIGHT) {
+                        inFlightGroups.firstOrNull { it.isActive }?.join()
+                    }
+                }
+                if (workGate.allows(mangaId, generation) && isEnabled(mangaId) && !isRateLimited()) {
+                    flush()
+                }
+                // Every launched group recycles its own bitmaps; the ones below are the remainder
+                // that never became a group, so nothing may be recycled until the jobs are done.
+                inFlightGroups.joinAll()
+            } finally {
+                group.forEach { (_, bitmap) -> bitmap.recycle() }
             }
-        } finally {
-            group.forEach { (_, bitmap) -> bitmap.recycle() }
         }
     }
 
@@ -283,15 +324,26 @@ class TranslationManager(
         mangaId: Long,
         chapterId: Long,
         stamp: String,
+        generation: Int,
         group: List<Pair<Int, Bitmap>>,
     ) {
+        val pixels = group.sumOf { (_, bitmap) -> bitmap.width.toLong() * bitmap.height }
+        val large = pixels > LARGE_WORK_PIXELS
         pageSlots.withPermit {
+            if (large) largeWorkSlots.acquire()
             try {
-                if (!isEnabled(mangaId) || isRateLimited()) return@withPermit
+                if (!workGate.allows(mangaId, generation) || !isEnabled(mangaId) || isRateLimited()) {
+                    return@withPermit
+                }
                 val translated = translator.translateStrip(
                     group.map { it.second },
                     "chapter=$chapterId pages=${group.joinToString { it.first.toString() }}",
                 )
+                if (!workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
+                    translated.forEach { bitmap -> if (!bitmap.isRecycled) bitmap.recycle() }
+                    logcat { "Discarded in-flight strip for chapter $chapterId after cache invalidation" }
+                    return@withPermit
+                }
                 translated.forEachIndexed { position, bitmap ->
                     val index = group[position].first
                     val target = cache.pageFile(mangaId, chapterId, index, stamp)
@@ -303,14 +355,20 @@ class TranslationManager(
                 }
                 cache.trimToSize()
                 consecutiveFailures = 0
+                reportPagesHandled(group.size)
                 val mode = if (group.size == 1) "at native page resolution" else "as one continuous strip"
                 logcat { "Translated ${group.size} page(s) $mode for chapter $chapterId" }
             } catch (e: PageTranslator.NothingToTranslate) {
                 // The whole run had no dialogue: record that for each page so it is never retried.
-                group.forEach { (index, _) ->
-                    runCatching { noneMarker(cache.pageFile(mangaId, chapterId, index, stamp)).createNewFile() }
+                if (workGate.allows(mangaId, generation) && isEnabled(mangaId)) {
+                    group.forEach { (index, _) ->
+                        runCatching {
+                            noneMarker(cache.pageFile(mangaId, chapterId, index, stamp)).createNewFile()
+                        }
+                    }
                 }
                 consecutiveFailures = 0
+                reportPagesHandled(group.size)
             } catch (e: ProviderRateLimited) {
                 armBackoff(e)
                 _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
@@ -320,6 +378,7 @@ class TranslationManager(
                 _status.value = TranslationStatus.Failed(e.message ?: "Dịch thất bại")
             } catch (e: Throwable) {
                 logcat { "Strip translation failed for chapter $chapterId: ${e.message}" }
+                reportPagesHandled(group.size)
                 _status.value = TranslationStatus.Failed(friendlyMessage(e))
                 consecutiveFailures++
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
@@ -328,6 +387,7 @@ class TranslationManager(
                     logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
                 }
             } finally {
+                if (large) largeWorkSlots.release()
                 group.forEach { (_, bitmap) -> bitmap.recycle() }
             }
         }
@@ -339,7 +399,7 @@ class TranslationManager(
         pageIndex: Int,
         openSource: () -> InputStream,
     ): File? {
-        val stamp = preferences.outputStamp()
+        val stamp = cacheKey(mangaId)
         val target = cache.pageFile(mangaId, chapterId, pageIndex, stamp)
         if (cache.isCached(target)) {
             target.setLastModified(System.currentTimeMillis())
@@ -365,6 +425,11 @@ class TranslationManager(
                 val source = decode(openSource) ?: return@withLock null
                 try {
                     val translated = translator.translate(source, "chapter=$chapterId page=$pageIndex")
+                    if (!workGate.allows(mangaId, generation) || !isEnabled(mangaId)) {
+                        if (translated !== source && !translated.isRecycled) translated.recycle()
+                        logcat { "Discarded in-flight page $pageIndex after cache invalidation" }
+                        return@withLock null
+                    }
                     val written = try {
                         write(translated, target)
                     } finally {
@@ -376,7 +441,9 @@ class TranslationManager(
                     target
                 } catch (e: PageTranslator.NothingToTranslate) {
                     logcat { "Page $pageIndex of chapter $chapterId has no dialogue" }
-                    runCatching { noneMarker.createNewFile() }
+                    if (workGate.allows(mangaId, generation) && isEnabled(mangaId)) {
+                        runCatching { noneMarker.createNewFile() }
+                    }
                     consecutiveFailures = 0
                     null
                 } catch (e: ProviderRateLimited) {
@@ -440,7 +507,11 @@ class TranslationManager(
         File(target.parentFile, target.nameWithoutExtension + ".none")
 
     fun isPageCached(mangaId: Long, chapterId: Long, pageIndex: Int): Boolean =
-        cache.isCached(cache.pageFile(mangaId, chapterId, pageIndex, preferences.outputStamp()))
+        cache.isCached(cache.pageFile(mangaId, chapterId, pageIndex, cacheKey(mangaId)))
+
+    private fun cacheKey(mangaId: Long): String =
+        preferences.outputStamp() +
+            "|g${preferences.globalCacheGeneration.get()}.${preferences.cacheGeneration(mangaId).get()}"
 
     // ── Progress reporting ──────────────────────────────────────────────────────────────────────
 
@@ -452,6 +523,51 @@ class TranslationManager(
      */
     fun updateStatus(status: TranslationStatus) {
         _status.value = status
+    }
+
+    @Volatile private var progressLabel = ""
+
+    @Volatile private var progressTotal = 0
+
+    private val progressDone = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /**
+     * Starts the counter for one chapter.
+     *
+     * The number the reader sees has to mean "pages you can now look at", and it used to mean
+     * "pages fetched": the loop counted a page the moment its bytes arrived, then handed forty of
+     * them to the translator in one go. So the panel raced to 7/42 while the first page was still
+     * the only one rendered, and sat there for as long as the batch took. Counting is therefore
+     * done here, where pages are actually finished, and the total is one chapter — not a running
+     * sum over the look-ahead window, which grew under the fraction as it went.
+     */
+    fun beginChapterProgress(label: String, totalPages: Int) {
+        progressLabel = label
+        progressTotal = totalPages
+        progressDone.set(0)
+        publishProgress()
+    }
+
+    /** [pages] more pages of the current chapter are done — translated, blank, or given up on. */
+    fun reportPagesHandled(pages: Int) {
+        if (pages <= 0 || progressTotal <= 0) return
+        progressDone.addAndGet(pages)
+        publishProgress()
+    }
+
+    private fun publishProgress() {
+        val total = progressTotal
+        if (total <= 0) return
+        // A quota or credentials message is the one line that explains why pages stopped; a
+        // progress bar must not paint over it.
+        if (_status.value is TranslationStatus.Failed) return
+        _status.value = TranslationStatus.Working(progressDone.get().coerceAtMost(total), total, progressLabel)
+    }
+
+    /** The look-ahead finished or was abandoned; stop reporting a chapter that is no longer running. */
+    fun finishProgress() {
+        progressTotal = 0
+        if (_status.value is TranslationStatus.Working) _status.value = TranslationStatus.Idle
     }
 
     /**
@@ -468,12 +584,39 @@ class TranslationManager(
         }
     }
 
-    fun clearFor(mangaId: Long) {
+    /**
+     * Drops cached pages for [mangaId] and makes any in-flight writer unable to put them back.
+     *
+     * Deleting files alone is not enough: the viewer may still hold a page open (delete then
+     * fails), and a strip that started before the tap finishes minutes later and recreates the
+     * same names. Bumping the generation changes the on-disk key; leftover files become orphans.
+     */
+    fun discardTranslations(mangaId: Long) {
+        workGate.invalidateInFlight()
+        preferences.bumpCacheGeneration(mangaId)
         cache.clearManga(mangaId)
+        _status.value = TranslationStatus.Idle
+        logcat { "Discarded translations for manga $mangaId" }
     }
 
+    fun clearFor(mangaId: Long) {
+        discardTranslations(mangaId)
+    }
+
+    /**
+     * Drops every series' translations.
+     *
+     * Bumps the global generation for the same reason [discardTranslations] bumps the per-series
+     * one: a page the viewer still holds open cannot be deleted on every filesystem, and a strip
+     * that started before the tap will finish afterwards and write the old names back. Changing the
+     * key makes whatever survives unreachable instead of trusting the delete.
+     */
     fun clearAll() {
+        workGate.invalidateInFlight()
+        preferences.bumpGlobalCacheGeneration()
         cache.clearAll()
+        _status.value = TranslationStatus.Idle
+        logcat { "Discarded every translated page" }
     }
 
     fun cacheSizeBytes(): Long = cache.sizeBytes()
@@ -565,11 +708,23 @@ class TranslationManager(
          */
         const val DAILY_QUOTA_PAUSE_SECONDS = 30L * 60
         /**
-         * Pages translated at once. Two is enough to keep one page reading while another
-         * waits on the network, and low enough that their bitmaps — tens of megabytes each
-         * for a webtoon strip — cannot exhaust the heap.
+         * Pages translated at once.
+         *
+         * Two was chosen when the loop awaited each group anyway, so it was never reached. With
+         * groups actually running concurrently this is what turns "eight seconds a page" into
+         * "eight seconds for four pages", and it is the whole of the speed answer: the provider
+         * call is the cost, and the only way to shorten it is to overlap it with other pages'.
+         *
+         * Four is bounded by memory rather than by the endpoint — see [largeWorkSlots], which keeps
+         * webtoon strips at the old figure.
          */
-        const val MAX_PAGES_IN_FLIGHT = 2
+        const val MAX_PAGES_IN_FLIGHT = 4
+
+        /** Concurrency for stitched strips, whose bitmaps are an order of magnitude larger. */
+        const val MAX_LARGE_PAGES_IN_FLIGHT = 2
+
+        /** Above this, a group counts as large. An ordinary comic page sits well under it. */
+        const val LARGE_WORK_PIXELS = 8_000_000L
 
         /**
          * Pixel budget for one stitched strip, and a page-count guard beside it.

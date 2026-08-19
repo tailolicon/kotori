@@ -1,17 +1,38 @@
-D/TextBlockDetector: Text-block pass added 9 region(s) and kept 1 speech fallback(s)
-D/PageTranslator: Merged 12 detector fragment(s) into complete caption blocks
-D/BubbleRenderer: text-block=BubbleBox(left=135, top=15517, right=835, bottom=15812, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 5498 flood px outside the lettering's neighbourhood Rect(89, 163 - 882, 573)
-D/BubbleRenderer: bubble=BubbleBox(left=135, top=15517, right=835, bottom=15812, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(96, 163 - 869, 573) layout=Rect(96, 163 - 869, 573) slot=Rect(208, 185 - 757, 568) page=Rect(208, 15482 - 757, 15865) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=76, top=12609, right=698, bottom=12847, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(31, 168 - 745, 506) layout=Rect(31, 168 - 745, 506) slot=Rect(31, 168 - 745, 506) page=Rect(31, 12559 - 745, 12897) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: text-block=BubbleBox(left=188, top=14380, right=781, bottom=14614, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 680 flood px outside the lettering's neighbourhood Rect(152, 143 - 839, 511)
-D/BubbleRenderer: bubble=BubbleBox(left=188, top=14380, right=781, bottom=14614, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(152, 159 - 826, 491) layout=Rect(152, 159 - 826, 491) slot=Rect(152, 159 - 826, 491) page=Rect(152, 14331 - 826, 14663) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: text-block=BubbleBox(left=90, top=7326, right=614, bottom=7559, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 1108 flood px outside the lettering's neighbourhood Rect(32, 118 - 674, 483)
-D/BubbleRenderer: bubble=BubbleBox(left=90, top=7326, right=614, bottom=7559, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(32, 134 - 674, 465) layout=Rect(32, 134 - 674, 465) slot=Rect(105, 139 - 602, 464) page=Rect(105, 7282 - 602, 7607) fill=fffdfdfd ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=128, top=9337, right=770, bottom=9527, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(82, 180 - 818, 450) layout=Rect(82, 180 - 818, 450) slot=Rect(82, 180 - 818, 450) page=Rect(82, 9297 - 818, 9567) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=180, top=4248, right=745, bottom=4431, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(129, 160 - 797, 419) layout=Rect(129, 160 - 797, 419) slot=Rect(129, 160 - 797, 419) page=Rect(129, 4210 - 797, 4469) fill=fffcfcfc ink=ff060606
-D/BubbleRenderer: text-block=BubbleBox(left=245, top=1081, right=761, bottom=1279, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): clipped 1368 flood px outside the lettering's neighbourhood Rect(120, 109 - 759, 451)
-D/BubbleRenderer: bubble=BubbleBox(left=245, top=1081, right=761, bottom=1279, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(120, 139 - 759, 421) layout=Rect(120, 139 - 759, 421) slot=Rect(120, 139 - 759, 421) page=Rect(184, 1039 - 823, 1321) fill=fffdfdfd ink=ff060606
-D/BubbleRenderer: bubble=BubbleBox(left=99, top=10208, right=611, bottom=10377, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(49, 144 - 660, 383) layout=Rect(49, 144 - 660, 383) slot=Rect(49, 144 - 660, 383) page=Rect(49, 10173 - 660, 10412) fill=fffdfdfd ink=ff060606
-D/BubbleRenderer: text-block=BubbleBox(left=414, top=11844, right=798, bottom=11985, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true): clipped 1058 flood px outside the lettering's neighbourhood Rect(112, 80 - 568, 331)
-D/BubbleRenderer: bubble=BubbleBox(left=414, top=11844, right=798, bottom=11985, confidence=0.15, isTextBlock=true, isFallbackTextBlock=true) flat-fill bounds=Rect(112, 105 - 555, 304) layout=Rect(112, 105 - 555, 304) slot=Rect(112, 105 - 555, 304) page=Rect(392, 11815 - 835, 12014) fill=fffcfcfc ink=ff070707
-D/BubbleRenderer: bubble=BubbleBox(left=78, top=15224, right=433, bottom=15326, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) flat-fill bounds=Rect(28, 104 - 462, 246) layout=Rect(28, 104 - 462, 246) slot=Rect(28, 104 - 462, 246) page=Rect(28, 15204 - 462, 15346) fill=fffcfcfc ink=ff060606
+D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 3); reading as Latin
+D/SimplePageReader: Read 10 lettering region(s) from 34 line(s) as 'en'
+D/SimplePageReader:   region Rect(245, 1081 - 761, 1278): IM NOT THAT / VALUABLE OF A / PERSON...
+D/SimplePageReader:   region Rect(180, 4248 - 745, 4427): ...FOLLOW ME, / I HAVE SOMETHING / TO SHOW YOU.
+D/SimplePageReader:   region Rect(91, 7328 - 615, 7556): THE / PAINTING DIELA / SAID SHE'D BUY IF / SHE LOST...
+D/SimplePageReader:   region Rect(128, 9337 - 768, 9527): THIS IS THE / LANDSCAPE OF THE / CORHES GRANARY.
+D/SimplePageReader:   region Rect(99, 10210 - 611, 10377): DO I JUST / KNOW TOO LITTLE / ABOUT ART?
+D/SimplePageReader:   region Rect(414, 11850 - 798, 11984): IT LOOKS LIKE / A BLANK CANVAS / TO ME.
+D/SimplePageReader:   region Rect(76, 12611 - 698, 12847): YOU SAW IT / CORRECTLY. SUCH A / PAINTING ONLY EXISTS / ON THE LEDGERS.
+D/SimplePageReader:   region Rect(188, 14381 - 781, 14612): A FAKE / PAINTING OUR HOUSE / PURCHASED TO / EVADE TAXES.
+D/SimplePageReader:   region Rect(78, 15226 - 433, 15324): DIELA IS TRULY / AMAZING.
+D/SimplePageReader:   region Rect(135, 15523 - 837, 15810): SHE / SOMEHOW KNEW / THIS AND OFFERED TO / COVER UP OUR HOUSE'S / WEAKNESS...
+D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/PageTranslator: Merged 7 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(245, 1081 - 761, 1278): best containment 25%
+D/PageTranslator: No balloon for Rect(180, 4248 - 745, 4427): best containment 5%
+D/PageTranslator: No balloon for Rect(91, 7328 - 615, 7556): best containment 4%
+D/PageTranslator: No balloon for Rect(128, 9337 - 768, 9527): best containment 5%
+D/PageTranslator: No balloon for Rect(99, 10210 - 611, 10377): best containment 6%
+D/PageTranslator: No balloon for Rect(76, 12611 - 698, 12847): best containment 3%
+D/PageTranslator: No balloon for Rect(188, 14381 - 781, 14612): best containment 4%
+D/PageTranslator: No balloon for Rect(78, 15226 - 433, 15324): best containment 37%
+D/PageTranslator: No balloon for Rect(135, 15523 - 837, 15810): best containment 4%
+D/PageTranslator: Grouped 10 region(s) by balloon
+D/PageTranslator: Recovered paper balloon Rect(88, 798 - 832, 1409) around Rect(245, 1081 - 761, 1278)
+D/PageTranslator: Recovered paper balloon Rect(129, 3993 - 797, 4606) around Rect(180, 4248 - 745, 4427)
+D/PageTranslator: Recovered paper balloon Rect(24, 7196 - 682, 7774) around Rect(91, 7328 - 615, 7556)
+D/PageTranslator: Recovered paper balloon Rect(82, 9065 - 818, 9717) around Rect(128, 9337 - 768, 9527)
+D/PageTranslator: Recovered paper balloon Rect(49, 10058 - 660, 10531) around Rect(99, 10210 - 611, 10377)
+D/PageTranslator: Recovered paper balloon Rect(2, 12274 - 898, 12934) around Rect(76, 12611 - 698, 12847)
+D/PageTranslator: Recovered paper balloon Rect(2, 14346 - 898, 14941) around Rect(188, 14381 - 781, 14612)
+D/PageTranslator: Recovered paper balloon Rect(28, 15104 - 549, 15462) around Rect(78, 15226 - 433, 15324)
+D/PageTranslator: Recovered paper balloon Rect(28, 15112 - 869, 15985) around Rect(135, 15523 - 837, 15810)
+D/PageTranslator: Merged 1 region(s) that share a recovered balloon
+D/UndispatchedCoroutine: regression:ch35-e7db607f.jpg rendering 9/9 translated bubbles
+D/BubbleRenderer: Typeset: BubbleBox(left=28, top=15104, right=869, bottom=15985, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Typeset: BubbleBox(left=378, top=11849, right=834, bottom=11997, confidence=0.38190663, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source

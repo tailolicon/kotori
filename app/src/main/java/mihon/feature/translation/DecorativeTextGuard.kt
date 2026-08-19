@@ -34,12 +34,31 @@ internal object DecorativeTextGuard {
         val prominentCompact = compactTitleType &&
             wordCount in 2..MAX_COMPACT_TITLE_WORDS &&
             boxWidth >= pageWidth * COMPACT_TITLE_WIDTH_RATIO
-        if ((!largeType || !substantial) && !prominentCompact) return false
+        val displaySized = largeType && substantial
 
-        return !looksLikeDialogue(text)
+        // A short run of Han with no kana and no Hangul, drawn at title size, is a logo.
+        //
+        // This is checked before the area test on purpose. A series logo's subtitle — 我震惊全球！
+        // under 末日剑神 — is a wide, shallow strip: display type, but nowhere near the area a
+        // caption box covers, so the area test let it through and the pipeline erased the artwork
+        // and set flat type across it. Japanese prose carries kana and Korean carries Hangul, so
+        // requiring their absence keeps this to the case it is for. The cost is an occasional short
+        // Chinese caption left untranslated; the alternative was wrecking the logo every chapter.
+        if (largeType && isHanOnlyOrnament(text)) return true
+
+        if (!displaySized && !prominentCompact) return false
+
+        return !looksLikeDialogue(text, displaySized)
     }
 
-    private fun looksLikeDialogue(raw: String): Boolean {
+    /** Han, nothing but Han, and too little of it to be a sentence. */
+    private fun isHanOnlyOrnament(raw: String): Boolean {
+        if (raw.any(::isHangul) || raw.any(::isKana)) return false
+        val han = raw.count(::isIdeographic)
+        return han in 1 until MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE
+    }
+
+    private fun looksLikeDialogue(raw: String, displaySized: Boolean = false): Boolean {
         // Scripts that do not put spaces between words cannot be judged by counting words, and the
         // Latin normalisation below deletes them outright: every Korean and Japanese balloon arrived
         // here as the empty string, counted zero words, and was discarded as decoration. That is one
@@ -52,10 +71,24 @@ internal object DecorativeTextGuard {
         // reader cannot read is the whole failure the feature exists to prevent.
         if (JapaneseSfxGuard.shouldDrop(raw)) return false
         val ideographs = raw.count(::isIdeographic)
+        val hangul = raw.count(::isHangul)
+        val kana = raw.count(::isKana)
+
+        // Display type raises the bar, but only for Han on its own. 末日剑神 across the top of a
+        // chapter is exactly four Han characters: a sentence at body size, a *logo* at title size,
+        // and once the recogniser started reading it correctly the pipeline erased the artwork and
+        // set flat type over it. Kana or Hangul in the string says prose rather than a logo, and
+        // Korean captions in particular carry very short lines of real dialogue at display size —
+        // raising the floor for those is how sharp, obvious Korean dialogue got dropped before.
+        val hanOnlyOrnament = displaySized &&
+            hangul == 0 && kana == 0 &&
+            ideographs in 1 until MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE
+        if (hanOnlyOrnament) return false
+
         if (ideographs >= MIN_IDEOGRAPHIC_DIALOGUE) return true
         // Two Hangul syllables is already a spoken word. The ideograph floor of four is for
         // titles and drawn SFX; applying it to Korean dropped short, sharp dialogue.
-        if (raw.count(::isHangul) >= MIN_HANGUL_DIALOGUE) return true
+        if (hangul >= MIN_HANGUL_DIALOGUE) return true
 
         val normalized = raw
             .uppercase()
@@ -77,6 +110,8 @@ internal object DecorativeTextGuard {
     private fun isHangul(ch: Char): Boolean = ch.code.let { cp ->
         cp in 0x1100..0x11FF || cp in 0xAC00..0xD7AF
     }
+
+    private fun isKana(ch: Char): Boolean = ch.code in 0x3040..0x30FF
 
     private fun isSpanishLetter(ch: Char): Boolean = ch in SPANISH_LETTERS
 
@@ -126,6 +161,9 @@ internal object DecorativeTextGuard {
     /** Characters of a spaceless script above which the region is a sentence, not an ornament. */
     private const val MIN_IDEOGRAPHIC_DIALOGUE = 4
     private const val MIN_HANGUL_DIALOGUE = 2
+
+    /** Han characters below which a display-size, Han-only region is a logo rather than a line. */
+    private const val MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE = 8
 
     private const val MIN_DISPLAY_TEXT_HEIGHT = 42
     private const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f

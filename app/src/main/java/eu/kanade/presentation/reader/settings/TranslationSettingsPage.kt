@@ -1,5 +1,6 @@
 package eu.kanade.presentation.reader.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -11,9 +12,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -39,6 +44,7 @@ import mihon.feature.translation.TranslationStatus
 import mihon.feature.translation.offline.OfflineLicenseText
 import mihon.feature.translation.offline.OfflineModelSpec
 import mihon.feature.translation.offline.OfflineModelState
+import mihon.feature.translation.provider.GeminiKeyRing
 import mihon.feature.translation.provider.TranslationProviders
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.CheckboxItem
@@ -66,7 +72,8 @@ private val providerLabels = listOf(
  * Gemma is deliberately absent despite advertising 14,400 requests a day. Asked for this pipeline's
  * JSON contract it answers with a *restatement of the instructions* — "Role: Manga translator.
  * Input format: ..." — rather than the translation, on both 26B and 31B. An allowance that large is
- * worth nothing when nothing parses.
+ * worth nothing when nothing parses. It also reads no images, and the page pipeline now depends on
+ * the model doing the reading.
  *
  * Flash-Lite is fastest and cheapest but drops and misplaces Vietnamese diacritics often enough to
  * be noticeable — "khả năng" comes back as "kh năng". The heavier Flash models are the ones to reach
@@ -80,14 +87,6 @@ private val geminiModels = listOf(
     "2.5 Flash · cũ" to "gemini-2.5-flash",
 )
 
-private val sourceLanguages = listOf(
-    "Nhật" to "ja",
-    "Trung" to "zh",
-    "Hàn" to "ko",
-    "Anh" to "en",
-    "Tây Ban Nha" to "es",
-)
-
 /**
  * Languages the reader can ask for.
  *
@@ -95,6 +94,11 @@ private val sourceLanguages = listOf(
  * it stays first. The others share a generic prompt, which is why adding one is a list entry and
  * nothing more: the recogniser for any Latin-script source is the same one, and every guard
  * downstream already keys on the code rather than on Vietnamese specifically.
+ *
+ * There is deliberately no matching list for the *source* language. Which language a page is
+ * written in is a fact about the page, and both readers work it out for themselves — so asking the
+ * user was at best a chore and at worst a trap: the setting kept the last series' answer, and a
+ * Korean series opened after a Japanese one was translated as though it were still Japanese.
  */
 private val targetLanguages = listOf(
     "Việt" to "vi",
@@ -104,6 +108,12 @@ private val targetLanguages = listOf(
 
 /**
  * Reader-side translation controls.
+ *
+ * Two decisions are the reader's — translate this series, and which model does it — and those are
+ * what the page leads with. Everything the app can work out for itself it now works out: the source
+ * language from the page, the recogniser from the source language, and how dialogue is set from
+ * whether the page turned out to be vertical Japanese. The rest is real but rarely touched, so it
+ * sits behind "Nâng cao".
  *
  * The primary action translates the chapter on screen plus the next
  * [TRANSLATION_PREFETCH_CHAPTERS] chapters, which is what makes continuous reading possible: by the
@@ -117,13 +127,13 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
     val status by manager.status.collectAsState()
 
     val provider by preferences.provider.collectAsState()
-    val sourceLanguage by preferences.sourceLanguage.collectAsState()
     val geminiKey by preferences.geminiApiKey.collectAsState()
     val groqKey by preferences.groqApiKey.collectAsState()
     val offlineState by manager.offlineModelStore.state.collectAsState()
     val licenseAccepted by preferences.offlineLicenseAcceptedVersion.collectAsState()
     val threadCount by preferences.offlineThreadCount.collectAsState()
     val scope = rememberCoroutineScope()
+    var showAdvanced by remember { mutableStateOf(false) }
 
     val mangaId = manga?.id
     val enabled = mangaId?.let { manager.isEnabled(it) } == true
@@ -191,7 +201,7 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         when (val current = status) {
             is TranslationStatus.Working -> {
                 Text(
-                    text = "${current.label} — ${current.completed}/${current.total} trang",
+                    text = "${current.label} — đã dịch ${current.completed}/${current.total} trang",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 LinearProgressIndicator(
@@ -209,7 +219,8 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             TranslationStatus.Idle -> {
                 if (enabled) {
                     Text(
-                        text = "Trang đang mở được dịch khi xem. Nếu vẫn tiếng gốc, nhấn Dịch lại.",
+                        text = "Ngôn ngữ gốc và cách sắp chữ do ứng dụng tự nhận theo từng trang. " +
+                            "Dịch lại sẽ xoá bản dịch cũ rồi dịch từ đầu.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -238,61 +249,29 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         )
     }
 
-    LabelledChipRow(label = "Ngôn ngữ gốc") {
-        sourceLanguages.forEach { (label, code) ->
-            FilterChip(
-                selected = sourceLanguage == code,
-                onClick = { preferences.sourceLanguage.set(code) },
-                label = { Text(label) },
-            )
-        }
-    }
-
-    val targetLanguage by preferences.targetLanguage.collectAsState()
-    LabelledChipRow(label = "Dịch sang") {
-        targetLanguages.forEach { (label, code) ->
-            FilterChip(
-                selected = targetLanguage == code,
-                onClick = { preferences.targetLanguage.set(code) },
-                label = { Text(label) },
-            )
-        }
-    }
-
-    val renderStyle by preferences.renderStylePref.collectAsState()
-    val simpleRender by preferences.simpleRender.collectAsState()
-    val currentStyle = if (preferences.renderStylePref.isSet()) {
-        renderStyle
-    } else if (simpleRender) {
-        TranslationRenderStyle.SIMPLE
-    } else {
-        TranslationRenderStyle.BUBBLE
-    }
-    LabelledChipRow(label = "Kiểu vẽ chữ") {
-        FilterChip(
-            selected = currentStyle == TranslationRenderStyle.SIMPLE,
-            onClick = { preferences.setRenderStyle(TranslationRenderStyle.SIMPLE) },
-            label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ") },
-        )
-        FilterChip(
-            selected = currentStyle == TranslationRenderStyle.TYPESET,
-            onClick = { preferences.setRenderStyle(TranslationRenderStyle.TYPESET) },
-            label = { Text("Sắp chữ — tô bóng thoại, căn giữa (manga Nhật)") },
-        )
-        FilterChip(
-            selected = currentStyle == TranslationRenderStyle.BUBBLE,
-            onClick = { preferences.setRenderStyle(TranslationRenderStyle.BUBBLE) },
-            label = { Text("Theo bóng thoại (cũ, chậm)") },
-        )
-    }
-
     when (provider) {
         TranslationProviderType.GEMINI -> {
             TextItem(
-                label = "Gemini API key",
+                label = "Gemini API key (mỗi key một dòng)",
                 value = geminiKey,
                 onChange = preferences.geminiApiKey::set,
             )
+            val keyCount = remember(geminiKey) { GeminiKeyRing().parse(geminiKey).size }
+            if (keyCount > 1) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    text = "$keyCount key. Hết hạn mức key nào thì tự chuyển sang key kế tiếp.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    text = "Dán thêm key ở dòng mới để khỏi hết hạn mức giữa chừng.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             val currentModel by preferences.geminiModel.collectAsState()
             LabelledChipRow(label = "Model") {
                 geminiModels.forEach { (label, id) ->
@@ -346,43 +325,116 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         )
     }
 
-    TextItem(
-        label = "Yêu cầu văn phong (tuỳ chọn)",
-        value = preferences.styleHint.get(),
-        onChange = preferences.styleHint::set,
-    )
-
-    val cacheSizePref = preferences.cacheSizeMb
-    val cacheSize by cacheSizePref.collectAsState()
-    SliderItem(
-        label = "Giới hạn bộ đệm trang đã dịch",
-        value = cacheSize,
-        valueRange = 128..4096 step 128,
-        valueString = "$cacheSize MB",
-        onChange = cacheSizePref::set,
-    )
-
-    val retentionPref = preferences.cacheRetentionHours
-    val retention by retentionPref.collectAsState()
-    SliderItem(
-        label = "Tự xoá bản dịch sau khi thoát truyện",
-        value = retention,
-        valueRange = 0..168 step 6,
-        valueString = if (retention == 0) "Không tự xoá" else "$retention giờ",
-        onChange = retentionPref::set,
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
+            .clickable { showAdvanced = !showAdvanced }
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(onClick = { mangaId?.let(manager::clearFor) }) {
-            Text("Xoá bản dịch truyện này")
+        Text(
+            text = "Nâng cao",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            imageVector = if (showAdvanced) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    if (showAdvanced) {
+        // Left here on purpose. The app now picks the mode per page — typeset for vertical Japanese
+        // on a bound page, the original footprint letterer everywhere else — and that is right often
+        // enough that the reader should not have to think about it. But every one of these modes is
+        // still the whole renderer, and forcing one is the only way to overrule a page the automatic
+        // choice gets wrong, so the control moves out of the way rather than away.
+        val renderStyle by preferences.renderStylePref.collectAsState()
+        val simpleRender by preferences.simpleRender.collectAsState()
+        val currentStyle = if (preferences.renderStylePref.isSet()) {
+            renderStyle
+        } else if (simpleRender) {
+            TranslationRenderStyle.SIMPLE
+        } else {
+            TranslationRenderStyle.BUBBLE
         }
-        OutlinedButton(onClick = manager::clearAll) {
-            Text("Xoá tất cả")
+        LabelledChipRow(label = "Kiểu vẽ chữ (mặc định: tự chọn theo trang)") {
+            FilterChip(
+                selected = currentStyle == TranslationRenderStyle.SIMPLE,
+                onClick = { preferences.setRenderStyle(TranslationRenderStyle.SIMPLE) },
+                label = { Text("Đơn giản — xoá thoại, ghi đè đúng chỗ (webtoon)") },
+            )
+            FilterChip(
+                selected = currentStyle == TranslationRenderStyle.TYPESET,
+                onClick = { preferences.setRenderStyle(TranslationRenderStyle.TYPESET) },
+                label = { Text("Sắp chữ — tô bóng thoại, căn giữa (manga Nhật)") },
+            )
+            FilterChip(
+                selected = currentStyle == TranslationRenderStyle.BUBBLE,
+                onClick = { preferences.setRenderStyle(TranslationRenderStyle.BUBBLE) },
+                label = { Text("Theo bóng thoại (cũ, chậm)") },
+            )
+        }
+
+        val targetLanguage by preferences.targetLanguage.collectAsState()
+        LabelledChipRow(label = "Dịch sang") {
+            targetLanguages.forEach { (label, code) ->
+                FilterChip(
+                    selected = targetLanguage == code,
+                    onClick = { preferences.targetLanguage.set(code) },
+                    label = { Text(label) },
+                )
+            }
+        }
+
+        TextItem(
+            label = "Yêu cầu văn phong (tuỳ chọn)",
+            value = preferences.styleHint.get(),
+            onChange = preferences.styleHint::set,
+        )
+
+        val cacheSizePref = preferences.cacheSizeMb
+        val cacheSize by cacheSizePref.collectAsState()
+        SliderItem(
+            label = "Giới hạn bộ đệm trang đã dịch",
+            value = cacheSize,
+            valueRange = 128..4096 step 128,
+            valueString = "$cacheSize MB",
+            onChange = cacheSizePref::set,
+        )
+
+        val retentionPref = preferences.cacheRetentionHours
+        val retention by retentionPref.collectAsState()
+        SliderItem(
+            label = "Tự xoá bản dịch sau khi thoát truyện",
+            value = retention,
+            valueRange = 0..168 step 6,
+            valueString = if (retention == 0) "Không tự xoá" else "$retention giờ",
+            onChange = retentionPref::set,
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Goes through the reader, not straight to the cache: the viewer is still holding the
+            // pages it decoded, so deleting the files alone left the bad artwork on screen and the
+            // delete looking like it had done nothing.
+            OutlinedButton(onClick = screenModel.onDiscardTranslations) {
+                Text("Xoá bản dịch truyện này")
+            }
+            OutlinedButton(
+                onClick = {
+                    manager.clearAll()
+                    screenModel.onDiscardTranslations()
+                },
+            ) {
+                Text("Xoá tất cả")
+            }
         }
     }
 }

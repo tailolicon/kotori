@@ -19,6 +19,8 @@ class ReaderSettingsScreenModel(
     val onChangeOrientation: (ReaderOrientation) -> Unit,
     /** Turns translation on or off for the manga being read and refreshes the visible chapter. */
     val onToggleTranslation: (Boolean) -> Unit = {},
+    /** Throws this series' translated pages away and puts the original artwork back on screen. */
+    val onDiscardTranslations: () -> Unit = {},
     val preferences: ReaderPreferences = Injekt.get(),
     val translationPreferences: TranslationPreferences = Injekt.get(),
     val translationManager: TranslationManager = Injekt.get(),
