@@ -283,19 +283,22 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
                 label = "Gemini API key (mỗi key một dòng)",
                 value = geminiKey,
                 onChange = preferences.geminiApiKey::set,
+                singleLine = false,
+                minLines = 3,
             )
             val keyCount = remember(geminiKey) { GeminiKeyRing().parse(geminiKey).size }
             if (keyCount > 1) {
                 Text(
                     modifier = Modifier.padding(horizontal = 24.dp),
-                    text = "$keyCount key. Hết hạn mức key nào thì tự chuyển sang key kế tiếp.",
+                    text = "$keyCount key. Hết hạn mức key nào thì tự chuyển key; hết cả $keyCount key " +
+                        "thì tự hạ sang model khác còn hạn mức.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text(
                     modifier = Modifier.padding(horizontal = 24.dp),
-                    text = "Dán thêm key ở dòng mới để khỏi hết hạn mức giữa chừng.",
+                    text = "Dán thêm key ở dòng mới (hoặc ngăn bằng dấu phẩy) để khỏi hết hạn mức giữa chừng.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

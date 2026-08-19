@@ -81,7 +81,8 @@ class GeminiTranslationProvider(
                 "x2=${(box.right * scaleX).toInt()}, y2=${(box.bottom * scaleY).toInt()})"
         }
 
-        val payload = buildJsonObject {
+        val payload = { modelName: String ->
+            buildJsonObject {
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
@@ -112,7 +113,11 @@ class GeminiTranslationProvider(
                     },
                 )
             }
-            put("generationConfig", generationConfig(jsonOutput = true, temperature = 0.15, thinkingBudget = 1024))
+            put(
+                "generationConfig",
+                generationConfig(modelName, jsonOutput = true, temperature = 0.15, thinkingBudget = 1024),
+            )
+            }
         }
 
         GeminiResponse.parseBubbles(call(payload), boxes.size)
@@ -139,14 +144,16 @@ class GeminiTranslationProvider(
     }
 
     private fun translateMangaBatchInternal(texts: List<String>, context: TranslationContext): List<String>? {
-        val payload = textPayload(
-            prompt = mihon.feature.translation.manga.MangaPrompts.batchPrompt(texts, context),
-            temperature = 0.2,
-            thinkingBudget = 512,
-        )
         repeat(3) { attempt ->
             try {
-                val body = call(payload)
+                val body = call { modelName ->
+                    textPayload(
+                        modelName = modelName,
+                        prompt = mihon.feature.translation.manga.MangaPrompts.batchPrompt(texts, context),
+                        temperature = 0.2,
+                        thinkingBudget = 512,
+                    )
+                }
                 val text = GeminiResponse.candidateText(body) ?: return@repeat
                 val parsed = mihon.feature.translation.manga.MangaPrompts.parseBatch(text, texts.size)
                 if (parsed != null) return parsed
@@ -169,12 +176,17 @@ class GeminiTranslationProvider(
         context: TranslationContext,
     ): List<BubbleTranslation> = withIOContext {
         if (texts.isEmpty()) return@withIOContext emptyList()
-        val payload = textPayload(
-            prompt = TranslationPrompts.bubbleLines(context, texts),
-            temperature = 0.15,
-            thinkingBudget = 1024,
+        GeminiResponse.parseBubbles(
+            call { modelName ->
+                textPayload(
+                    modelName = modelName,
+                    prompt = TranslationPrompts.bubbleLines(context, texts),
+                    temperature = 0.15,
+                    thinkingBudget = 1024,
+                )
+            },
+            texts.size,
         )
-        GeminiResponse.parseBubbles(call(payload), texts.size)
     }
 
     override suspend fun translateProse(
@@ -183,17 +195,27 @@ class GeminiTranslationProvider(
         prose: ProseContext,
     ): ProseTranslation = withIOContext {
         if (paragraphs.isEmpty()) return@withIOContext ProseTranslation("")
-        val payload = textPayload(
-            prompt = TranslationPrompts.prose(context, prose, paragraphs),
-            // Prose needs room to breathe: at low temperature and a clamped thinking budget the output
-            // reads like a machine gloss rather than a translator's prose.
-            temperature = 0.6,
-            thinkingBudget = 4096,
+        GeminiResponse.parseProse(
+            call { modelName ->
+                textPayload(
+                    modelName = modelName,
+                    prompt = TranslationPrompts.prose(context, prose, paragraphs),
+                    // Prose needs room to breathe: at low temperature and a clamped thinking budget
+                    // the output reads like a machine gloss rather than a translator's prose.
+                    temperature = 0.6,
+                    thinkingBudget = 4096,
+                )
+            },
+            paragraphs.size,
         )
-        GeminiResponse.parseProse(call(payload), paragraphs.size)
     }
 
-    private fun textPayload(prompt: String, temperature: Double, thinkingBudget: Int): JsonObject =
+    private fun textPayload(
+        modelName: String,
+        prompt: String,
+        temperature: Double,
+        thinkingBudget: Int,
+    ): JsonObject =
         buildJsonObject {
             putJsonArray("contents") {
                 add(
@@ -204,11 +226,15 @@ class GeminiTranslationProvider(
                     },
                 )
             }
-            put("generationConfig", generationConfig(true, temperature, thinkingBudget))
+            put("generationConfig", generationConfig(modelName, true, temperature, thinkingBudget))
         }
 
-    private fun generationConfig(jsonOutput: Boolean, temperature: Double, thinkingBudget: Int): JsonObject {
-        val modelName = model()
+    private fun generationConfig(
+        modelName: String,
+        jsonOutput: Boolean,
+        temperature: Double,
+        thinkingBudget: Int,
+    ): JsonObject {
         return buildJsonObject {
             // Gemma-branded endpoints reject responseMimeType outright.
             if (jsonOutput && !modelName.startsWith("gemma")) {
@@ -229,38 +255,72 @@ class GeminiTranslationProvider(
      * request is tried again on the next one; only when every key has refused does the failure
      * reach the caller, which is when it genuinely means "stop translating for a while".
      */
-    private fun call(payload: JsonObject): String {
+    /**
+     * Sends the request, moving to the next key and then to the next model rather than giving up.
+     *
+     * Two ladders, in that order. Keys first, because a second Google account is a second daily
+     * allowance for the *same* model and costs nothing in quality. Only when every key is spent on
+     * this model does it step down to another one — a chapter half-translated because the headline
+     * model allows twenty requests a day is worse than the same chapter finished on Flash-Lite, and
+     * the reader cannot act on the difference mid-chapter anyway.
+     *
+     * The reader's chosen model is never overwritten: the step-down is parked in memory and expires,
+     * so tomorrow's quota is picked up on the model they actually asked for.
+     */
+    private fun call(payload: (String) -> JsonObject): String {
         val keys = keyRing.parse(apiKey())
         require(keys.isNotEmpty()) { "Chưa có Gemini API key. Nhập trong Cài đặt → Dịch." }
 
         var lastFailure: Exception? = null
-        for (key in keyRing.available(keys)) {
-            try {
-                val body = callWith(key, payload)
-                keyRing.release(key)
-                return body
-            } catch (limited: ProviderRateLimited) {
-                keyRing.park(
-                    key,
-                    when {
-                        limited.dailyQuota -> GeminiKeyRing.DAILY_PARK_SECONDS
-                        else -> limited.retryAfterSeconds ?: GeminiKeyRing.MINUTE_PARK_SECONDS
-                    },
-                )
-                logcat { "Gemini key ...${key.takeLast(4)} is out of quota; trying the next one" }
-                lastFailure = limited
-            } catch (rejected: ProviderRejected) {
-                keyRing.park(key, GeminiKeyRing.REJECTED_PARK_SECONDS)
-                logcat { "Gemini refused key ...${key.takeLast(4)}; trying the next one" }
-                lastFailure = rejected
+        for (modelName in modelLadder()) {
+            var everyKeySpent = true
+            for (key in keyRing.available(keys, modelName)) {
+                try {
+                    val body = callWith(key, modelName, payload(modelName))
+                    keyRing.release(key)
+                    if (modelName != model()) {
+                        logcat { "Gemini: '${model()}' is out of quota today; translating on '$modelName'" }
+                    }
+                    return body
+                } catch (limited: ProviderRateLimited) {
+                    keyRing.park(
+                        key,
+                        modelName,
+                        when {
+                            limited.dailyQuota -> GeminiKeyRing.DAILY_PARK_SECONDS
+                            else -> limited.retryAfterSeconds ?: GeminiKeyRing.MINUTE_PARK_SECONDS
+                        },
+                    )
+                    logcat { "Gemini key ...${key.takeLast(4)} is out of quota on $modelName" }
+                    lastFailure = limited
+                    // A per-minute limit is not a reason to abandon the model; a daily one is.
+                    if (!limited.dailyQuota) everyKeySpent = false
+                } catch (rejected: ProviderRejected) {
+                    keyRing.park(key, modelName, GeminiKeyRing.REJECTED_PARK_SECONDS)
+                    logcat { "Gemini refused key ...${key.takeLast(4)}; trying the next one" }
+                    lastFailure = rejected
+                }
             }
+            if (!everyKeySpent) break
         }
         throw lastFailure ?: IllegalStateException("Gemini không trả lời")
     }
 
-    private fun callWith(key: String, payload: JsonObject): String {
+    /**
+     * The reader's model, then the ones with a bigger daily allowance, then nothing.
+     *
+     * Only models that read images: the page pipeline hands the artwork to the model, so a text-only
+     * fallback would not merely be worse, it would fail the request.
+     */
+    private fun modelLadder(): List<String> {
+        val chosen = model()
+        if (!supportsVisionOcr) return listOf(chosen)
+        return listOf(chosen) + FALLBACK_MODELS.filterNot { it == chosen }
+    }
+
+    private fun callWith(key: String, modelName: String, payload: JsonObject): String {
         val request = Request.Builder()
-            .url("$ENDPOINT/${model()}:generateContent")
+            .url("$ENDPOINT/$modelName:generateContent")
             .header("x-goog-api-key", key)
             .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
@@ -376,6 +436,18 @@ class GeminiTranslationProvider(
         /** Second guard so a very long strip still fits inside one request. */
         const val MAX_API_PIXELS = 12_000_000L
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * Models to fall back to when the chosen one has spent its day, largest allowance first.
+         *
+         * Flash-Lite 3.1 permits 500 requests a day against the headline Flash models' twenty, which
+         * is the difference between a chapter that finishes and one that stops on page six.
+         */
+        val FALLBACK_MODELS = listOf(
+            "gemini-3.1-flash-lite",
+            "gemini-3.5-flash-lite",
+            "gemini-2.5-flash",
+        )
     }
 }
 

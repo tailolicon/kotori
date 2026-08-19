@@ -405,9 +405,13 @@ class SimplePageReader {
     ): List<ReadLine> {
         val companions = PageFormatDetector.companionScripts(format, language)
         if (companions.isEmpty()) return primary
-        // Always try the other script on a webtoon: a Korean page with three Spanish balloons
-        // already has enough Hangul to skip the page-level fallback.
-        if (format != PageFormat.WEBTOON && !primaryLikelyMixed(primary)) return primary
+        // Evidence first, on every format. Each companion is a *whole extra read of the page*, and
+        // running two of them unconditionally on webtoons turned the one-pass reader — the entire
+        // point of this mode, 136s down to 4.3s — back into a three-pass one. A page that really
+        // does mix scripts shows it: the primary recogniser returns Hangul for the Korean balloons
+        // and letter-shaped noise for the Spanish ones, so both alphabets are present in its own
+        // output. A page written in one script shows nothing, and pays nothing.
+        if (!primaryLikelyMixed(primary) && !primaryLooksMisread(primary, language)) return primary
         val merged = primary.toMutableList()
         var added = 0
         var replaced = 0
@@ -442,6 +446,25 @@ class SimplePageReader {
         if (added == 0 && replaced == 0) return primary
         logcat { "Companion '$language' pass: +$added line(s), replaced $replaced junk reading(s)" }
         return merged
+    }
+
+    /**
+     * The primary recogniser returned letter-shaped noise where another script actually is.
+     *
+     * The cheap mixed-script test counts alphabets and misses this: a page of English with one
+     * Korean sign has almost no Hangul in the *primary* output precisely because the Latin
+     * recogniser could not read it — it reports two junk glyphs instead. Those junk readings are
+     * the evidence, and a couple of them is worth one extra pass; one is not, or a smudge on the
+     * artwork would buy the page a whole second read.
+     */
+    private fun primaryLooksMisread(lines: List<ReadLine>, language: String): Boolean {
+        val expected = ScriptKindDetector.ofLanguage(language)
+        val junk = lines.count { line ->
+            val text = line.line.text
+            text.count { it.isLetterOrDigit() } >= MIN_COMPANION_LETTERS &&
+                ScriptKindDetector.looksLikeJunk(text, expected)
+        }
+        return junk >= MIN_MISREAD_LINES
     }
 
     private fun primaryLikelyMixed(lines: List<ReadLine>): Boolean {
@@ -785,6 +808,9 @@ class SimplePageReader {
         const val MIN_CJK_STANDALONE = 2
         const val MIN_MULTILINE_CHARACTERS = 2
         const val MAX_COMPANION_SCRIPTS = 2
+
+        /** Junk readings before the page is re-read in another script. */
+        const val MIN_MISREAD_LINES = 2
         const val MIN_COMPANION_LETTERS = 3
 
         const val BLOCK_PAD_RATIO = 0.04f

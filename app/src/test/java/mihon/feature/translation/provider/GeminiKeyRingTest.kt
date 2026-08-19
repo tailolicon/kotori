@@ -26,17 +26,17 @@ class GeminiKeyRingTest {
     @Test
     fun `a spent key steps aside for the next one`() {
         val keys = listOf("AAA", "BBB")
-        ring.park("AAA", 60)
-        assertEquals(listOf("BBB"), ring.available(keys))
-        assertFalse(ring.allParked(keys))
+        ring.park("AAA", "m", 60)
+        assertEquals(listOf("BBB"), ring.available(keys, "m"))
+        assertFalse(ring.allParked(keys, "m"))
     }
 
     @Test
     fun `a parked key comes back when its window passes`() {
         val keys = listOf("AAA", "BBB")
-        ring.park("AAA", 60)
+        ring.park("AAA", "m", 60)
         clock += 61_000
-        assertEquals(keys, ring.available(keys))
+        assertEquals(keys, ring.available(keys, "m"))
     }
 
     @Test
@@ -44,23 +44,34 @@ class GeminiKeyRingTest {
         // Returning nothing here would leave translation off until the app restarted, even after
         // the daily quota had rolled over.
         val keys = listOf("AAA", "BBB")
-        ring.park("AAA", 600)
-        ring.park("BBB", 1800)
-        assertTrue(ring.allParked(keys))
-        assertEquals(listOf("AAA"), ring.available(keys))
+        ring.park("AAA", "m", 600)
+        ring.park("BBB", "m", 1800)
+        assertTrue(ring.allParked(keys, "m"))
+        assertEquals(listOf("AAA"), ring.available(keys, "m"))
     }
 
     @Test
     fun `a key that works is un-parked`() {
         val keys = listOf("AAA", "BBB")
-        ring.park("AAA", 600)
+        ring.park("AAA", "m", 600)
         ring.release("AAA")
-        assertEquals(keys, ring.available(keys))
+        assertEquals(keys, ring.available(keys, "m"))
     }
 
     @Test
     fun `no keys means nothing to try`() {
-        assertTrue(ring.available(emptyList()).isEmpty())
-        assertFalse(ring.allParked(emptyList()))
+        assertTrue(ring.available(emptyList(), "m").isEmpty())
+        assertFalse(ring.allParked(emptyList(), "m"))
+    }
+
+    @Test
+    fun `a key spent on one model still has its allowance on another`() {
+        // Google meters the daily quota per model, so parking the key outright would throw away
+        // hundreds of requests the same key still has on a lighter model.
+        val keys = listOf("AAA")
+        ring.park("AAA", "gemini-3.5-flash", 1800)
+        assertTrue(ring.available(keys, "gemini-3.5-flash").isEmpty() || ring.allParked(keys, "gemini-3.5-flash"))
+        assertEquals(keys, ring.available(keys, "gemini-3.1-flash-lite"))
+        assertFalse(ring.allParked(keys, "gemini-3.1-flash-lite"))
     }
 }

@@ -277,17 +277,46 @@ class PageTranslator(
                 var blocks = usable.map(read.boxes::get)
                 var blockTexts = usable.map(read.texts::get)
 
+                // Japanese *manga* decides how this page is set, not a setting. Vertical columns
+                // give a recognised footprint that is a tall sliver, and a sentence written into a
+                // sliver comes out one or two words per row — translated and unreadable. The balloon
+                // around it has the room. A reader should not have to know that, so the page says so.
+                //
+                // Deliberately gated on the page being a page. Flooding balloons on a colour webtoon
+                // is how neon ovals used to get painted over and how a dark credits panel becomes a
+                // slab, so a strip that merely happens to read as Japanese must not trigger it.
+                val typeset = when (renderStyle) {
+                    TranslationRenderStyle.TYPESET -> true
+                    TranslationRenderStyle.SIMPLE -> false
+                    else -> read.language == "ja" && pageFormat == PageFormat.MANGA
+                }
+                resolvedStyle = if (typeset) {
+                    TranslationRenderStyle.TYPESET
+                } else {
+                    TranslationRenderStyle.SIMPLE
+                }
+
                 // Where the lettering *may go* is a different question from where it is, and only the
-                // balloon answers it. Japanese runs in columns: the recognised footprint of a line is
-                // a tall sliver, and a sentence written into that sliver comes out one or two words
-                // per row - translated, and unreadable. The balloon around it is a wide oval with
-                // room for the sentence.
-                val balloons = suppressOverlaps(
-                    runCatching { detector.detect(source, horizontalSeams) }
-                        .onFailure { logcat { "Bubble detection failed: ${it.message}" } }
-                        .getOrDefault(emptyList())
-                        .filterNot { it.isEdgeSliver(source.width) },
-                )
+                // balloon answers it — for vertical Japanese, whose recognised footprint is a sliver
+                // no sentence fits into. That is the only reason this runs, and it is expensive: the
+                // ONNX detector was 10.6s of the original 136s page, and this whole mode exists
+                // because reading the page once got that page to 4.3s by skipping it.
+                //
+                // So it runs where it earns its keep. A webtoon strip lettered in its own footprint
+                // needs no balloon, and paying for one there put twenty to forty seconds back onto
+                // exactly the pages the fast path was built for.
+                val needsBalloons = typeset || pageFormat == PageFormat.MANGA
+                val balloons = if (!needsBalloons) {
+                    logcat { "$diagnosticLabel skipping the balloon detector: $pageFormat lettered in place" }
+                    emptyList()
+                } else {
+                    suppressOverlaps(
+                        runCatching { detector.detect(source, horizontalSeams) }
+                            .onFailure { logcat { "Bubble detection failed: ${it.message}" } }
+                            .getOrDefault(emptyList())
+                            .filterNot { it.isEdgeSliver(source.width) },
+                    )
+                }
 
                 // Read the page once, but do not accept "once" as the last word on a balloon the page
                 // pass got nothing usable out of. Reading a whole page in bands is what makes this
@@ -358,24 +387,6 @@ class PageTranslator(
                 // lettering already sits in a readable footprint; typeset fill on colour
                 // strips is how neon ovals used to get painted over. Picking TYPESET still
                 // forces that path on a strip.
-                // Japanese *manga* decides this, not a setting. Vertical columns give a recognised
-                // footprint that is a tall sliver, and a sentence written into a sliver comes out
-                // one or two words per row — translated and unreadable. The balloon around it has
-                // the room. A reader should not have to know that, so the page says so.
-                //
-                // Deliberately gated on the page being a page. Flooding balloons on a colour webtoon
-                // is how neon ovals used to get painted over and how a dark credits panel becomes a
-                // slab, so a strip that merely happens to read as Japanese must not trigger it.
-                val typeset = when (renderStyle) {
-                    TranslationRenderStyle.TYPESET -> true
-                    TranslationRenderStyle.SIMPLE -> false
-                    else -> read.language == "ja" && pageFormat == PageFormat.MANGA
-                }
-                resolvedStyle = if (typeset) {
-                    TranslationRenderStyle.TYPESET
-                } else {
-                    TranslationRenderStyle.SIMPLE
-                }
                 var placed = placeInBalloons(blocks, blockTexts, balloons, preferBalloon = typeset)
                 if (typeset) {
                     placed = recoverPaperBalloons(source, placed.first, placed.second)
@@ -668,9 +679,13 @@ class PageTranslator(
         // the single-lane local stages, running them, waiting on the network, and drawing are four
         // very different problems with four different fixes.
         logcat {
+            // Stage names as the *simple* path actually uses them: it reads the page first and does
+            // everything else after, so calling the read "detect" and the rest "ocr" — which is what
+            // the bubble-aware path does — reads as though the ONNX detector were taking twenty
+            // seconds when it is the page read.
             "$diagnosticLabel timing: queue=${lockedAt - startedAt}ms " +
-                "detect=${detectDoneAt - lockedAt}ms blocks=${blocksDoneAt - detectDoneAt}ms " +
-                "ocr=${localDoneAt - blocksDoneAt}ms provider=${providerDoneAt - localDoneAt}ms " +
+                "read=${detectDoneAt - lockedAt}ms blocks=${blocksDoneAt - detectDoneAt}ms " +
+                "detect+place=${localDoneAt - blocksDoneAt}ms provider=${providerDoneAt - localDoneAt}ms " +
                 "render=${System.currentTimeMillis() - providerDoneAt}ms " +
                 "total=${System.currentTimeMillis() - startedAt}ms"
         }

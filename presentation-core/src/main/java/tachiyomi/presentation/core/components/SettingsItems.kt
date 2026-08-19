@@ -384,7 +384,15 @@ fun TriStateItem(
 }
 
 @Composable
-fun TextItem(label: String, value: String, onChange: (String) -> Unit) {
+fun TextItem(
+    label: String,
+    value: String,
+    /** False for fields that hold a list, one entry per line — several API keys, for instance. */
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    // Last so the trailing-lambda call sites keep working: `TextItem(label, value) { ... }`.
+    onChange: (String) -> Unit,
+) {
     OutlinedTextField(
         modifier = Modifier
             .fillMaxWidth()
@@ -392,7 +400,8 @@ fun TextItem(label: String, value: String, onChange: (String) -> Unit) {
         label = { Text(text = label) },
         value = value,
         onValueChange = onChange,
-        singleLine = true,
+        singleLine = singleLine,
+        minLines = minLines,
     )
 }
 
