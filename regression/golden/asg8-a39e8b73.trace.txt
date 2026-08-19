@@ -1,5 +1,18 @@
 D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg pipeline: original path (1280x12100, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
+D/UndispatchedCoroutine: Loading pages for Chapter 7
+D/DispatchedCoroutine: chapter=299394 page=1 pipeline: original path (720x12685, script='not probed')
+D/DispatchedCoroutine: chapter=299394 page=0 pipeline: original path (720x15367, script='not probed')
+D/UndispatchedCoroutine: chapter=299394 pages=2 pipeline: original path (720x12095, script='not probed')
+D/TranslationManager: Strip translation failed for chapter 299394: StandaloneCoroutine was cancelled
+D/TranslationManager: Discarded translations for manga 3034
+D/UndispatchedCoroutine: Loading pages for Chapter 7
+D/TranslationManager: Discarded every translated page
+D/TranslationManager: Discarded translations for manga 3034
+D/UndispatchedCoroutine: Loading pages for Chapter 7
+D/DispatchedCoroutine: chapter=299394 page=0 pipeline: original path (720x15367, script='not probed')
+D/UndispatchedCoroutine: Loading pages for Chapter 6
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 0 junk reading(s)
 D/SimplePageReader: Dropping 0 as noise rather than dialogue
 D/SimplePageReader: Read 7 lettering region(s) from 14 line(s) as 'en'
@@ -10,8 +23,10 @@ D/SimplePageReader:   region Rect(457, 5681 - 841, 5815): CAN ONLY BE / RESISTED
 D/SimplePageReader:   region Rect(904, 8397 - 1270, 8471): 快快看浸画
 D/SimplePageReader:   region Rect(494, 9564 - 1248, 9648): KAISCANS.COM
 D/SimplePageReader:   region Rect(227, 11482 - 799, 11742): TSK~ THIS TRAP WAS / TRULY UNNECESSARY... / NOW THE DAMAGE IS / EVEN BIGGER.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (189 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=904, top=8397, right=1270, bottom=8471, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 快快看浸画
+D/TranslationManager: Discarded translations for manga 3034
+D/UndispatchedCoroutine: Loading pages for Chapter 7
 D/PageTranslator: Merged 17 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
 D/UndispatchedCoroutine: Recovered Rect(418, 5513 - 883, 5600): CAN ONLY BE

@@ -1,8 +1,26 @@
 D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ko scored 1); reading as Latin
+D/PageTranslator: Merged 7 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/SimplePageReader: Probe inconclusive (best 'ko' scored 1); leaving the script open
+D/PageTranslator: No balloon for Rect(121, 272 - 519, 382): best containment 11%
+D/PageTranslator: No balloon for Rect(209, 2093 - 506, 2183): best containment 46%
+D/PageTranslator: No balloon for Rect(154, 2842 - 423, 3001): best containment 23%
+D/PageTranslator: No balloon for Rect(171, 4853 - 553, 4960): best containment 0%
+D/PageTranslator: No balloon for Rect(168, 8012 - 603, 8195): best containment 3%
+D/PageTranslator: No balloon for Rect(101, 9988 - 497, 10150): best containment 11%
+D/PageTranslator: Grouped 6 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299394 pages=5 rendering 6/6 translated bubbles
+D/BubbleRenderer: Simple: Rect(168, 8012 - 603, 8195) textBlock=true vertical=false lines=2 bounds=Rect(184, 8019 - 587, 8188)
+D/BubbleRenderer: Simple: Rect(101, 9988 - 497, 10150) textBlock=true vertical=false lines=3 bounds=Rect(116, 9994 - 482, 10144)
+D/BubbleRenderer: Simple: Rect(121, 272 - 519, 382) textBlock=true vertical=false lines=3 bounds=Rect(136, 276 - 504, 378)
+D/BubbleRenderer: Simple: Rect(154, 2842 - 423, 3001) textBlock=true vertical=false lines=3 bounds=Rect(164, 2848 - 413, 2995)
+D/BubbleRenderer: Simple: Rect(171, 4853 - 553, 4960) textBlock=true vertical=false lines=2 bounds=Rect(185, 4857 - 539, 4956)
+D/BubbleRenderer: Simple: Rect(209, 2093 - 506, 2183) textBlock=true vertical=false lines=2 bounds=Rect(220, 2097 - 495, 2179)
+D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
+D/UndispatchedCoroutine: chapter=299394 pages=6 pipeline: original path (720x13965, script='en')
 D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
 D/SimplePageReader:   region Rect(73, 918 - 689, 1084): AND SHE ALSO / HAS A PERFECT READ / ON MY FATHER.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (35 chars); remembering it
 D/PageTranslator: No balloon for Rect(73, 918 - 689, 1084): best containment 7%
 D/PageTranslator: Grouped 1 region(s) by balloon
 D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg rendering 1/1 translated bubbles

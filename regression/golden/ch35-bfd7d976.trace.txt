@@ -1,11 +1,20 @@
 D/UndispatchedCoroutine: regression:ch35-bfd7d976.jpg pipeline: original path (900x1563, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
+D/SimplePageReader: Read 8 lettering region(s) from 28 line(s) as 'en'
+D/SimplePageReader:   region Rect(242, 2336 - 574, 2555): I SAID ID LET / YOU GOIF YOU / LICKED IT LIKE A / DOG, DIDN'T I? / HAHAHA
+D/SimplePageReader:   region Rect(26, 3357 - 686, 3626): I THOUGHT IT WAS / ONLY NATURAL THAT SOMEONE / LIKE ME WOULD SPEND THEIR / WHOLE LIFE BEING PUSHED / AROUND BY PEOPLE / LIKE YOU.
+D/SimplePageReader:   region Rect(125, 4382 - 537, 4613): I'M PISSED / RIGHT NOW AND / I STILL HAVE A / LOT TO SAY..
+D/SimplePageReader:   region Rect(404, 4904 - 528, 4988): UHUH
+D/SimplePageReader:   region Rect(110, 7193 - 598, 7331): BUT THAT / WASN'T TRUE.
+D/SimplePageReader:   region Rect(36, 10030 - 678, 10283): BEING HONEST / ABOUT YOUR DESIRES AND / LOSING ALL COMPOSURE / BEFORE YOUR / INSTINCT
+D/SimplePageReader:   region Rect(36, 11798 - 444, 12110): Lel qo / of ie!
+D/SimplePageReader:   region Rect(95, 12609 - 619, 12806): YOU'RE JUST AN / IMMATURE CHILD, / AREN'T YOU?
 D/SimplePageReader: Read 4 lettering region(s) from 11 line(s) as 'en'
 D/SimplePageReader:   region Rect(137, 134 - 518, 301): HOW DO YOU / KNOW ABOUT / THAT?!
 D/SimplePageReader:   region Rect(473, 474 - 794, 587): IVE READ IT / SINCE THE FIRST / CHAPTER.
 D/SimplePageReader:   region Rect(132, 752 - 521, 868): THEN THE / PERSON WHO TOLD / DERRICK ABOUT IT
 D/SimplePageReader:   region Rect(425, 1062 - 679, 1164): THAT / WAS ME~
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (93 chars); remembering it
 D/PageTranslator: Merged 2 overlapping balloon detection(s)
 D/PageTranslator: No balloon for Rect(137, 134 - 518, 301): best containment 0%
 D/PageTranslator: No balloon for Rect(473, 474 - 794, 587): best containment 0%

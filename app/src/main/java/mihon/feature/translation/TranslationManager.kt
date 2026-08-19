@@ -60,14 +60,18 @@ class TranslationManager(
     private val pageSlots = Semaphore(MAX_PAGES_IN_FLIGHT)
 
     /**
-     * Second, tighter gate for work that is large enough to matter to the heap.
+     * One strip at a time, whatever [pageSlots] allows.
      *
-     * A stitched webtoon strip is [MAX_STRIP_PIXELS] pixels — about 48 MB as ARGB_8888, and it is
-     * held twice while it is drawn and sliced. Four of those at once is most of an Android heap, so
-     * strips keep the old limit while ordinary pages get the wider one. Always acquired *after*
-     * [pageSlots] and released before it, so the two can never deadlock against each other.
+     * Concurrency only buys anything where the wait is the network. On a bound page it is: the
+     * provider takes six to nineteen seconds against half a second on the device. On a webtoon strip
+     * it is the exact opposite — measured in the reader on a real chapter, `provider=0.5-1.6s`
+     * against `detect=10-27s` and `ocr=10-17s`, all of it behind a single-lane mutex. Running four
+     * strips at once therefore adds nothing but queueing, and the log showed exactly that:
+     * `queue=68s` in front of pages that then took forty. Strips go one at a time; pages still
+     * overlap. Always acquired *after* [pageSlots] and released before it, so the two cannot
+     * deadlock against each other.
      */
-    private val largeWorkSlots = Semaphore(MAX_LARGE_PAGES_IN_FLIGHT)
+    private val stripSlots = Semaphore(MAX_STRIPS_IN_FLIGHT)
 
     private val workGate = TranslationWorkGate()
 
@@ -77,6 +81,7 @@ class TranslationManager(
      */
     fun beginSession(mangaId: Long) {
         workGate.begin(mangaId)
+        translator.beginSeries(preferences.detectedLanguage(mangaId))
     }
 
     /**
@@ -89,6 +94,9 @@ class TranslationManager(
             logcat { "Claiming translation session for $mangaId (was ${workGate.activeMangaId})" }
             workGate.begin(mangaId)
         }
+        // Always, not only on a change of series: the reader can outrun beginSession, and a page
+        // translated against the previous series' script is exactly the bug this replaced.
+        translator.beginSeries(preferences.detectedLanguage(mangaId))
     }
 
     /** User asked again: drop the circuit breaker so a stale 429 cannot silence the new run. */
@@ -304,7 +312,7 @@ class TranslationManager(
                     // Decoding runs ahead of translation, and a decoded page is tens of megabytes.
                     // Without this the loop would read a whole chapter into memory while the first
                     // few pages were still waiting on the network.
-                    if (inFlightGroups.count { it.isActive } >= MAX_PAGES_IN_FLIGHT) {
+                    if (inFlightGroups.count { it.isActive } >= MAX_PAGES_IN_FLIGHT + 1) {
                         inFlightGroups.firstOrNull { it.isActive }?.join()
                     }
                 }
@@ -327,13 +335,31 @@ class TranslationManager(
         generation: Int,
         group: List<Pair<Int, Bitmap>>,
     ) {
-        val pixels = group.sumOf { (_, bitmap) -> bitmap.width.toLong() * bitmap.height }
-        val large = pixels > LARGE_WORK_PIXELS
+        // Shape, not size: what decides whether concurrency helps is where the time goes, and that
+        // follows the format. A strip is on-device bound, a page is network bound.
+        val width = group.maxOf { (_, bitmap) -> bitmap.width }
+        val height = group.sumOf { (_, bitmap) -> bitmap.height }
+        val strip = PageFormatDetector.detect(width, height, ScriptKind.NONE) == PageFormat.WEBTOON
+        // A single-page group is the same unit the viewer translates on demand, so it takes the same
+        // per-page lock. Without it the reader opening page 0 and the look-ahead reaching page 0 ran
+        // the whole pipeline twice on the same image at the same time — one of them then sat
+        // `queue=68s` behind the other for a result that was already being written.
+        val soloKey = group.singleOrNull()?.let { (index, _) -> "$mangaId/$chapterId/$index/$stamp" }
+        val soloLock = soloKey?.let { mutexFor(it) }
+        soloLock?.lock()
+        try {
         pageSlots.withPermit {
-            if (large) largeWorkSlots.acquire()
+            if (strip) stripSlots.acquire()
             try {
                 if (!workGate.allows(mangaId, generation) || !isEnabled(mangaId) || isRateLimited()) {
                     return@withPermit
+                }
+                // The other side may have finished it while this one waited for the lock.
+                group.singleOrNull()?.let { (index, _) ->
+                    if (cache.isCached(cache.pageFile(mangaId, chapterId, index, stamp))) {
+                        reportPagesHandled(1)
+                        return@withPermit
+                    }
                 }
                 val translated = translator.translateStrip(
                     group.map { it.second },
@@ -387,9 +413,12 @@ class TranslationManager(
                     logcat { "Pausing translation for ${FAILURE_PAUSE_SECONDS}s after repeated failures" }
                 }
             } finally {
-                if (large) largeWorkSlots.release()
+                if (strip) stripSlots.release()
                 group.forEach { (_, bitmap) -> bitmap.recycle() }
             }
+        }
+        } finally {
+            soloLock?.unlock()
         }
     }
 
@@ -728,21 +757,19 @@ class TranslationManager(
         /**
          * Pages translated at once.
          *
-         * Two was chosen when the loop awaited each group anyway, so it was never reached. With
-         * groups actually running concurrently this is what turns "eight seconds a page" into
-         * "eight seconds for four pages", and it is the whole of the speed answer: the provider
-         * call is the cost, and the only way to shorten it is to overlap it with other pages'.
+         * Two was chosen when the loop awaited each group anyway, so it was never reached; with
+         * groups actually launched it means something, and on a bound page — where the provider call
+         * is six to nineteen seconds against half a second on the device — overlapping is the whole
+         * of the speed answer.
          *
-         * Four is bounded by memory rather than by the endpoint — see [largeWorkSlots], which keeps
-         * webtoon strips at the old figure.
+         * Three rather than four, and one of the three is left for the page the reader is actually
+         * looking at: that page is translated on demand through [translatedPage], and if prefetch
+         * holds every permit it waits behind work for pages nobody has reached yet.
          */
-        const val MAX_PAGES_IN_FLIGHT = 4
+        const val MAX_PAGES_IN_FLIGHT = 3
 
-        /** Concurrency for stitched strips, whose bitmaps are an order of magnitude larger. */
-        const val MAX_LARGE_PAGES_IN_FLIGHT = 2
-
-        /** Above this, a group counts as large. An ordinary comic page sits well under it. */
-        const val LARGE_WORK_PIXELS = 8_000_000L
+        /** Strips are bound by the single-lane on-device stages, so more than one only queues. */
+        const val MAX_STRIPS_IN_FLIGHT = 1
 
         /**
          * Pixel budget for one stitched strip, and a page-count guard beside it.

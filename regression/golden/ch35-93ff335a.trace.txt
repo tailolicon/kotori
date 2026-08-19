@@ -1,5 +1,10 @@
 D/UndispatchedCoroutine: regression:ch35-93ff335a.jpg pipeline: original path (900x2215, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/PageTranslator: No balloon for Rect(155, 9616 - 515, 9772): best containment 15%
+D/PageTranslator: Grouped 1 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299394 pages=10 rendering 1/1 translated bubbles
+D/BubbleRenderer: Simple: Rect(155, 9616 - 515, 9772) textBlock=true vertical=false lines=3 bounds=Rect(168, 9622 - 502, 9766)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
+D/UndispatchedCoroutine: chapter=299394 pages=11 pipeline: original path (720x14000, script='en')
 D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
 D/PageTranslator: Merged 5 overlapping balloon detection(s)

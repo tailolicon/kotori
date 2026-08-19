@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg8-9c9986fa.jpg pipeline: original path (1280x13000, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Read 6 lettering region(s) from 14 line(s) as 'en'
 D/SimplePageReader:   region Rect(157, 1706 - 736, 1772): KAISCANS.COM
 D/SimplePageReader:   region Rect(666, 2442 - 1242, 2694): I NEED TO DEAL WITH / IT QUICKLY, IN CASE THE / CLIMBER APPEARS / AGAIN...
@@ -7,7 +7,7 @@ D/SimplePageReader:   region Rect(677, 6542 - 1255, 6608): KAISCANS.COM
 D/SimplePageReader:   region Rect(54, 6729 - 494, 6974): YOU FELL INTO MY / TRAP SO QUICKLY! / THAT TRAP REALLY / WORKED OUT!
 D/SimplePageReader:   region Rect(156, 10304 - 738, 10370): KAISCANS.COM
 D/SimplePageReader:   region Rect(348, 11947 - 988, 12234): MIDDLE LEVEL 2 MUTANT / [CLIMBERI / IS COMING!
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (168 chars); remembering it
 D/PageTranslator: Merged 29 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(157, 1706 - 736, 1772): best containment 16%

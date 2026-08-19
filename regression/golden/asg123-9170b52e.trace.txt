@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg123-9170b52e.jpg pipeline: original path (800x6655, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 7); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 11); leaving the script open
 D/SimplePageReader: Read 10 lettering region(s) from 43 line(s) as 'en'
 D/SimplePageReader:   region Rect(315, 144 - 588, 213): HM? IT ENDED SO / QUICKLY?
 D/SimplePageReader:   region Rect(219, 1364 - 621, 1432): IT SHOULD HAVE JUST / BEEN A PROBING BATTLE.
@@ -11,7 +11,7 @@ D/SimplePageReader:   region Rect(22, 4530 - 554, 4673): TO AVOID LETTING OTHER 
 D/SimplePageReader:   region Rect(46, 5182 - 458, 5288): CAPTAIN, THEN ISN'T / OUR BEST COOPERATION / PARTNER RIGHT NOW DNY?
 D/SimplePageReader:   region Rect(406, 5401 - 763, 5587): CORRECT, RIGHT NOW / DNY SHOULD BE THE / ONLY ONE WHO HASN'T / COOPERATED WITH / ANYONE.
 D/SimplePageReader:   region Rect(229, 6281 - 639, 6387): DNY'S STRENGTH ISN'T / TOO BAD, AND THEY POSE / NO THREAT TO US!
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (651 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=64, top=2145, right=391, bottom=2597, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NATIONAL WAR POINTS
 D/UndispatchedCoroutine: LEADERBOARO
 D/UndispatchedCoroutine: Y-COUNTRY: 27 MILUON

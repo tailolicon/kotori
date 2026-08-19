@@ -57,6 +57,19 @@ class PageTranslator(
      */
     private val localWork = Mutex()
 
+    /**
+     * What script the series being read is written in, once a page has established it.
+     *
+     * Held as the preference itself rather than a copy so it survives the reader being closed: a
+     * series is read over days, and re-probing on every session is the cost this exists to avoid.
+     */
+    @Volatile private var seriesScript: tachiyomi.core.common.preference.Preference<String>? = null
+
+    /** The reader moved to another series; its own remembered script applies from here. */
+    fun beginSeries(script: tachiyomi.core.common.preference.Preference<String>) {
+        seriesScript = script
+    }
+
     /** Thrown when the page simply has no dialogue to translate — not an error worth surfacing. */
     class NothingToTranslate : Exception("No speech bubbles found")
 
@@ -147,18 +160,24 @@ class PageTranslator(
         // Routing asks the page, and asks it twice: is this the shape of a bound page, and is it
         // written in Japanese. Shape alone is not enough — a webtoon slice is 676x952 and a manga
         // page is 900x1300 — and getting that wrong put webtoon credits pages through the balloon
-        // filler, which merged their columns into one grey block. The script probe reads a single
-        // band, and only pages that already passed the shape test ever pay for it.
+        // filler, which merged their columns into one grey block.
+        //
+        // The script comes from what this series has already been found to be written in, and is
+        // probed only when nothing is known yet. Probing every page cost three extra recogniser
+        // loads per page and, worse, could answer from bands that happened to hold no text.
+        val remembered = seriesScript?.get().orEmpty()
         val mayBeManga = MangaPipeline.mayHandle(
             source.width,
             source.height,
             currentProvider().displayName,
             currentProvider().supportsVisionOcr,
         )
-        val pageScript = if (mayBeManga) {
-            localWork.withLock { runCatching { simpleReader.probeScript(source) }.getOrDefault("") }
-        } else {
-            ""
+        val pageScript = when {
+            remembered.isNotBlank() -> remembered
+            !mayBeManga -> ""
+            else -> localWork.withLock {
+                runCatching { simpleReader.probeScript(source) }.getOrDefault("")
+            }.also { probed -> if (probed.isNotBlank()) seriesScript?.set(probed) }
         }
         val useMangaPort = MangaPipeline.shouldHandle(
             source.width,
@@ -221,7 +240,9 @@ class PageTranslator(
             // re-reading text the page pass had already read correctly.
             val renderStyle = preferences.renderStyle()
             if (renderStyle != TranslationRenderStyle.BUBBLE) {
-                val read = simpleReader.read(source, translationContext.sourceLanguage)
+                // The series' own script, when it has one. Blank falls through to the reader's
+                // probe, whose answer is remembered below so the next page pays nothing.
+                val read = simpleReader.read(source, remembered.ifBlank { translationContext.sourceLanguage })
                 val pageFormat = PageFormatDetector.detect(
                     source.width,
                     source.height,
@@ -229,10 +250,21 @@ class PageTranslator(
                 )
                 detectDoneAt = System.currentTimeMillis()
                 blocksDoneAt = detectDoneAt
+                // Remember the script only when the page actually read something. A page that is
+                // pure artwork returns the fallback, and writing that down would pin a whole
+                // Japanese series to the Latin recogniser on the evidence of one wordless page.
+                val readCharacters = read.texts.sumOf { text -> text.text.count { it.isLetterOrDigit() } }
+                if (
+                    read.language.isNotBlank() &&
+                    read.language != remembered &&
+                    readCharacters >= MIN_CHARACTERS_TO_TRUST_SCRIPT
+                ) {
+                    logcat { "This series reads as '${read.language}' ($readCharacters chars); remembering it" }
+                    seriesScript?.set(read.language)
+                }
                 read.language
                     .takeIf { it != translationContext.sourceLanguage }
                     ?.let { pageLanguage ->
-                        logcat { "Reading this page as '$pageLanguage' rather than the configured source" }
                         translationContext = translationContext.copy(sourceLanguage = pageLanguage)
                     }
                 val usable = read.boxes.indices.filterNot { index ->
@@ -1344,6 +1376,9 @@ class PageTranslator(
          * fifty percent more time on every page, plus duplicate readings of the same banner. The
          * floor stays.
          */
+        /** Characters a page must yield before its script is written down for the whole series. */
+        const val MIN_CHARACTERS_TO_TRUST_SCRIPT = 24
+
         const val MIN_RESCUE_CONFIDENCE = 0.35f
         /** Ceiling on re-reads per page, so a page of false positives cannot dominate its own cost. */
         const val MAX_RESCUE_BALLOONS = 8

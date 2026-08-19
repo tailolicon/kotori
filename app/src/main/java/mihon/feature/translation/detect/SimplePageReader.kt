@@ -47,14 +47,6 @@ import kotlin.math.roundToInt
 class SimplePageReader {
 
     /**
-     * Script the previous page probed as, tried first on the next one.
-     *
-     * Only ever an ordering hint: every candidate is still scored the same way, so a chapter that
-     * genuinely changes script is picked up on the page it changes.
-     */
-    private var lastProbeWinner: String? = null
-
-    /**
      * @param boxes one region per paragraph of lettering, in reading order
      * @param texts the recognised lines for the box at the same index
      * @param language the script the page turned out to be written in
@@ -71,7 +63,9 @@ class SimplePageReader {
         // page pass, and the guess used to come from a single app-wide setting — which is how a
         // Korean series carried on being read as Japanese after the reader left a Japanese one.
         val configured = if (sourceLanguage.isBlank() || sourceLanguage == AUTO) {
-            probeLanguage(bitmap)
+            // An inconclusive probe means "no opinion", not "Latin". Reading a page with the Latin
+            // recogniser on no evidence is how a Korean raw lost most of its balloons.
+            probeLanguage(bitmap).ifBlank { "en" }
         } else {
             sourceLanguage
         }
@@ -601,20 +595,15 @@ class SimplePageReader {
     fun probeScript(bitmap: Bitmap): String = probeLanguage(bitmap)
 
     private fun probeLanguage(bitmap: Bitmap): String {
-        val probe = probeBand(bitmap)
+        val probes = probeBands(bitmap)
         try {
-            var best = "en"
+            var best = ""
             var bestScore = 0
-            // Whatever the last page turned out to be, first. A chapter is written in one script, so
-            // after the first page the early exit below ends the probe on its first read instead of
-            // loading and running all three recognisers — measured at about four seconds a page on a
-            // 2069x2880 raw, which is most of what the probe costs.
-            val order = lastProbeWinner
-                ?.let { listOf(it) + CJK_PROBE_ORDER.filterNot { candidate -> candidate == it } }
-                ?: CJK_PROBE_ORDER
-            for (candidate in order) {
-                val score = withRecognizer(candidate) {
-                    scriptCharactersIn(readBand(it, probe, 0, padEdges = false), candidate)
+            for (candidate in CJK_PROBE_ORDER) {
+                val score = probes.sumOf { band ->
+                    withRecognizer(candidate) {
+                        scriptCharactersIn(readBand(it, band, 0, padEdges = false), candidate)
+                    }
                 }
                 if (score > bestScore) {
                     bestScore = score
@@ -623,15 +612,37 @@ class SimplePageReader {
                 if (score >= PROBE_CONFIDENT_CHARACTERS) break
             }
             if (bestScore < MIN_PROBE_CHARACTERS) {
-                logcat { "Probe found no CJK worth trusting (best $best scored $bestScore); reading as Latin" }
-                lastProbeWinner = null
-                return "en"
+                // Not "it must be Latin". A strip is fourteen thousand pixels tall and the bands may
+                // simply have landed on artwork; answering "en" here and remembering it is how a
+                // Korean raw got read end to end with the Latin recogniser and came back with most
+                // of its balloons missing. Say nothing, and let the caller's read-and-check settle
+                // it on evidence from the whole page.
+                logcat { "Probe inconclusive (best '$best' scored $bestScore); leaving the script open" }
+                return ""
             }
-            logcat { "Page reads best as '$best' ($bestScore ${best}-script chars on the probe band)" }
-            lastProbeWinner = best
+            logcat { "Page reads best as '$best' ($bestScore ${best}-script chars across the probe bands)" }
             return best
         } finally {
-            if (probe !== bitmap) probe.recycle()
+            probes.forEach { if (it !== bitmap) it.recycle() }
+        }
+    }
+
+    /**
+     * Bands to sample when nobody has said what script the page is in.
+     *
+     * A bound page gets one band from the middle, which is where its dialogue is. A webtoon strip
+     * gets several, spread down its length: one band out of fourteen thousand pixels is a sample of
+     * about six per cent of the page, and if it happens to land on artwork the probe sees nothing
+     * and the whole strip is then read with the wrong recogniser.
+     */
+    private fun probeBands(bitmap: Bitmap): List<Bitmap> {
+        if (bitmap.height <= BAND_HEIGHT) return listOf(bitmap)
+        val wanted = if (bitmap.height > BAND_HEIGHT * TALL_PAGE_BANDS) TALL_PAGE_BANDS else 1
+        if (wanted == 1) return listOf(probeBand(bitmap))
+        val usable = bitmap.height - BAND_HEIGHT
+        return (1..wanted).map { index ->
+            val top = (usable.toLong() * index / (wanted + 1)).toInt().coerceIn(0, usable)
+            Bitmap.createBitmap(bitmap, 0, top, bitmap.width, BAND_HEIGHT)
         }
     }
 
@@ -704,6 +715,9 @@ class SimplePageReader {
 
         /** Source-language value meaning "work it out from the page". */
         const val AUTO = "auto"
+
+        /** Bands sampled on a long strip before committing to a recogniser. */
+        const val TALL_PAGE_BANDS = 3
 
         /** Scripts to try when the configured one reads nothing off a page. */
         val SCRIPT_FALLBACK_ORDER = listOf("ja", "zh", "ko", "en")

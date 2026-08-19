@@ -194,6 +194,18 @@ class TranslationPreferences(
      * file that failed to delete (still open in the viewer) or was rewritten by in-flight work
      * cannot be served again.
      */
+    /**
+     * Script this series turned out to be written in, learned from its first translated page.
+     *
+     * Per series, which is the whole point — the app-wide setting it replaces kept the *previous*
+     * series' answer and read the new one through it. Remembering it also means the recogniser is
+     * chosen once rather than probed on every page: probing per page cost three extra ML Kit model
+     * loads a page, and on a long strip it could sample nothing but artwork and commit the whole
+     * chapter to the wrong script.
+     */
+    fun detectedLanguage(mangaId: Long): Preference<String> =
+        preferenceStore.getString("pref_translation_detected_lang_$mangaId", "")
+
     fun cacheGeneration(mangaId: Long): Preference<Int> =
         preferenceStore.getInt("pref_translation_cache_gen_$mangaId", 0)
 

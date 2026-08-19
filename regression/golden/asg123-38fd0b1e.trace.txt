@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg pipeline: original path (800x6350, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 5); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 10); leaving the script open
 D/SimplePageReader: Read 10 lettering region(s) from 44 line(s) as 'en'
 D/SimplePageReader:   region Rect(346, 871 - 778, 1095): BUT THE COUNTRIES / THAT ENTERED EARLIER / HAVE ALREADY FORMED / SOME ALLIANCES/ WE / ABSOLUTELY CANNOT / BE CARELESS!
 D/SimplePageReader:   region Rect(112, 1131 - 627, 1394): BEFORE FACING OUR / ULTIMATE OPPONENT, / Y-COUNTRY WE MUST / PRESERVE OUR STRENGTH! / IT IS SAFEST IE WE CAN / FIND ANOTHER ALLY TO JoIN / FORCES WITH!
@@ -11,7 +11,7 @@ D/SimplePageReader:   region Rect(340, 3934 - 696, 4043): THIS GUESS BY NANDA / 
 D/SimplePageReader:   region Rect(344, 4813 - 784, 4955): BESIDES BEING SMART, / IT'S ALSO POSSIBLE THEY / DIDN'T RECEIVE NEWS FROM / THE TRAITORS BACK HOME..
 D/SimplePageReader:   region Rect(22, 5433 - 465, 5577): AFTER ALL, HUAXIA'S / STRENGTH IN PAST / NATIONAL WARS WAS INDEED / NOT WEAK...
 D/SimplePageReader:   region Rect(94, 6130 - 337, 6166): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (736 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=168, top=1660, right=679, bottom=1710, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NATIDNAL WAR POINTS LEADERBOARO
 D/PageTranslator: Merged 28 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read

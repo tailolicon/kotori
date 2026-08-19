@@ -1,5 +1,30 @@
 D/UndispatchedCoroutine: regression:kd53-783d728c.jpg pipeline: original path (800x14475, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Dropping 7 as noise rather than dialogue
+D/SimplePageReader: Read 19 lettering region(s) from 55 line(s) as 'en'
+D/SimplePageReader:   region Rect(283, 234 - 523, 408): HEY. HOW / MANY TIMES / A WEEK DO / YOU JERK / OFF?
+D/SimplePageReader:   region Rect(344, 2620 - 572, 2683): o.. WHAT?
+D/SimplePageReader:   region Rect(247, 3166 - 543, 3419): THE 15T / DAEHAN / INTERNATIONAL / HIGH / SCHOOL / GRADUATION / CEREMONY
+D/SimplePageReader:   region Rect(375, 4228 - 720, 4286): IAHGA1SFXEOM
+D/SimplePageReader:   region Rect(211, 4347 - 393, 4445): HUH? / M-ME?
+D/SimplePageReader:   region Rect(431, 5557 - 587, 5642): YEAH, / YOU-!!
+D/SimplePageReader:   region Rect(122, 6232 - 402, 6359): DOING IT / BY / YOURSELF~
+D/SimplePageReader:   region Rect(422, 6444 - 664, 6567): UH... I HOPE THAT / EVEN AFTER / GRADUATION, YOU / REMAIN UPRIGHT / AND PROUD..
+D/SimplePageReader:   region Rect(456, 7474 - 583, 7548): HOW / MANY
+D/SimplePageReader:   region Rect(92, 7715 - 373, 7859): ...AND BECOME / WONDERFUL / DESCENDANTS OF / DAEHAN / INTERNATIONAL HIGH/ / SCHOOL.
+D/SimplePageReader:   region Rect(322, 7916 - 514, 7989): PARK JI-MIN IS / SO HILARIOUS, / LOL.
+D/SimplePageReader:   region Rect(400, 8860 - 720, 8909): MAMGA1 SFX.COM
+D/SimplePageReader:   region Rect(135, 8881 - 342, 8930): -TIMES DO YOU / STROKE IT~
+D/SimplePageReader:   region Rect(491, 9360 - 628, 9413): YOU LITTLE / BRAT!!!
+D/SimplePageReader:   region Rect(352, 10286 - 575, 10387): -PER / WEEK~!?
+D/SimplePageReader:   region Rect(255, 11405 - 551, 11455): IAJ MA
+D/SimplePageReader:   region Rect(163, 12681 - 438, 12799): HEY, PARK / JI-MÍN. ASK / THAT LATER.
+D/SimplePageReader:   region Rect(395, 12963 - 596, 13031): EVERYONE / IS HERE.
+D/SimplePageReader:   region Rect(540, 13088 - 683, 13192): OUR / PARENTS / ARE HERE, / TOO.
+D/UndispatchedCoroutine: Dropped BubbleBox(left=255, top=11405, right=551, bottom=11455, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: IAJ MA
+D/BubbleDetector: Kept 43 unsupported bubble(s) from strip detection
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
 D/SimplePageReader: Not one paragraph: Rect(38, 144 - 758, 268) + Rect(29, 396 - 770, 478) — type 124 vs 35, same paper: true
 D/SimplePageReader: Read 6 lettering region(s) from 11 line(s) as 'en'
 D/SimplePageReader:   region Rect(9, 139 - 787, 273): AWARNING!
@@ -8,10 +33,39 @@ D/SimplePageReader:   region Rect(51, 573 - 732, 663): PLEASE AEAD THIS SERIES O
 D/SimplePageReader:   region Rect(1, 725 - 773, 869): TO SUAPOAT US IN CONTINUiNG TO PUBLISH / MORE AMAZING SERIES WITH THE BEST ADSSIBLE / QUALİTY AND TRANSLATiON
 D/SimplePageReader:   region Rect(477, 933 - 791, 972): - THUNDERSCANS TEAM
 D/SimplePageReader:   region Rect(83, 4561 - 296, 4593): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (250 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=9, top=139, right=787, bottom=273, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AWARNING!
+D/UndispatchedCoroutine: Recovered Rect(248, 11389 - 547, 11473): ALJ mA
+D/PageTranslator: No balloon for Rect(247, 3166 - 543, 3419): best containment 64%
+D/PageTranslator: No balloon for Rect(375, 4228 - 720, 4286): best containment 59%
+D/PageTranslator: Ignoring oversized balloon Rect(44, 6096 - 702, 6590) for Rect(422, 6444 - 664, 6567)
+D/PageTranslator: No balloon for Rect(400, 8860 - 720, 8909): best containment 44%
+D/PageTranslator: Grouped 19 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299393 pages=15, 16, 17 rendering 19/19 translated bubbles
+D/BubbleRenderer: Simple: Rect(247, 3166 - 543, 3419) textBlock=true vertical=false lines=7 bounds=Rect(258, 3175 - 532, 3410)
+D/BubbleRenderer: Simple: Rect(283, 234 - 523, 408) textBlock=true vertical=false lines=5 bounds=Rect(292, 240 - 514, 402)
+D/BubbleRenderer: Simple: Rect(92, 7715 - 373, 7859) textBlock=true vertical=false lines=6 bounds=Rect(102, 7720 - 363, 7854)
+D/BubbleRenderer: Simple: Rect(122, 6232 - 402, 6359) textBlock=true vertical=false lines=3 bounds=Rect(132, 6237 - 392, 6354)
+D/BubbleRenderer: Simple: Rect(163, 12681 - 438, 12799) textBlock=true vertical=false lines=3 bounds=Rect(173, 12685 - 428, 12795)
+D/BubbleRenderer: Simple: Rect(422, 6444 - 664, 6567) textBlock=true vertical=false lines=5 bounds=Rect(431, 6449 - 655, 6562)
+D/BubbleRenderer: Simple: Rect(248, 11389 - 547, 11473) textBlock=false vertical=false lines=1 bounds=Rect(322, 11403 - 549, 11450)
+D/BubbleRenderer: Simple: Rect(352, 10286 - 575, 10387) textBlock=true vertical=false lines=2 bounds=Rect(360, 10290 - 567, 10383)
+D/BubbleRenderer: Simple: Rect(375, 4228 - 720, 4286) textBlock=true vertical=false lines=1 bounds=Rect(388, 4232 - 708, 4282)
+D/BubbleRenderer: Simple: Rect(211, 4347 - 393, 4445) textBlock=true vertical=false lines=2 bounds=Rect(218, 4351 - 386, 4441)
+D/BubbleRenderer: Simple: Rect(400, 8860 - 720, 8909) textBlock=true vertical=false lines=1 bounds=Rect(412, 8864 - 708, 8905)
+D/BubbleRenderer: Simple: Rect(540, 13088 - 683, 13192) textBlock=true vertical=false lines=4 bounds=Rect(545, 13092 - 678, 13188)
+D/BubbleRenderer: Simple: Rect(344, 2620 - 572, 2683) textBlock=true vertical=false lines=1 bounds=Rect(352, 2624 - 564, 2679)
+D/BubbleRenderer: Simple: Rect(322, 7916 - 514, 7989) textBlock=true vertical=false lines=3 bounds=Rect(329, 7920 - 507, 7985)
+D/BubbleRenderer: Simple: Rect(395, 12963 - 596, 13031) textBlock=true vertical=false lines=2 bounds=Rect(402, 12967 - 589, 13027)
+D/BubbleRenderer: Simple: Rect(431, 5557 - 587, 5642) textBlock=true vertical=false lines=2 bounds=Rect(437, 5561 - 581, 5638)
+D/BubbleRenderer: Simple: Rect(135, 8881 - 342, 8930) textBlock=true vertical=false lines=2 bounds=Rect(143, 8885 - 334, 8926)
+D/BubbleRenderer: Simple: Rect(456, 7474 - 583, 7548) textBlock=true vertical=false lines=2 bounds=Rect(461, 7478 - 578, 7544)
+D/BubbleRenderer: Simple: Rect(491, 9360 - 628, 9413) textBlock=true vertical=false lines=2 bounds=Rect(496, 9364 - 623, 9409)
 D/PageTranslator: Merged 28 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
+D/PageTranslator: Stitched 3 pages into 720x13885 strip
+D/UndispatchedCoroutine: chapter=299393 pages=18, 19, 20 pipeline: original path (720x13885, script='en')
 D/PageTranslator: No balloon for Rect(0, 392 - 800, 482): best containment 4%
 D/PageTranslator: No balloon for Rect(51, 573 - 732, 663): best containment 12%
 D/PageTranslator: No balloon for Rect(1, 725 - 773, 869): best containment 7%

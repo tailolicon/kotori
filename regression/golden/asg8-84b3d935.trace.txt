@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best zh scored 2); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'zh' scored 3); leaving the script open
 D/SimplePageReader: Not one paragraph: Rect(630, 6789 - 1230, 6854) + Rect(30, 6920 - 900, 7055) — type 65 vs 27, same paper: false
 D/SimplePageReader: Read 7 lettering region(s) from 17 line(s) as 'en'
 D/SimplePageReader:   region Rect(605, 1945 - 1254, 2018): KAISCANS.COM
@@ -9,7 +9,7 @@ D/SimplePageReader:   region Rect(606, 6785 - 1254, 6858): KAISCANS.COM
 D/SimplePageReader:   region Rect(0, 6915 - 932, 7060): TL/N: THE DARKNESS UNDER THE LAMP PORTRAYS THAT BEFORE / ELECTRIC LIGHT, WITH THE LAMP USING BOWL S, DISHES OR OTHER / ITEMS, THERE WAS ALWAYS A DARKNESS CREATED BY THE LAMP / RIGHT UNDER IT, A REGION WHERE THE LIGHT DIDN'T REACH.
 D/SimplePageReader:   region Rect(568, 7466 - 1152, 7647): BUT THE TIMING OF / /TS CHARGED ATTACK IS / UNPREDICTABLE!
 D/SimplePageReader:   region Rect(180, 9988 - 828, 10060): KAISCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (405 chars); remembering it
 D/PageTranslator: Merged 13 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(605, 1945 - 1254, 2018): best containment 9%

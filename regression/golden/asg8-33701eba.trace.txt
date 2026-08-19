@@ -1,11 +1,11 @@
 D/UndispatchedCoroutine: regression:asg8-33701eba.jpg pipeline: original path (1280x8730, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Read 4 lettering region(s) from 5 line(s) as 'en'
 D/SimplePageReader:   region Rect(623, 2321 - 1254, 2392): KAISCANS.COM
 D/SimplePageReader:   region Rect(86, 3258 - 670, 3378): A HIDDEN ELITE MUTANT / ACTUALLY APPEARED!
 D/SimplePageReader:   region Rect(169, 4634 - 801, 4706): KAISCANS.COM
 D/SimplePageReader:   region Rect(619, 7856 - 1216, 7940): KAISCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (67 chars); remembering it
 D/PageTranslator: Merged 6 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(623, 2321 - 1254, 2392): best containment 11%

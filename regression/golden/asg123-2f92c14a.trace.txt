@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg123-2f92c14a.jpg pipeline: original path (800x6930, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
 D/SimplePageReader: Read 9 lettering region(s) from 26 line(s) as 'en'
 D/SimplePageReader:   region Rect(394, 81 - 735, 223): IS IT REALLY / OKAY TO LEAVE LORD / YE NING ALONE IN THE / SKYSCRAPER?
 D/SimplePageReader:   region Rect(106, 922 - 523, 1109): LORD YE NING HAS / CONTROLLED THREE / COUNTRIES UNDER HIM, / AND ALSO DECEIVED FOUR / COUNTRIES...
@@ -10,7 +10,7 @@ D/SimplePageReader:   region Rect(447, 3451 - 740, 3727): 73F
 D/SimplePageReader:   region Rect(67, 4329 - 355, 4398): EVIL GOD RITUAL / FULL POWER!
 D/SimplePageReader:   region Rect(426, 5321 - 679, 5362): ALTARS- RISE!
 D/SimplePageReader:   region Rect(96, 6722 - 339, 6758): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (383 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=447, top=3451, right=740, bottom=3727, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 73F
 D/PageTranslator: Merged 11 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 3 balloon(s) the page pass could not read

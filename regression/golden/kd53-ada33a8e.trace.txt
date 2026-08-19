@@ -1,5 +1,49 @@
 D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg pipeline: original path (800x11498, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
+D/SimplePageReader: Read 14 lettering region(s) from 48 line(s) as 'en'
+D/SimplePageReader:   region Rect(91, 108 - 656, 272): GLASS)MATES
+D/SimplePageReader:   region Rect(150, 1230 - 581, 1307): AFTERWARD, PARK JI-MIN / HEADED BACK FIRST, LOOKING / COMPLETELY EXHILARATED.
+D/SimplePageReader:   region Rect(433, 1581 - 650, 1682): KKOJJIMO~ / SEE YOU / LATER!
+D/SimplePageReader:   region Rect(182, 4035 - 548, 4125): I HEADED DOWN TO / THE BEACH TO / COMPLETE MY QUEST.
+D/SimplePageReader:   region Rect(124, 5129 - 612, 5322): SURVIVAL ON A l| / DESERTED ISLAND. / DESCRIPTION: CATCH / 10 CLAMS (HARD / CLAMS), (O/10)
+D/SimplePageReader:   region Rect(267, 5380 - 455, 5445): REWARD: 1 / POINT
+D/SimplePageReader:   region Rect(165, 5690 - 428, 5775): 'SURVIVAL ONA / DESERTED / ISLAND'... I SEE.
+D/SimplePageReader:   region Rect(349, 6219 - 532, 6381): SO THIS / REALLY IS / A / DESERTED / ISLAND.
+D/SimplePageReader:   region Rect(176, 8297 - 452, 8555): I GUESS IF I / SUCCEED IN / 'SURVIVING, / THEY'LL SEND / ME BACK TO / MY ORIGINAL / WORLD.
+D/SimplePageReader:   region Rect(398, 8840 - 720, 8891): MANGALSFX.COM
+D/SimplePageReader:   region Rect(273, 9158 - 603, 9252): THERE SEEM TO BE / PLENTY OF CLAMS / AROUND, BUT...
+D/SimplePageReader:   region Rect(492, 9287 - 708, 9423): WHICH OF / THESE ARE / ACTUALLY / HARD CLAMS?
+D/SimplePageReader:   region Rect(219, 11020 - 409, 11176): I HAVE / NO IDEA / WHICH IS / WHICH.
+D/SimplePageReader:   region Rect(302, 13282 - 565, 13426): IS THIS A / HARD CLAM? / HMM, OR / NOT?
+D/UndispatchedCoroutine: Dropped BubbleBox(left=91, top=108, right=656, bottom=272, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: GLASS)MATES
+D/BubbleDetector: Kept 138 unsupported bubble(s) from strip detection
+D/PageTranslator: Merged 19 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 5 balloon(s) the page pass could not read
+D/UndispatchedCoroutine: Recovered Rect(36, 13 - 707, 435): UEALLH / GLASSMAJES / E
+D/PageTranslator: No balloon for Rect(349, 6219 - 532, 6381): best containment 42%
+D/PageTranslator: Ignoring oversized balloon Rect(0, 8258 - 715, 9210) for Rect(176, 8297 - 452, 8555)
+D/PageTranslator: Ignoring oversized balloon Rect(24, 10868 - 593, 11319) for Rect(219, 11020 - 409, 11176)
+D/PageTranslator: Ignoring oversized balloon Rect(22, 12683 - 678, 13714) for Rect(302, 13282 - 565, 13426)
+D/PageTranslator: Grouped 13 region(s) by balloon, joining 1 that shared one
+D/UndispatchedCoroutine: chapter=299393 pages=27, 28, 29 rendering 13/13 translated bubbles
+D/BubbleRenderer: Simple: Rect(36, 13 - 707, 435) textBlock=false vertical=false lines=1 bounds=Rect(131, 150 - 346, 255)
+D/BubbleRenderer: Simple: BubbleBox(left=36, top=13, right=707, bottom=435, confidence=0.8149131, isTextBlock=false, isFallbackTextBlock=false) paper and lettering were not separable
+D/BubbleRenderer: Simple: Rect(124, 5129 - 612, 5322) textBlock=true vertical=false lines=5 bounds=Rect(142, 5136 - 594, 5315)
+D/BubbleRenderer: Simple: Rect(176, 8297 - 452, 8555) textBlock=true vertical=false lines=8 bounds=Rect(186, 8307 - 708, 8887)
+D/BubbleRenderer: Simple: Rect(302, 13282 - 565, 13426) textBlock=true vertical=false lines=4 bounds=Rect(312, 13287 - 555, 13421)
+D/BubbleRenderer: Simple: Rect(150, 1230 - 581, 1307) textBlock=true vertical=false lines=3 bounds=Rect(166, 1234 - 565, 1303)
+D/BubbleRenderer: Simple: Rect(182, 4035 - 548, 4125) textBlock=true vertical=false lines=3 bounds=Rect(196, 4039 - 534, 4121)
+D/BubbleRenderer: Simple: Rect(273, 9158 - 603, 9252) textBlock=true vertical=false lines=3 bounds=Rect(285, 9162 - 591, 9248)
+D/BubbleRenderer: Simple: Rect(349, 6219 - 532, 6381) textBlock=true vertical=false lines=5 bounds=Rect(356, 6225 - 525, 6375)
+D/BubbleRenderer: Simple: Rect(219, 11020 - 409, 11176) textBlock=true vertical=false lines=4 bounds=Rect(226, 11026 - 402, 11170)
+D/BubbleRenderer: Simple: Rect(492, 9287 - 708, 9423) textBlock=true vertical=false lines=4 bounds=Rect(500, 9292 - 700, 9418)
+D/BubbleRenderer: Simple: Rect(165, 5690 - 428, 5775) textBlock=true vertical=false lines=3 bounds=Rect(175, 5694 - 418, 5771)
+D/BubbleRenderer: Simple: Rect(433, 1581 - 650, 1682) textBlock=true vertical=false lines=3 bounds=Rect(441, 1585 - 642, 1678)
+D/BubbleRenderer: Simple: Rect(267, 5380 - 455, 5445) textBlock=true vertical=false lines=2 bounds=Rect(274, 5384 - 448, 5441)
+D/BubbleRenderer: Simple: BubbleBox(left=267, top=5380, right=455, bottom=5445, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) paper and lettering were not separable
+D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
+D/PageTranslator: Stitched 3 pages into 720x13901 strip
+D/UndispatchedCoroutine: chapter=299393 pages=30, 31, 32 pipeline: original path (720x13901, script='en')
 D/SimplePageReader: Read 11 lettering region(s) from 32 line(s) as 'en'
 D/SimplePageReader:   region Rect(140, 243 - 684, 381): BO0OM!!
 D/SimplePageReader:   region Rect(83, 2058 - 296, 2090): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
@@ -12,7 +56,7 @@ D/SimplePageReader:   region Rect(220, 7019 - 625, 7213): BESIDES, / ADAPTING TO
 D/SimplePageReader:   region Rect(147, 8511 - 654, 8597): [SPIRIT TRANSFERI
 D/SimplePageReader:   region Rect(167, 9704 - 633, 9995): AN ABILITY / BRANGH THAT ALOWS / THE USER TO SWITGH / BODIES,
 D/SimplePageReader:   region Rect(115, 11273 - 683, 11418): AND IZEL HALIFA 'S UNIQUE / SHEDDING TECHNIQUE.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (388 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=140, top=243, right=684, bottom=381, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: BO0OM!!
 D/UndispatchedCoroutine: Dropped BubbleBox(left=147, top=8511, right=654, bottom=8597, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: [SPIRIT TRANSFERI
 D/UndispatchedCoroutine: Dropped BubbleBox(left=167, top=9704, right=633, bottom=9995, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AN ABILITY

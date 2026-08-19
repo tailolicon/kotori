@@ -121,6 +121,22 @@ class DecorativeTextGuardTest {
     }
 
     @Test
+    fun `a squarish chinese caption box is dialogue, not a logo`() {
+        // The logo rule must not reach caption boxes: a balloon dropped here is never translated
+        // and never drawn, which the reader sees as the app skipping dialogue.
+        assertFalse(
+            DecorativeTextGuard.shouldDrop(
+                isTextBlock = true,
+                text = "我不同意",
+                lineHeights = listOf(74),
+                boxWidth = 220,
+                boxHeight = 160,
+                pageWidth = 800,
+            ),
+        )
+    }
+
+    @Test
     fun `short korean in title type is still dialogue`() {
         // Korean captions carry very short spoken lines at display size; the raised floor is for
         // Han on its own, never for Hangul.

@@ -1,5 +1,6 @@
 D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg pipeline: original path (900x3102, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
+D/SimplePageReader:   region Rect(155, 9616 - 515, 9772): I.. I GAME / INSIDE... PARK / JIMIN...
 D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
 D/PageTranslator: Merged 1 overlapping balloon detection(s)

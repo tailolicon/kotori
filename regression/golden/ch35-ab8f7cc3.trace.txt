@@ -1,11 +1,51 @@
 D/UndispatchedCoroutine: regression:ch35-ab8f7cc3.jpg pipeline: original path (900x16000, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Dropping 1 as noise rather than dialogue
+D/SimplePageReader: Read 11 lettering region(s) from 32 line(s) as 'en'
+D/SimplePageReader:   region Rect(132, 358 - 586, 491): IVE FILLED THIS / WOMAN COMPLETELY / WITH MY CUM.
+D/SimplePageReader:   region Rect(100, 2740 - 430, 2940): YOU FUCKING / VIRGIN! WHAT / THE FUCK?!
+D/SimplePageReader:   region Rect(330, 3038 - 639, 3210): HOW IS YOUR / COCK SO HARD / RIGHT AFTER / CUMMING?!
+D/SimplePageReader:   region Rect(36, 3806 - 692, 3962): I THOUGHT YOU WERE / SOMEONE I COULD NEVER / POSSIBLY REACH.
+D/SimplePageReader:   region Rect(148, 4622 - 395, 4754): HEY YOU / COMMONER / LOSER!
+D/SimplePageReader:   region Rect(480, 5443 - 609, 5488): BVLGAM
+D/SimplePageReader:   region Rect(297, 6286 - 620, 6447): DO THAT THING / YOU DID BEFORE / AGAIN OL! IT'S / HILARIOUS.
+D/SimplePageReader:   region Rect(86, 7661 - 628, 7853): YOU'RE SOMEONE / FROM A DIFFERENT / WORLD;
+D/SimplePageReader:   region Rect(162, 10033 - 586, 10192): ST-STAY AWAY / FROM ME!
+D/SimplePageReader:   region Rect(32, 10790 - 688, 10897): BECAUSE THE NORLD IS / INHERENTLY UNFAIR.
+D/SimplePageReader:   region Rect(152, 11565 - 461, 11690): HEY / I TOLD YOU TO / LICK IT.
+D/PageTranslator: Merged 74 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(132, 358 - 586, 491): best containment 0%
+D/PageTranslator: No balloon for Rect(36, 3806 - 692, 3962): best containment 3%
+D/PageTranslator: No balloon for Rect(148, 4622 - 395, 4754): best containment 63%
+D/PageTranslator: No balloon for Rect(480, 5443 - 609, 5488): best containment 67%
+D/PageTranslator: No balloon for Rect(297, 6286 - 620, 6447): best containment 18%
+D/PageTranslator: No balloon for Rect(86, 7661 - 628, 7853): best containment 3%
+D/PageTranslator: No balloon for Rect(162, 10033 - 586, 10192): best containment 63%
+D/PageTranslator: No balloon for Rect(32, 10790 - 688, 10897): best containment 42%
+D/PageTranslator: No balloon for Rect(152, 11565 - 461, 11690): best containment 15%
+D/PageTranslator: Grouped 11 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299394 pages=12 rendering 11/11 translated bubbles
+D/BubbleRenderer: Simple: Rect(86, 7661 - 628, 7853) textBlock=true vertical=false lines=3 bounds=Rect(106, 7668 - 608, 7846)
+D/BubbleRenderer: Simple: Rect(36, 3806 - 692, 3962) textBlock=true vertical=false lines=3 bounds=Rect(60, 3812 - 668, 3956)
+D/BubbleRenderer: Simple: Rect(32, 10790 - 688, 10897) textBlock=true vertical=false lines=2 bounds=Rect(56, 10794 - 664, 10893)
+D/BubbleRenderer: Simple: Rect(162, 10033 - 586, 10192) textBlock=true vertical=false lines=2 bounds=Rect(178, 10039 - 570, 10186)
+D/BubbleRenderer: Simple: Rect(100, 2740 - 430, 2940) textBlock=true vertical=false lines=3 bounds=Rect(112, 2747 - 418, 2933)
+D/BubbleRenderer: Simple: Rect(132, 358 - 586, 491) textBlock=true vertical=false lines=3 bounds=Rect(149, 363 - 569, 486)
+D/BubbleRenderer: Simple: Rect(330, 3038 - 639, 3210) textBlock=true vertical=false lines=4 bounds=Rect(341, 3044 - 628, 3204)
+D/BubbleRenderer: Simple: Rect(297, 6286 - 620, 6447) textBlock=true vertical=false lines=4 bounds=Rect(309, 6292 - 608, 6441)
+D/BubbleRenderer: Simple: Rect(152, 11565 - 461, 11690) textBlock=true vertical=false lines=3 bounds=Rect(163, 11570 - 450, 11685)
+D/BubbleRenderer: Simple: Rect(148, 4622 - 395, 4754) textBlock=true vertical=false lines=3 bounds=Rect(157, 4627 - 386, 4749)
+D/BubbleRenderer: Simple: Rect(480, 5443 - 609, 5488) textBlock=true vertical=false lines=1 bounds=Rect(485, 5447 - 604, 5484)
+D/BubbleRenderer: bubble=BubbleBox(left=480, top=5443, right=609, bottom=5488, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 804 surviving px of original lettering
+D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
+D/UndispatchedCoroutine: chapter=299394 pages=13 pipeline: original path (720x13020, script='en')
 D/SimplePageReader: Read 4 lettering region(s) from 13 line(s) as 'en'
 D/SimplePageReader:   region Rect(99, 12690 - 451, 12871): VERY / FAINT WIND / MAGIC...
 D/SimplePageReader:   region Rect(68, 14107 - 626, 14291): BUT WITH / DELICATE CONTROL / AND WITHOUT A SINGLE / BIT OF WASTE,
 D/SimplePageReader:   region Rect(463, 14443 - 807, 14589): SHE / EVADED THAT / BARRAGE.
 D/SimplePageReader:   region Rect(219, 15258 - 683, 15388): ON TOP OF / THAT, PRECISE MANA / DETECTION.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (118 chars); remembering it
 D/PageTranslator: Merged 4 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(99, 12690 - 451, 12871): best containment 12%

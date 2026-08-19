@@ -1,5 +1,26 @@
 D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 4); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 7); leaving the script open
+D/SimplePageReader: Read 5 lettering region(s) from 15 line(s) as 'en'
+D/SimplePageReader:   region Rect(237, 7599 - 576, 7751): GrGET / OFF ME!!
+D/SimplePageReader:   region Rect(123, 8088 - 582, 8380): o / GrGET OFF / ME RIGHT NOW, / YOU FUCKING / BASTARD!
+D/SimplePageReader:   region Rect(188, 11279 - 370, 11388): SORRY, / JIMIN.
+D/SimplePageReader:   region Rect(352, 11461 - 620, 11608): I JUST / COULDNT / HOLD BACK.
+D/SimplePageReader:   region Rect(145, 13316 - 438, 13460): SHUT UP / YOU FUCKING / BASTARD...!
+D/PageTranslator: Merged 5 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(237, 7599 - 576, 7751): best containment 0%
+D/PageTranslator: No balloon for Rect(123, 8088 - 582, 8380): best containment 19%
+D/PageTranslator: No balloon for Rect(188, 11279 - 370, 11388): best containment 31%
+D/PageTranslator: No balloon for Rect(352, 11461 - 620, 11608): best containment 12%
+D/PageTranslator: Grouped 5 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299394 pages=6 rendering 5/5 translated bubbles
+D/BubbleRenderer: Simple: Rect(123, 8088 - 582, 8380) textBlock=true vertical=false lines=5 bounds=Rect(140, 8099 - 565, 8369)
+D/BubbleRenderer: Simple: Rect(237, 7599 - 576, 7751) textBlock=true vertical=false lines=2 bounds=Rect(250, 7605 - 563, 7745)
+D/BubbleRenderer: Simple: Rect(145, 13316 - 438, 13460) textBlock=true vertical=false lines=3 bounds=Rect(156, 13321 - 427, 13455)
+D/BubbleRenderer: Simple: Rect(352, 11461 - 620, 11608) textBlock=true vertical=false lines=3 bounds=Rect(362, 11466 - 610, 11603)
+D/BubbleRenderer: Simple: Rect(188, 11279 - 370, 11388) textBlock=true vertical=false lines=2 bounds=Rect(195, 11283 - 363, 11384)
+D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
+D/UndispatchedCoroutine: chapter=299394 pages=7 pipeline: original path (720x12380, script='en')
 D/SimplePageReader: Read 11 lettering region(s) from 41 line(s) as 'en'
 D/SimplePageReader:   region Rect(79, 247 - 819, 489): MY FATHER... / HAS NO INTEREST IN MY / MAGICAL ACHIEVEMENTS / THEMSELVES.
 D/SimplePageReader:   region Rect(50, 2208 - 580, 2419): AS LONG AS I / SERVE MY PURPOSE / FOR THE HOUSE / LIKE THIS,
@@ -12,7 +33,7 @@ D/SimplePageReader:   region Rect(224, 10143 - 810, 10382): ...TOWARD THE / SERV
 D/SimplePageReader:   region Rect(127, 11813 - 774, 12101): WHAT ABOUT / THE YOU WHO DEPICTS / SIR ROBAIN'S LOVE / MORE SENSITIVELY / THAN ANYONE?
 D/SimplePageReader:   region Rect(136, 13825 - 652, 14146): WHAT / ABOUT THE / YOU WHo SMILES / WHILE LEARNING / MAGIC..
 D/SimplePageReader:   region Rect(277, 14379 - 789, 14523): ...WITHOUT / REALIZING IT?
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (414 chars); remembering it
 D/PageTranslator: Merged 11 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(79, 247 - 819, 489): best containment 3%
@@ -39,3 +60,12 @@ D/BubbleRenderer: Simple: Rect(303, 2614 - 807, 2814) textBlock=true vertical=fa
 D/BubbleRenderer: Simple: Rect(76, 9730 - 509, 9942) textBlock=true vertical=false lines=4 bounds=Rect(92, 9738 - 493, 9934)
 D/BubbleRenderer: Simple: Rect(277, 14379 - 789, 14523) textBlock=true vertical=false lines=2 bounds=Rect(296, 14384 - 770, 14518)
 D/BubbleRenderer: Simple: Rect(259, 3478 - 640, 3619) textBlock=true vertical=false lines=2 bounds=Rect(273, 3483 - 626, 3614)
+D/SimplePageReader: Dropping l.. as noise rather than dialogue
+D/SimplePageReader: Read 7 lettering region(s) from 26 line(s) as 'en'
+D/SimplePageReader:   region Rect(186, 93 - 418, 285): JIMIN. / KEEP IT / DOWN.
+D/SimplePageReader:   region Rect(253, 422 - 649, 704): YOU DONT / WANT THE OTHERS / TO FIND OUT YOU / HAD SEX WITH / ME EITHER, / RIGHT?
+D/SimplePageReader:   region Rect(316, 2678 - 649, 2834): DON'T / GIVE ME THAT / SHIT..
+D/SimplePageReader:   region Rect(133, 6788 - 535, 6935): VGH.. IM / ALREADY ABOUT / TO CUM.
+D/SimplePageReader:   region Rect(277, 8396 - 679, 8566): ARE YOU / EVEN LISTENING / TO ME?
+D/SimplePageReader:   region Rect(146, 9504 - 497, 9666): RIGHT NOW / THIS SNOW-WHITE / SKIN, THAT SOFT / BODY
+D/SimplePageReader:   region Rect(261, 11817 - 585, 11964): THOSE / SHARP LITTLE / MOANS...

@@ -1,9 +1,9 @@
 D/UndispatchedCoroutine: regression:ch35-d2448b25.jpg pipeline: original path (900x1478, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
 D/SimplePageReader: Read 2 lettering region(s) from 8 line(s) as 'en'
 D/SimplePageReader:   region Rect(124, 320 - 626, 567): I DON'T CARE / WHAT HAPPENS / TO THE DENISE / OF VELTUS.
 D/SimplePageReader:   region Rect(244, 790 - 800, 1014): THE ONE / I'M ROOTING FOR / IS SIMPLY THE GIRL / NAMED DENISE.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (83 chars); remembering it
 D/PageTranslator: Merged 2 overlapping balloon detection(s)
 D/PageTranslator: No balloon for Rect(124, 320 - 626, 567): best containment 8%
 D/PageTranslator: Grouped 2 region(s) by balloon

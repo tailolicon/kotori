@@ -1,19 +1,21 @@
 D/UndispatchedCoroutine: regression:jpraw-99877464.jpg pipeline: original path (900x1300, script='not probed')
-D/SimplePageReader: Page reads best as 'ja' (59 ja-script chars on the probe band)
+D/SimplePageReader: Page reads best as 'ja' (59 ja-script chars across the probe bands)
 D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'ja'
 D/SimplePageReader:   region Rect(114, 175 - 395, 267): 巨竜神を前に成す術なし一!?
 D/SimplePageReader:   region Rect(534, 172 - 771, 267): まさか、 / ここまでとは
 D/SimplePageReader:   region Rect(183, 590 - 321, 686): 逃げろ! / 早く!
 D/SimplePageReader:   region Rect(570, 591 - 730, 682): このカは本物だ
 D/SimplePageReader:   region Rect(252, 915 - 654, 1059): 雷鳴竜が目覚めた都市全体が危険だすぐに避難を開始しろ
-D/UndispatchedCoroutine: Reading this page as 'ja' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'ja' (59 chars); remembering it
 D/PageTranslator: Merged 4 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(534, 172 - 771, 267): best containment 22%
 D/PageTranslator: No balloon for Rect(183, 590 - 321, 686): best containment 42%
 D/PageTranslator: No balloon for Rect(570, 591 - 730, 682): best containment 42%
 D/PageTranslator: Grouped 5 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(476, 126 - 825, 325) around Rect(534, 172 - 771, 267)
-D/PageTranslator: Recovered paper balloon Rect(139, 526 - 365, 755) around Rect(183, 590 - 321, 686)
-D/PageTranslator: Recovered paper balloon Rect(519, 526 - 781, 755) around Rect(570, 591 - 730, 682)
 D/UndispatchedCoroutine: regression:jpraw-99877464.jpg rendering 5/5 translated bubbles
+D/BubbleRenderer: Simple: Rect(252, 915 - 654, 1059) textBlock=true vertical=false lines=3 bounds=Rect(267, 920 - 639, 1054)
+D/BubbleRenderer: Simple: Rect(114, 175 - 395, 267) textBlock=true vertical=false lines=2 bounds=Rect(124, 179 - 385, 263)
+D/BubbleRenderer: Simple: Rect(534, 172 - 771, 267) textBlock=true vertical=false lines=2 bounds=Rect(543, 176 - 762, 263)
+D/BubbleRenderer: Simple: Rect(570, 591 - 730, 682) textBlock=true vertical=false lines=2 bounds=Rect(576, 595 - 724, 678)
+D/BubbleRenderer: Simple: Rect(183, 590 - 321, 686) textBlock=true vertical=false lines=2 bounds=Rect(188, 594 - 316, 682)

@@ -44,18 +44,28 @@ internal object DecorativeTextGuard {
         // and set flat type across it. Japanese prose carries kana and Korean carries Hangul, so
         // requiring their absence keeps this to the case it is for. The cost is an occasional short
         // Chinese caption left untranslated; the alternative was wrecking the logo every chapter.
-        if (largeType && isHanOnlyOrnament(text)) return true
+        if (largeType && isHanOnlyOrnament(text, boxWidth, boxHeight)) return true
 
         if (!displaySized && !prominentCompact) return false
 
         return !looksLikeDialogue(text, displaySized)
     }
 
-    /** Han, nothing but Han, and too little of it to be a sentence. */
-    private fun isHanOnlyOrnament(raw: String): Boolean {
+    /**
+     * Han, nothing but Han, too little of it to be a sentence — and laid out like a logo.
+     *
+     * The shape requirement matters. Without it the rule reached ordinary manhua caption boxes,
+     * which carry real dialogue in few characters, and swallowed them: a balloon dropped here is
+     * never translated and never drawn, which reads to the user as the app skipping dialogue. A
+     * logo subtitle is a wide shallow band — the one that prompted this was 382x82 — while a
+     * caption box is far closer to square.
+     */
+    private fun isHanOnlyOrnament(raw: String, boxWidth: Int, boxHeight: Int): Boolean {
         if (raw.any(::isHangul) || raw.any(::isKana)) return false
         val han = raw.count(::isIdeographic)
-        return han in 1 until MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE
+        if (han !in 1 until MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE) return false
+        if (boxHeight <= 0) return false
+        return boxWidth.toFloat() / boxHeight >= MIN_ORNAMENT_ASPECT
     }
 
     private fun looksLikeDialogue(raw: String, displaySized: Boolean = false): Boolean {
@@ -164,6 +174,9 @@ internal object DecorativeTextGuard {
 
     /** Han characters below which a display-size, Han-only region is a logo rather than a line. */
     private const val MIN_IDEOGRAPHIC_DISPLAY_DIALOGUE = 8
+
+    /** Width-to-height a Han-only display region must reach before it counts as a logo band. */
+    private const val MIN_ORNAMENT_ASPECT = 3.0f
 
     private const val MIN_DISPLAY_TEXT_HEIGHT = 42
     private const val DISPLAY_TEXT_HEIGHT_RATIO = 0.05f

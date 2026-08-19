@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg8-16f89bd3.jpg pipeline: original path (676x952, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
 D/SimplePageReader: Not one paragraph: Rect(440, 542 - 595, 581) + Rect(491, 586 - 582, 667) — type 39 vs 21, same paper: true
 D/SimplePageReader: Read 10 lettering region(s) from 25 line(s) as 'en'
 D/SimplePageReader:   region Rect(213, 5 - 301, 23): TRANSLATED
@@ -12,7 +12,7 @@ D/SimplePageReader:   region Rect(49, 646 - 298, 770): SUPPORT US / DSC.GG/E7Q6E
 D/SimplePageReader:   region Rect(487, 743 - 611, 935): PROOFREADER / ATLAS / RAW PROVIDER / EGR / Q.CHEEKER / HELIOS
 D/SimplePageReader:   region Rect(93, 822 - 249, 846): RECRUITMENT
 D/SimplePageReader:   region Rect(30, 863 - 310, 920): WE ARE RECRUITING! ALL / POSITIONS ARE PAID!
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (256 chars); remembering it
 D/PageTranslator: Merged 5 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(372, 0 - 462, 26): best containment 63%

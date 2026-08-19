@@ -182,6 +182,34 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // On the main screen, not behind "Nâng cao". This is the button someone reaches for the
+            // moment a page comes back wrong, and hiding it inside a collapsed section meant a
+            // reader looking at broken artwork could not find the one control that clears it.
+            //
+            // Both go through the reader rather than straight to the cache: the viewer is still
+            // holding the pages it decoded, so deleting the files alone left the bad artwork on
+            // screen and the delete looking like it had done nothing.
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = screenModel.onDiscardTranslations,
+            ) {
+                Text("Xoá bản dịch truyện này")
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    manager.clearAll()
+                    screenModel.onDiscardTranslations()
+                },
+            ) {
+                Text("Xoá tất cả")
+            }
+        }
+
         if (missingKey) {
             Text(
                 text = when (provider) {
@@ -420,27 +448,6 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
             onChange = retentionPref::set,
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Goes through the reader, not straight to the cache: the viewer is still holding the
-            // pages it decoded, so deleting the files alone left the bad artwork on screen and the
-            // delete looking like it had done nothing.
-            OutlinedButton(onClick = screenModel.onDiscardTranslations) {
-                Text("Xoá bản dịch truyện này")
-            }
-            OutlinedButton(
-                onClick = {
-                    manager.clearAll()
-                    screenModel.onDiscardTranslations()
-                },
-            ) {
-                Text("Xoá tất cả")
-            }
-        }
     }
 }
 

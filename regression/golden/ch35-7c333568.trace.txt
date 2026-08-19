@@ -1,8 +1,10 @@
 D/UndispatchedCoroutine: regression:ch35-7c333568.jpg pipeline: original path (900x1700, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
+D/PageTranslator: Merged 10 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
 D/SimplePageReader: Read 1 lettering region(s) from 4 line(s) as 'en'
 D/SimplePageReader:   region Rect(163, 1049 - 740, 1299): SOLELY / FOR THE SAKE OF / THEIR RESPECTIVE / ACHIEVEMENTS.
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (45 chars); remembering it
 D/PageTranslator: Merged 1 overlapping balloon detection(s)
 D/PageTranslator: No balloon for Rect(163, 1049 - 740, 1299): best containment 10%
 D/PageTranslator: Grouped 1 region(s) by balloon

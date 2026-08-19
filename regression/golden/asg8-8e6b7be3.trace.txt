@@ -1,11 +1,11 @@
 D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg pipeline: original path (1280x10920, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Dropping V as noise rather than dialogue
 D/SimplePageReader: Read 3 lettering region(s) from 4 line(s) as 'en'
 D/SimplePageReader:   region Rect(129, 298 - 795, 492): SWORD CUT
 D/SimplePageReader:   region Rect(633, 3520 - 1255, 3590): KAISCANS.COM
 D/SimplePageReader:   region Rect(401, 8278 - 1021, 8348): KAISCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (30 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=129, top=298, right=795, bottom=492, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: SWORD CUT
 D/PageTranslator: Merged 7 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read

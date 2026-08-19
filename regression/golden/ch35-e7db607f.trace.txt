@@ -1,5 +1,110 @@
 D/UndispatchedCoroutine: regression:ch35-e7db607f.jpg pipeline: original path (900x16000, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 3); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
+D/SimplePageReader: Not one paragraph: Rect(133, 7922 - 585, 7975) + Rect(135, 7983 - 584, 8006) — type 53 vs 23, same paper: true
+D/SimplePageReader: Not one paragraph: Rect(104, 8248 - 701, 8327) + Rect(58, 8432 - 675, 8653) — type 79 vs 42, same paper: true
+D/SimplePageReader: Not one paragraph: Rect(104, 9409 - 134, 9420) + Rect(98, 9417 - 190, 9455) — type 11 vs 22, same paper: false
+D/SimplePageReader: Dropping -X as noise rather than dialogue
+D/SimplePageReader: Read 31 lettering region(s) from 54 line(s) as 'en'
+D/SimplePageReader:   region Rect(91, 104 - 615, 274): IT ALL COMES / CRUMBLING DOWN / HERE.!
+D/SimplePageReader:   region Rect(273, 6692 - 720, 6759): ORIGINAL STORY: BYEONGARINEUN PPIYAK / ADAPTATION & ART: MEONSONG
+D/SimplePageReader:   region Rect(350, 6800 - 720, 6831): PRODUCTION SUPPORT: UC STUDIO
+D/SimplePageReader:   region Rect(613, 6890 - 696, 6914): STUDIO
+D/SimplePageReader:   region Rect(322, 6951 - 711, 7021): to be continued
+D/SimplePageReader:   region Rect(125, 7294 - 595, 7374): YOU CAN READ THE NEXT CHAPTER / EARLY BY SUPPORTING US!
+D/SimplePageReader:   region Rect(147, 7424 - 574, 7510): PAYMENT METHODS: / PAYPAL, CREDIT CARD, CRYPTO.
+D/SimplePageReader:   region Rect(75, 7555 - 644, 7592): VISIT OUR WEBSITE AT: OMEGASCANS.ORG
+D/SimplePageReader:   region Rect(66, 7641 - 654, 7769): OR JOIN OUR DISCORD SERVER AND CREATE / A TICKET FOR MORE INFORMATION: / DISCORD.GG/OSCOM
+D/SimplePageReader:   region Rect(115, 7918 - 603, 7979): RMEGA SCANS
+D/SimplePageReader:   region Rect(117, 7979 - 602, 8010): READ EARLY ON OMEGASCANS.ORG
+D/SimplePageReader:   region Rect(80, 8244 - 720, 8331): WOMEGACANS
+D/SimplePageReader:   region Rect(18, 8419 - 700, 8763): DO YOU WANT TO / READ CHAPTERS EARLY? / YOU CAN READ CHAPTERS EARLY / BY SUPPORTING US ON OURWEBSITE! / NWWW.OMEGASCANS.ORG
+D/SimplePageReader:   region Rect(162, 8919 - 559, 8957): OTHER SERIES WE DO!
+D/SimplePageReader:   region Rect(296, 9124 - 431, 9187): WONDEREU / NEW / WoRLD
+D/SimplePageReader:   region Rect(536, 9135 - 584, 9160): 1ORY
+D/SimplePageReader:   region Rect(100, 9405 - 138, 9424): YOUR
+D/SimplePageReader:   region Rect(94, 9413 - 194, 9459): RIRIERIEND WAS / AMAZINC
+D/SimplePageReader:   region Rect(280, 9409 - 421, 9456): 1STHERE NO / VyDdue coLEGE
+D/SimplePageReader:   region Rect(310, 9671 - 426, 9726): HERBALLOVE / StORO
+D/SimplePageReader:   region Rect(526, 9679 - 624, 9729): AYVTH / SPERM PAY
+D/SimplePageReader:   region Rect(76, 9682 - 196, 9729): SDENEACTOR / )DDAUGITERO
+D/SimplePageReader:   region Rect(76, 9961 - 139, 9987): HUNTI
+D/SimplePageReader:   region Rect(285, 9951 - 436, 10014): TRAPPED / In THEACADEMY:S / RO
+D/SimplePageReader:   region Rect(540, 9972 - 642, 10009): eMeiCK
+D/SimplePageReader:   region Rect(74, 10191 - 224, 10262): Isekaipagm / KjgiCommnatder
+D/SimplePageReader:   region Rect(334, 10228 - 432, 10275): sTRATe
+D/SimplePageReader:   region Rect(527, 10250 - 647, 10287): ONEN FAOE
+D/SimplePageReader:   region Rect(155, 10490 - 568, 10529): WE'RE RECRUITING!
+D/SimplePageReader:   region Rect(37, 10597 - 674, 10710): KOREAN TRANSLATOR (NO MTL) - [PAID] / MANGA SFX LETTERER(00 NOT USE FONTS) [PAID]
+D/SimplePageReader:   region Rect(47, 10859 - 669, 10899): JOIN OUR DISCORD FOR MORE INFO: DISCORD.GG/0SCOM
+D/UndispatchedCoroutine: Dropped BubbleBox(left=322, top=6951, right=711, bottom=7021, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: to be continued
+D/UndispatchedCoroutine: Dropped BubbleBox(left=115, top=7918, right=603, bottom=7979, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: RMEGA SCANS
+D/UndispatchedCoroutine: Dropped BubbleBox(left=80, top=8244, right=720, bottom=8331, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: WOMEGACANS
+D/PageTranslator: Merged 21 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(91, 104 - 615, 274): best containment 6%
+D/PageTranslator: No balloon for Rect(350, 6800 - 720, 6831): best containment 41%
+D/PageTranslator: No balloon for Rect(125, 7294 - 595, 7374): best containment 14%
+D/PageTranslator: No balloon for Rect(147, 7424 - 574, 7510): best containment 13%
+D/PageTranslator: No balloon for Rect(75, 7555 - 644, 7592): best containment 44%
+D/PageTranslator: No balloon for Rect(117, 7979 - 602, 8010): best containment 43%
+D/PageTranslator: No balloon for Rect(18, 8419 - 700, 8763): best containment 1%
+D/PageTranslator: No balloon for Rect(162, 8919 - 559, 8957): best containment 24%
+D/PageTranslator: No balloon for Rect(296, 9124 - 431, 9187): best containment 38%
+D/PageTranslator: No balloon for Rect(94, 9413 - 194, 9459): best containment 21%
+D/PageTranslator: No balloon for Rect(310, 9671 - 426, 9726): best containment 55%
+D/PageTranslator: No balloon for Rect(526, 9679 - 624, 9729): best containment 33%
+D/PageTranslator: No balloon for Rect(76, 9682 - 196, 9729): best containment 73%
+D/PageTranslator: No balloon for Rect(76, 9961 - 139, 9987): best containment 19%
+D/PageTranslator: No balloon for Rect(285, 9951 - 436, 10014): best containment 48%
+D/PageTranslator: No balloon for Rect(540, 9972 - 642, 10009): best containment 45%
+D/PageTranslator: No balloon for Rect(74, 10191 - 224, 10262): best containment 35%
+D/PageTranslator: No balloon for Rect(334, 10228 - 432, 10275): best containment 0%
+D/PageTranslator: No balloon for Rect(527, 10250 - 647, 10287): best containment 0%
+D/PageTranslator: No balloon for Rect(155, 10490 - 568, 10529): best containment 35%
+D/PageTranslator: No balloon for Rect(37, 10597 - 674, 10710): best containment 8%
+D/PageTranslator: No balloon for Rect(47, 10859 - 669, 10899): best containment 18%
+D/PageTranslator: Grouped 28 region(s) by balloon
+D/UndispatchedCoroutine: Dropping unchanged translation for bubble 13
+D/UndispatchedCoroutine: Dropping unchanged translation for bubble 14
+D/UndispatchedCoroutine: Dropping unchanged translation for bubble 20
+D/UndispatchedCoroutine: chapter=299394 pages=15 rendering 25/28 translated bubbles
+D/BubbleRenderer: Simple: Rect(18, 8419 - 700, 8763) textBlock=true vertical=false lines=5 bounds=Rect(43, 8432 - 675, 8750)
+D/BubbleRenderer: Simple: Rect(91, 104 - 615, 274) textBlock=true vertical=false lines=3 bounds=Rect(110, 110 - 596, 268)
+D/BubbleRenderer: bubble=BubbleBox(left=91, top=104, right=615, bottom=274, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 6964 surviving px of original lettering
+D/BubbleRenderer: Simple: Rect(66, 7641 - 654, 7769) textBlock=true vertical=false lines=3 bounds=Rect(88, 7646 - 632, 7764)
+D/BubbleRenderer: Simple: Rect(37, 10597 - 674, 10710) textBlock=true vertical=false lines=2 bounds=Rect(61, 10601 - 650, 10706)
+D/BubbleRenderer: Simple: Rect(125, 7294 - 595, 7374) textBlock=true vertical=false lines=2 bounds=Rect(142, 7298 - 578, 7370)
+D/BubbleRenderer: Simple: Rect(147, 7424 - 574, 7510) textBlock=true vertical=false lines=2 bounds=Rect(163, 7428 - 558, 7506)
+D/BubbleRenderer: Simple: Rect(273, 6692 - 720, 6759) textBlock=true vertical=false lines=2 bounds=Rect(290, 6696 - 709, 6755)
+D/BubbleRenderer: Simple: Rect(47, 10859 - 669, 10899) textBlock=true vertical=false lines=1 bounds=Rect(70, 10863 - 646, 10895)
+D/BubbleRenderer: Simple: Rect(75, 7555 - 644, 7592) textBlock=true vertical=false lines=1 bounds=Rect(96, 7559 - 623, 7588)
+D/BubbleRenderer: Simple: Rect(155, 10490 - 568, 10529) textBlock=true vertical=false lines=1 bounds=Rect(170, 10494 - 553, 10525)
+D/BubbleRenderer: Simple: Rect(162, 8919 - 559, 8957) textBlock=true vertical=false lines=1 bounds=Rect(177, 8923 - 544, 8953)
+D/BubbleRenderer: Simple: Rect(117, 7979 - 602, 8010) textBlock=true vertical=false lines=1 bounds=Rect(135, 7983 - 584, 8006)
+D/BubbleRenderer: Simple: Rect(350, 6800 - 720, 6831) textBlock=true vertical=false lines=1 bounds=Rect(364, 6804 - 708, 6827)
+D/BubbleRenderer: Simple: Rect(74, 10191 - 224, 10262) textBlock=true vertical=false lines=2 bounds=Rect(80, 10195 - 218, 10258)
+D/BubbleRenderer: Simple: Rect(285, 9951 - 436, 10014) textBlock=true vertical=false lines=3 bounds=Rect(291, 9955 - 430, 10010)
+D/BubbleRenderer: Simple: Rect(296, 9124 - 431, 9187) textBlock=true vertical=false lines=3 bounds=Rect(301, 9128 - 426, 9183)
+D/BubbleRenderer: Simple: Rect(280, 9409 - 421, 9456) textBlock=true vertical=false lines=2 bounds=Rect(285, 9413 - 416, 9452)
+D/BubbleRenderer: bubble=BubbleBox(left=280, top=9409, right=421, bottom=9456, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 108 surviving px of original lettering
+D/BubbleRenderer: Simple: Rect(310, 9671 - 426, 9726) textBlock=true vertical=false lines=2 bounds=Rect(314, 9675 - 422, 9722)
+D/BubbleRenderer: bubble=BubbleBox(left=310, top=9671, right=426, bottom=9726, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 186 surviving px of original lettering
+D/BubbleRenderer: Simple: Rect(76, 9682 - 196, 9729) textBlock=true vertical=false lines=2 bounds=Rect(80, 9686 - 192, 9725)
+D/BubbleRenderer: bubble=BubbleBox(left=76, top=9682, right=196, bottom=9729, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 424 surviving px of original lettering
+D/BubbleRenderer: Simple: Rect(526, 9679 - 624, 9729) textBlock=true vertical=false lines=2 bounds=Rect(530, 9683 - 620, 9725)
+D/BubbleRenderer: bubble=BubbleBox(left=526, top=9679, right=624, bottom=9729, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 116 surviving px of original lettering
+D/BubbleRenderer: Simple: Rect(334, 10228 - 432, 10275) textBlock=true vertical=false lines=1 bounds=Rect(338, 10232 - 428, 10271)
+D/BubbleRenderer: bubble=BubbleBox(left=334, top=10228, right=432, bottom=10275, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: 938/1273 ink px still standing after repair — leaving the original rather than overprinting
+D/BubbleRenderer: Simple: Rect(94, 9413 - 194, 9459) textBlock=true vertical=false lines=2 bounds=Rect(98, 9417 - 190, 9455)
+D/BubbleRenderer: bubble=BubbleBox(left=94, top=9413, right=194, bottom=9459, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: 269/588 ink px still standing after repair — leaving the original rather than overprinting
+D/BubbleRenderer: Simple: Rect(527, 10250 - 647, 10287) textBlock=true vertical=false lines=1 bounds=Rect(531, 10254 - 643, 10283)
+D/BubbleRenderer: bubble=BubbleBox(left=527, top=10250, right=647, bottom=10287, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: 45/46 ink px still standing after repair — leaving the original rather than overprinting
+D/BubbleRenderer: Simple: Rect(540, 9972 - 642, 10009) textBlock=true vertical=false lines=1 bounds=Rect(544, 9976 - 638, 10005)
+D/BubbleRenderer: Simple: Rect(613, 6890 - 696, 6914) textBlock=true vertical=false lines=1 bounds=Rect(617, 6894 - 692, 6910)
+D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
+D/UndispatchedCoroutine: Loading pages for Chapter 8
+D/PageTranslator: Stitched 3 pages into 720x13820 strip
+D/UndispatchedCoroutine: chapter=299393 pages=0, 1, 2 pipeline: original path (720x13820, script='en')
 D/SimplePageReader: Read 10 lettering region(s) from 34 line(s) as 'en'
 D/SimplePageReader:   region Rect(245, 1081 - 761, 1278): IM NOT THAT / VALUABLE OF A / PERSON...
 D/SimplePageReader:   region Rect(180, 4248 - 745, 4427): ...FOLLOW ME, / I HAVE SOMETHING / TO SHOW YOU.
@@ -11,7 +116,7 @@ D/SimplePageReader:   region Rect(76, 12611 - 698, 12847): YOU SAW IT / CORRECTL
 D/SimplePageReader:   region Rect(188, 14381 - 781, 14612): A FAKE / PAINTING OUR HOUSE / PURCHASED TO / EVADE TAXES.
 D/SimplePageReader:   region Rect(78, 15226 - 433, 15324): DIELA IS TRULY / AMAZING.
 D/SimplePageReader:   region Rect(135, 15523 - 837, 15810): SHE / SOMEHOW KNEW / THIS AND OFFERED TO / COVER UP OUR HOUSE'S / WEAKNESS...
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (351 chars); remembering it
 D/PageTranslator: Merged 7 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(245, 1081 - 761, 1278): best containment 25%

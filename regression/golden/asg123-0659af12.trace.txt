@@ -1,5 +1,5 @@
 D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best zh scored 9); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'zh' scored 9); leaving the script open
 D/SimplePageReader: Companion 'en' pass: +2 line(s), replaced 0 junk reading(s)
 D/SimplePageReader: Not one paragraph: Rect(46, 145 - 768, 266) + Rect(29, 392 - 771, 478) — type 121 vs 42, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(160, 2692 - 640, 2864) + Rect(238, 2846 - 569, 2880) — type 172 vs 34, same paper: true
@@ -20,7 +20,7 @@ D/SimplePageReader:   region Rect(164, 4431 - 549, 4537): EVERYONE, WE AND / COU
 D/SimplePageReader:   region Rect(178, 5519 - 556, 5589): THIS PROVES WE ARE / TIED FOR STRONGEST!
 D/SimplePageReader:   region Rect(370, 5955 - 596, 5994): YES! CAPTAIN!
 D/SimplePageReader:   region Rect(457, 6323 - 689, 6354): ZXY CAPTAIN: NANDA
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (377 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=17, top=140, right=797, bottom=271, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AWARNING!
 D/UndispatchedCoroutine: Dropped BubbleBox(left=141, top=2685, right=659, bottom=2871, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 末日剑神
 D/UndispatchedCoroutine: Dropped BubbleBox(left=225, top=2842, right=582, bottom=2884, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: DooMSDAY SwORD GoD

@@ -1,5 +1,25 @@
 D/UndispatchedCoroutine: regression:kd53-99bc44fb.jpg pipeline: original path (800x13459, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
+D/SimplePageReader: Read 4 lettering region(s) from 8 line(s) as 'en'
+D/SimplePageReader:   region Rect(175, 1315 - 495, 1408): HEY, DON'T BLAME / ME FOR WHAT / HAPPENS NEXT.!
+D/SimplePageReader:   region Rect(390, 4223 - 720, 4289): MANEOISF.COM
+D/SimplePageReader:   region Rect(267, 8140 - 609, 8282): GOD, YOURS / IS SERIOUSLY / INSANE...!
+D/SimplePageReader:   region Rect(95, 10863 - 498, 11138): HAAAAA)
+D/UndispatchedCoroutine: Dropped BubbleBox(left=95, top=10863, right=498, bottom=11138, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: HAAAAA)
+D/BubbleDetector: Kept 38 unsupported bubble(s) from strip detection
+D/PageTranslator: Merged 2 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 5 balloon(s) the page pass could not read
+D/UndispatchedCoroutine: Recovered Rect(510, 9259 - 719, 9405): KA / JUUs
+D/PageTranslator: No balloon for Rect(390, 4223 - 720, 4289): best containment 48%
+D/PageTranslator: Grouped 4 region(s) by balloon
+D/UndispatchedCoroutine: chapter=299393 pages=21, 22, 23 rendering 4/4 translated bubbles
+D/BubbleRenderer: Simple: Rect(267, 8140 - 609, 8282) textBlock=true vertical=false lines=3 bounds=Rect(280, 8145 - 596, 8277)
+D/BubbleRenderer: Simple: BubbleBox(left=510, top=9259, right=719, bottom=9405, confidence=0.413285, isTextBlock=false, isFallbackTextBlock=false) has no measured lettering to erase
+D/BubbleRenderer: Simple: Rect(175, 1315 - 495, 1408) textBlock=true vertical=false lines=3 bounds=Rect(187, 1319 - 483, 1404)
+D/BubbleRenderer: Simple: Rect(390, 4223 - 720, 4289) textBlock=true vertical=false lines=1 bounds=Rect(402, 4227 - 712, 4285)
+D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
+D/PageTranslator: Stitched 3 pages into 720x13864 strip
+D/UndispatchedCoroutine: chapter=299393 pages=24, 25, 26 pipeline: original path (720x13864, script='en')
 D/SimplePageReader: Read 7 lettering region(s) from 20 line(s) as 'en'
 D/SimplePageReader:   region Rect(217, 92 - 605, 170): DONT TELL ME...
 D/SimplePageReader:   region Rect(178, 710 - 622, 982): THAT / OLD HAG'S POWER / EXCEEDS MYTHRIUM'S / RESISTANCE!
@@ -8,7 +28,7 @@ D/SimplePageReader:   region Rect(148, 3449 - 730, 3701): SLICING / THEM UP ONE 
 D/SimplePageReader:   region Rect(49, 4256 - 565, 4474): FOR / GATHERING ALL THOSE / DOLLS TOGETHER OUT OF / CONSIDERATION FOR AN / OLD HAG LIKE ME,
 D/SimplePageReader:   region Rect(210, 5582 - 591, 5642): THANK YOU.
 D/SimplePageReader:   region Rect(207, 7662 - 531, 7816): YOU / FCKING...!
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (238 chars); remembering it
 D/PageTranslator: Merged 9 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(217, 92 - 605, 170): best containment 16%

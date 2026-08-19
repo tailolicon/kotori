@@ -1,12 +1,42 @@
 D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg pipeline: original path (1280x8975, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
+D/UndispatchedCoroutine: Loading pages for Chapter 6
+D/UndispatchedCoroutine: Loading pages for Chapter 6
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Read 6 lettering region(s) from 12 line(s) as 'en'
+D/SimplePageReader:   region Rect(145, 5334 - 574, 5524): WeWAIT...! / 1 SAIP SOMETHING'S
+D/SimplePageReader:   region Rect(170, 7905 - 434, 7993): NI WI-I
+D/SimplePageReader:   region Rect(390, 9232 - 542, 9304): Mal
+D/SimplePageReader:   region Rect(285, 9808 - 603, 9932): A PLACE NO ONE / WAS EVER ABLE / TO REACH.!
+D/SimplePageReader:   region Rect(99, 10163 - 381, 10291): HEY! PULL / IT OUT..!
+D/SimplePageReader:   region Rect(307, 12193 - 650, 12340): T'M SERIOUSLY / GOING TO KILL / YOu.
+D/DispatchedCoroutine: This series reads as 'en' (95 chars); remembering it
+D/PageTranslator: Merged 14 overlapping balloon detection(s)
+D/DispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/UndispatchedCoroutine: Loading pages for Chapter 7
+D/UndispatchedCoroutine: Loading pages for Chapter 6
+D/TranslationManager: Claiming translation session for 3034 (was -9223372036854775808)
+D/UndispatchedCoroutine: Loading pages for Chapter 7
+D/PageTranslator: No balloon for Rect(390, 9232 - 542, 9304): best containment 0%
+D/PageTranslator: No balloon for Rect(99, 10163 - 381, 10291): best containment 15%
+D/PageTranslator: No balloon for Rect(307, 12193 - 650, 12340): best containment 0%
+D/PageTranslator: Grouped 6 region(s) by balloon
+D/DispatchedCoroutine: Dropping unchanged translation for bubble 3
+D/DispatchedCoroutine: chapter=299394 page=1 rendering 5/6 translated bubbles
+D/BubbleRenderer: Simple: Rect(145, 5334 - 574, 5524) textBlock=true vertical=false lines=2 bounds=Rect(161, 5341 - 558, 5517)
+D/BubbleRenderer: Simple: Rect(307, 12193 - 650, 12340) textBlock=true vertical=false lines=3 bounds=Rect(320, 12198 - 637, 12335)
+D/BubbleRenderer: Simple: Rect(285, 9808 - 603, 9932) textBlock=true vertical=false lines=3 bounds=Rect(297, 9813 - 591, 9927)
+D/BubbleRenderer: Simple: Rect(99, 10163 - 381, 10291) textBlock=true vertical=false lines=2 bounds=Rect(109, 10168 - 371, 10286)
+D/BubbleRenderer: Simple: Rect(170, 7905 - 434, 7993) textBlock=true vertical=false lines=1 bounds=Rect(180, 7909 - 424, 7989)
+D/TranslationManager: Discarded in-flight page 1 after cache invalidation
+D/DispatchedCoroutine: chapter=299394 page=0 pipeline: original path (720x15367, script='en')
 D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'en'
 D/SimplePageReader:   region Rect(441, 171 - 1013, 361): HA, WAS THERE SUCH A / THING IN MY PREVIOUS / LIFE?
 D/SimplePageReader:   region Rect(212, 1509 - 842, 1580): KAISCANS.COM
 D/SimplePageReader:   region Rect(482, 4346 - 1076, 4665): MAYBE I DIDN'T PAY / ATTENTION BACK THEN... / THIS MIGHT BE GO0D / MATERIAL TO MAKE A / TRAP...
 D/SimplePageReader:   region Rect(625, 6014 - 1255, 6084): KAISCANS.COM
 D/SimplePageReader:   region Rect(623, 8326 - 1253, 8398): KAISCANS.COM
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (134 chars); remembering it
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
 D/PageTranslator: Merged 2 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(441, 171 - 1013, 361): best containment 6%

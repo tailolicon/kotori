@@ -1,5 +1,20 @@
 D/UndispatchedCoroutine: regression:kd53-33ea889c.jpg pipeline: original path (800x13001, script='not probed')
-D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
+D/BubbleDetector: Kept 30 unsupported bubble(s) from strip detection
+D/PageTranslator: Merged 6 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 3 balloon(s) the page pass could not read
+D/PageTranslator: Ignoring oversized balloon Rect(7, 8249 - 684, 9183) for Rect(150, 8558 - 471, 8614)
+D/PageTranslator: Grouped 6 region(s) by balloon, joining 1 that shared one
+D/UndispatchedCoroutine: chapter=299393 pages=3, 4, 5 rendering 6/6 translated bubbles
+D/BubbleRenderer: Simple: Rect(180, 6465 - 549, 6635) textBlock=true vertical=false lines=5 bounds=Rect(194, 6471 - 535, 6629)
+D/BubbleRenderer: Simple: Rect(162, 5762 - 410, 5918) textBlock=true vertical=false lines=4 bounds=Rect(171, 5768 - 401, 5912)
+D/BubbleRenderer: Simple: Rect(203, 12215 - 482, 12318) textBlock=true vertical=false lines=2 bounds=Rect(213, 12219 - 472, 12314)
+D/BubbleRenderer: Simple: Rect(149, 9075 - 554, 9130) textBlock=true vertical=false lines=2 bounds=Rect(164, 9079 - 539, 9161)
+D/BubbleRenderer: Simple: Rect(398, 4122 - 719, 4180) textBlock=true vertical=false lines=1 bounds=Rect(410, 4126 - 707, 4176)
+D/BubbleRenderer: Simple: Rect(150, 8558 - 471, 8614) textBlock=true vertical=false lines=2 bounds=Rect(162, 8562 - 459, 8610)
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
+D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
+D/PageTranslator: Stitched 3 pages into 720x13900 strip
+D/UndispatchedCoroutine: chapter=299393 pages=6, 7, 8 pipeline: original path (720x13900, script='en')
 D/SimplePageReader: Read 8 lettering region(s) from 14 line(s) as 'en'
 D/SimplePageReader:   region Rect(171, 696 - 629, 854): HAS NEVER FELT A / LIMIT TO THIS DAY.
 D/SimplePageReader:   region Rect(83, 2265 - 297, 2297): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
@@ -9,11 +24,20 @@ D/SimplePageReader:   region Rect(310, 6107 - 524, 6610): FORM
 D/SimplePageReader:   region Rect(313, 7193 - 526, 8217): AIN SHIATGERINGI
 D/SimplePageReader:   region Rect(214, 10891 - 652, 11052): ...MY DOLLS / WERE GHATTERED / INTO PIECES...?
 D/SimplePageReader:   region Rect(107, 12284 - 621, 12427): TELEKINESIS / DEFINITELY SHOULDN'T / WORK ON THEM?!
-D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
+D/UndispatchedCoroutine: This series reads as 'en' (176 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=158, top=3388, right=642, bottom=3464, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: LTELEKINESIS (S)1
 D/UndispatchedCoroutine: Dropped BubbleBox(left=180, top=5102, right=616, bottom=5212, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: [FORM 1031
 D/UndispatchedCoroutine: Dropped BubbleBox(left=310, top=6107, right=524, bottom=6610, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: FORM
 D/UndispatchedCoroutine: Dropped BubbleBox(left=313, top=7193, right=526, bottom=8217, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AIN SHIATGERINGI
+D/SimplePageReader: Read 7 lettering region(s) from 20 line(s) as 'en'
+D/SimplePageReader:   region Rect(173, 1110 - 435, 1247): S-STOP, / THATIS / ENOUGH...
+D/SimplePageReader:   region Rect(456, 2724 - 677, 2894): HAAAA
+D/SimplePageReader:   region Rect(0, 4691 - 600, 4997): HHNGH
+D/SimplePageReader:   region Rect(267, 9203 - 527, 9360): YOU'RE / READY TO / DIE, AREN'T / YOU?
+D/SimplePageReader:   region Rect(272, 11449 - 584, 11585): AH. FINALLY, / THE TIME / HAS COME.
+D/SimplePageReader:   region Rect(204, 12095 - 414, 12250): FUCK. / HOW / SHOULD I / KILL YOU?
+D/SimplePageReader:   region Rect(303, 13793 - 626, 13900): SHOULD I RIP THAT / PROBLEMATIC COCK / OF YOURS OFF / WHII F VOUDE STl |
+D/UndispatchedCoroutine: Dropped BubbleBox(left=0, top=4691, right=600, bottom=4997, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: HHNGH
 D/PageTranslator: Merged 10 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
 D/UndispatchedCoroutine: Recovered Rect(180, 3391 - 494, 3459): LTELEKINESISC
@@ -28,3 +52,6 @@ D/BubbleRenderer: Simple: Rect(214, 10891 - 652, 11052) textBlock=true vertical=
 D/BubbleRenderer: Simple: Rect(180, 3391 - 494, 3459) textBlock=false vertical=false lines=1 bounds=Rect(192, 3387 - 555, 3474)
 D/BubbleRenderer: Simple: Rect(83, 2265 - 297, 2297) textBlock=true vertical=false lines=2 bounds=Rect(91, 2269 - 289, 2293)
 D/BubbleRenderer: bubble=BubbleBox(left=83, top=2265, right=297, bottom=2297, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 721 surviving px of original lettering
+D/BubbleDetector: Kept 74 unsupported bubble(s) from strip detection
+D/PageTranslator: Merged 14 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
