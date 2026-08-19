@@ -52,6 +52,10 @@ class BubbleRenderer(private val context: Context) {
     ): Bitmap {
         val resolved = if (simple) TranslationRenderStyle.SIMPLE else style
         return when (resolved) {
+            // AUTO is resolved by the caller, which is the only place that knows what the page turned
+            // out to be. Reaching here means nobody did, and the footprint letterer is the mode that
+            // cannot damage a page it was wrong about.
+            TranslationRenderStyle.AUTO -> renderSimple(source, bubbles, fontName)
             TranslationRenderStyle.SIMPLE -> renderSimple(source, bubbles, fontName)
             TranslationRenderStyle.TYPESET -> renderTypeset(source, bubbles, fontName)
             TranslationRenderStyle.BUBBLE -> renderBubbleAware(source, bubbles, fontName, horizontalSeams)

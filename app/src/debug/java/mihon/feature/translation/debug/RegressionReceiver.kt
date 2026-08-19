@@ -88,6 +88,7 @@ class RegressionReceiver : BroadcastReceiver() {
             "typeset" -> TranslationRenderStyle.TYPESET
             "bubble" -> TranslationRenderStyle.BUBBLE
             "simple" -> TranslationRenderStyle.SIMPLE
+            "auto" -> TranslationRenderStyle.AUTO
             else -> null
         }
         if (requested != null) preferences.setRenderStyle(requested)

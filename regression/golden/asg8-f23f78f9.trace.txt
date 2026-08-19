@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg pipeline: original path (1280x11350, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Read 8 lettering region(s) from 25 line(s) as 'en'
 D/SimplePageReader:   region Rect(183, 302 - 861, 376): KAISCANS.COM
@@ -20,14 +21,12 @@ D/PageTranslator: No balloon for Rect(594, 7627 - 1184, 7936): best containment 
 D/PageTranslator: No balloon for Rect(393, 8647 - 1094, 8956): best containment 6%
 D/PageTranslator: No balloon for Rect(183, 10632 - 861, 10708): best containment 11%
 D/PageTranslator: Grouped 8 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(184, 216 - 887, 432) around Rect(183, 302 - 861, 376)
-D/PageTranslator: Recovered paper balloon Rect(8, 1435 - 801, 2151) around Rect(45, 1675 - 732, 1962)
-D/PageTranslator: Recovered paper balloon Rect(14, 2443 - 820, 3188) around Rect(140, 2648 - 741, 2872)
-D/PageTranslator: Recovered paper balloon Rect(8, 4469 - 845, 5163) around Rect(50, 4672 - 755, 4873)
-D/PageTranslator: Recovered paper balloon Rect(451, 7204 - 1272, 8060) around Rect(594, 7627 - 1184, 7936)
-D/PageTranslator: Recovered paper balloon Rect(162, 8201 - 1278, 8834) around Rect(393, 8647 - 1094, 8956)
-D/PageTranslator: Recovered paper balloon Rect(174, 10596 - 887, 10743) around Rect(183, 10632 - 861, 10708)
 D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg rendering 8/8 translated bubbles
-D/BubbleRenderer: bubble=BubbleBox(left=162, top=8201, right=1278, bottom=8834, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 12489 surviving px of original lettering
-D/BubbleRenderer: Simple: BubbleBox(left=450, top=4104, right=1254, bottom=4184, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=450, top=4104, right=1254, bottom=4184, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(393, 8647 - 1094, 8956) textBlock=true vertical=false lines=5 bounds=Rect(419, 8658 - 1068, 8945)
+D/BubbleRenderer: Simple: Rect(45, 1675 - 732, 1962) textBlock=true vertical=false lines=5 bounds=Rect(70, 1686 - 707, 1951)
+D/BubbleRenderer: Simple: Rect(594, 7627 - 1184, 7936) textBlock=true vertical=false lines=5 bounds=Rect(616, 7638 - 1162, 7925)
+D/BubbleRenderer: Simple: Rect(50, 4672 - 755, 4873) textBlock=true vertical=false lines=3 bounds=Rect(76, 4679 - 729, 4866)
+D/BubbleRenderer: Simple: Rect(140, 2648 - 741, 2872) textBlock=true vertical=false lines=4 bounds=Rect(162, 2656 - 719, 2864)
+D/BubbleRenderer: Simple: Rect(450, 4104 - 1254, 4184) textBlock=true vertical=false lines=1 bounds=Rect(480, 4108 - 1224, 4180)
+D/BubbleRenderer: Simple: Rect(183, 10632 - 861, 10708) textBlock=true vertical=false lines=1 bounds=Rect(208, 10636 - 836, 10704)
+D/BubbleRenderer: Simple: Rect(183, 302 - 861, 376) textBlock=true vertical=false lines=1 bounds=Rect(208, 306 - 836, 372)

@@ -7,36 +7,46 @@ import mihon.feature.translation.ScriptKind
 /**
  * Chooses the dedicated Manga-Translator port versus Kotori's original webtoon path.
  *
- * The decision is made on the *page*, never on a setting. Routing on a stored source language is
+ * The decision is made on the *page*, never on a setting — routing on a stored source language is
  * what let a Korean series keep being read as Japanese after the reader moved on from a Japanese
- * one: the preference belonged to the app, not to the series in front of it.
+ * one. But it is not made on shape alone either, and that mistake shipped: a webtoon slice is
+ * 676x952 and a manga page is 900x1300, the same shape to two decimal places, so "short page" sent
+ * English webtoon slices into a pipeline that only knows speech balloons. It filled the panels
+ * grey, merged the credits column into one block and pushed text out of its box — every symptom of
+ * running a page pipeline over something that is not a page.
  *
- * Two things decide it instead:
+ * Three things must all hold:
  *
- *  * **Shape.** The port is the Python repo's page pipeline — detect balloons, flood them, set the
- *    translation in the balloon. That is right for a bound page and wrong for a webtoon strip, whose
- *    lettering routinely sits outside any balloon (status windows, narration bands, captions over
- *    art) and which the original path already handles well.
- *  * **Whether the provider can read.** Balloon geometry alone is not a translation; something has
- *    to say what each balloon holds. The vision providers do that in the same call that translates,
- *    for any language on the page. Without one, the original path's on-device recogniser is the only
- *    reader available, so the page goes there.
+ *  * **Shape.** The port recovers a balloon and sets the translation inside it. Right for a bound
+ *    page, wrong for a strip, whose lettering routinely sits outside any balloon.
+ *  * **Script.** Japanese. This is what the port was written for — vertical columns whose recognised
+ *    footprint is a sliver no sentence fits into — and everything else is served better by the
+ *    original path, which has years of guards for exactly that material.
+ *  * **A provider that can read images.** Nothing else in this pipeline reads the balloons.
  */
 internal object MangaPipeline {
 
     const val REGRESSION_PROVIDER = "Regression"
 
-    fun shouldHandle(
-        width: Int,
-        height: Int,
-        providerName: String,
-        providerReadsImages: Boolean,
-    ): Boolean {
+    /**
+     * Cheap half of the decision: is it even worth probing this page's script?
+     *
+     * Kept separate so a webtoon strip never pays for the probe at all.
+     */
+    fun mayHandle(width: Int, height: Int, providerName: String, providerReadsImages: Boolean): Boolean {
         // The regression suite pins the original path so its goldens keep measuring one pipeline.
         if (providerName == REGRESSION_PROVIDER) return false
         if (!providerReadsImages) return false
         return PageFormatDetector.detect(width, height, ScriptKind.NONE) == PageFormat.MANGA
     }
+
+    fun shouldHandle(
+        width: Int,
+        height: Int,
+        pageScript: String,
+        providerName: String,
+        providerReadsImages: Boolean,
+    ): Boolean = mayHandle(width, height, providerName, providerReadsImages) && pageScript == "ja"
 
     fun hasJapaneseDialogue(texts: List<String>): Boolean {
         val japanese = texts.filter { MangaOcrPostProcess.looksJapanese(it) }

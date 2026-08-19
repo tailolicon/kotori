@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 4); reading as Latin
 D/SimplePageReader: Read 11 lettering region(s) from 41 line(s) as 'en'
 D/SimplePageReader:   region Rect(79, 247 - 819, 489): MY FATHER... / HAS NO INTEREST IN MY / MAGICAL ACHIEVEMENTS / THEMSELVES.
@@ -26,17 +27,15 @@ D/PageTranslator: No balloon for Rect(127, 11813 - 774, 12101): best containment
 D/PageTranslator: No balloon for Rect(136, 13825 - 652, 14146): best containment 15%
 D/PageTranslator: No balloon for Rect(277, 14379 - 789, 14523): best containment 5%
 D/PageTranslator: Grouped 11 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(41, 34 - 859, 812) around Rect(79, 247 - 819, 489)
-D/PageTranslator: Recovered paper balloon Rect(28, 1987 - 754, 2721) around Rect(50, 2208 - 580, 2419)
-D/PageTranslator: Recovered paper balloon Rect(138, 2326 - 868, 2975) around Rect(303, 2614 - 807, 2814)
-D/PageTranslator: Recovered paper balloon Rect(142, 3317 - 758, 3821) around Rect(259, 3478 - 640, 3619)
-D/PageTranslator: Recovered paper balloon Rect(56, 5047 - 844, 5786) around Rect(141, 5276 - 800, 5486)
-D/PageTranslator: Recovered paper balloon Rect(2, 7608 - 844, 8371) around Rect(135, 8051 - 669, 8358)
-D/PageTranslator: Recovered paper balloon Rect(24, 9620 - 651, 10245) around Rect(76, 9730 - 509, 9942)
-D/PageTranslator: Recovered paper balloon Rect(32, 9801 - 877, 10534) around Rect(224, 10143 - 810, 10382)
-D/PageTranslator: Recovered paper balloon Rect(2, 11820 - 898, 12513) around Rect(127, 11813 - 774, 12101)
-D/PageTranslator: Recovered paper balloon Rect(28, 13563 - 822, 14607) around Rect(136, 13825 - 652, 14146)
-D/PageTranslator: Recovered paper balloon Rect(109, 14172 - 869, 14730) around Rect(277, 14379 - 789, 14523)
-D/PageTranslator: Merged 2 region(s) that share a recovered balloon
-D/UndispatchedCoroutine: regression:ch35-192082e0.jpg rendering 9/9 translated bubbles
-D/BubbleRenderer: Typeset: BubbleBox(left=24, top=9620, right=877, bottom=10534, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/UndispatchedCoroutine: regression:ch35-192082e0.jpg rendering 11/11 translated bubbles
+D/BubbleRenderer: Simple: Rect(127, 11813 - 774, 12101) textBlock=true vertical=false lines=5 bounds=Rect(151, 11824 - 750, 12090)
+D/BubbleRenderer: Simple: Rect(79, 247 - 819, 489) textBlock=true vertical=false lines=4 bounds=Rect(106, 256 - 792, 480)
+D/BubbleRenderer: Simple: Rect(136, 13825 - 652, 14146) textBlock=true vertical=false lines=5 bounds=Rect(155, 13837 - 633, 14134)
+D/BubbleRenderer: Simple: Rect(135, 8051 - 669, 8358) textBlock=true vertical=false lines=5 bounds=Rect(155, 8062 - 649, 8347)
+D/BubbleRenderer: Simple: Rect(224, 10143 - 810, 10382) textBlock=true vertical=false lines=4 bounds=Rect(246, 10152 - 788, 10373)
+D/BubbleRenderer: Simple: Rect(141, 5276 - 800, 5486) textBlock=true vertical=false lines=3 bounds=Rect(165, 5284 - 776, 5478)
+D/BubbleRenderer: Simple: Rect(50, 2208 - 580, 2419) textBlock=true vertical=false lines=4 bounds=Rect(70, 2216 - 560, 2411)
+D/BubbleRenderer: Simple: Rect(303, 2614 - 807, 2814) textBlock=true vertical=false lines=3 bounds=Rect(322, 2621 - 788, 2807)
+D/BubbleRenderer: Simple: Rect(76, 9730 - 509, 9942) textBlock=true vertical=false lines=4 bounds=Rect(92, 9738 - 493, 9934)
+D/BubbleRenderer: Simple: Rect(277, 14379 - 789, 14523) textBlock=true vertical=false lines=2 bounds=Rect(296, 14384 - 770, 14518)
+D/BubbleRenderer: Simple: Rect(259, 3478 - 640, 3619) textBlock=true vertical=false lines=2 bounds=Rect(273, 3483 - 626, 3614)

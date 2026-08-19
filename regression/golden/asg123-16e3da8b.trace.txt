@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg pipeline: original path (800x6735, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
 D/SimplePageReader: Read 5 lettering region(s) from 14 line(s) as 'en'
 D/SimplePageReader:   region Rect(76, 116 - 324, 155): VERY GOOD!
@@ -11,7 +12,9 @@ D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(334, 919 - 732, 1060): best containment 68%
 D/PageTranslator: No balloon for Rect(79, 1383 - 509, 1490): best containment 0%
 D/PageTranslator: Grouped 5 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(282, 761 - 778, 1184) around Rect(334, 919 - 732, 1060)
-D/PageTranslator: Recovered paper balloon Rect(48, 1268 - 533, 1604) around Rect(79, 1383 - 509, 1490)
 D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg rendering 5/5 translated bubbles
-D/BubbleRenderer: Typeset: BubbleBox(left=79, top=113, right=325, bottom=155, confidence=0.40341008, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(282, 3860 - 776, 4022) textBlock=true vertical=false lines=4 bounds=Rect(300, 3866 - 758, 4016)
+D/BubbleRenderer: Simple: Rect(334, 919 - 732, 1060) textBlock=true vertical=false lines=4 bounds=Rect(349, 924 - 717, 1055)
+D/BubbleRenderer: Simple: Rect(79, 1383 - 509, 1490) textBlock=true vertical=false lines=3 bounds=Rect(95, 1387 - 493, 1486)
+D/BubbleRenderer: Simple: Rect(76, 5528 - 512, 5602) textBlock=true vertical=false lines=2 bounds=Rect(92, 5532 - 496, 5598)
+D/BubbleRenderer: Simple: Rect(76, 116 - 324, 155) textBlock=true vertical=false lines=1 bounds=Rect(85, 120 - 315, 151)

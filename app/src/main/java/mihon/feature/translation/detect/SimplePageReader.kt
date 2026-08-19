@@ -591,6 +591,15 @@ class SimplePageReader {
      * A band is enough because a page is written in one script, and it is cheap enough — a fraction
      * of a page — to run before the real pass rather than after a wasted one.
      */
+    /**
+     * Which script this page is written in, from one band rather than the whole page.
+     *
+     * Exposed because routing needs it *before* anything expensive happens. A webtoon slice and a
+     * manga page are the same shape — 676x952 against 900x1300 — so shape alone cannot tell them
+     * apart, and deciding on shape sent English webtoon slices into the balloon-filling pipeline.
+     */
+    fun probeScript(bitmap: Bitmap): String = probeLanguage(bitmap)
+
     private fun probeLanguage(bitmap: Bitmap): String {
         val probe = probeBand(bitmap)
         try {

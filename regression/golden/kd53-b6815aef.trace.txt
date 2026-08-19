@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:kd53-b6815aef.jpg pipeline: original path (800x10788, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Read 7 lettering region(s) from 18 line(s) as 'en'
 D/SimplePageReader:   region Rect(140, 1227 - 672, 1490): WITH THIS POWER, SHE / HAS ESCAPED FATES WHERE / SHE SHOULD HAVE DIED / MULTIPLE TIMES,
@@ -19,8 +20,9 @@ D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(140, 1227 - 672, 1490): best containment 3%
 D/PageTranslator: No balloon for Rect(251, 8645 - 548, 8801): best containment 54%
 D/PageTranslator: Grouped 4 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(2, 851 - 798, 1866) around Rect(140, 1227 - 672, 1490)
-D/PageTranslator: Recovered paper balloon Rect(154, 8476 - 645, 8949) around Rect(251, 8645 - 548, 8801)
 D/UndispatchedCoroutine: regression:kd53-b6815aef.jpg rendering 4/4 translated bubbles
-D/BubbleRenderer: bubble=BubbleBox(left=78, top=4265, right=289, bottom=4304, confidence=0.2558911, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 448 surviving px of original lettering
-D/BubbleRenderer: Typeset: BubbleBox(left=78, top=4265, right=289, bottom=4304, confidence=0.2558911, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(140, 1227 - 672, 1490) textBlock=true vertical=false lines=4 bounds=Rect(160, 1237 - 652, 1480)
+D/BubbleRenderer: Simple: Rect(124, 9969 - 668, 10115) textBlock=true vertical=false lines=3 bounds=Rect(144, 9974 - 648, 10110)
+D/BubbleRenderer: Simple: Rect(251, 8645 - 548, 8801) textBlock=true vertical=false lines=3 bounds=Rect(262, 8651 - 537, 8795)
+D/BubbleRenderer: Simple: Rect(83, 4271 - 296, 4304) textBlock=true vertical=false lines=2 bounds=Rect(91, 4275 - 288, 4300)
+D/BubbleRenderer: bubble=BubbleBox(left=83, top=4271, right=296, bottom=4304, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 448 surviving px of original lettering

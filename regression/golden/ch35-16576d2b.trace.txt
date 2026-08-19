@@ -1,8 +1,9 @@
+D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ko scored 1); reading as Latin
 D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
 D/SimplePageReader:   region Rect(73, 918 - 689, 1084): AND SHE ALSO / HAS A PERFECT READ / ON MY FATHER.
 D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured source
 D/PageTranslator: No balloon for Rect(73, 918 - 689, 1084): best containment 7%
 D/PageTranslator: Grouped 1 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(24, 680 - 739, 1277) around Rect(73, 918 - 689, 1084)
 D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg rendering 1/1 translated bubbles
+D/BubbleRenderer: Simple: Rect(73, 918 - 689, 1084) textBlock=true vertical=false lines=3 bounds=Rect(96, 924 - 666, 1078)

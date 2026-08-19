@@ -358,9 +358,14 @@ internal fun ColumnScope.TranslationPage(screenModel: ReaderSettingsScreenModel)
         } else if (simpleRender) {
             TranslationRenderStyle.SIMPLE
         } else {
-            TranslationRenderStyle.BUBBLE
+            TranslationRenderStyle.AUTO
         }
-        LabelledChipRow(label = "Kiểu vẽ chữ (mặc định: tự chọn theo trang)") {
+        LabelledChipRow(label = "Kiểu vẽ chữ") {
+            FilterChip(
+                selected = currentStyle == TranslationRenderStyle.AUTO,
+                onClick = { preferences.setRenderStyle(TranslationRenderStyle.AUTO) },
+                label = { Text("Tự động theo trang (khuyên dùng)") },
+            )
             FilterChip(
                 selected = currentStyle == TranslationRenderStyle.SIMPLE,
                 onClick = { preferences.setRenderStyle(TranslationRenderStyle.SIMPLE) },

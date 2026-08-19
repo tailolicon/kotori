@@ -61,14 +61,20 @@ class OfflineOutputStampTest {
     fun `render style is part of outputStamp`() {
         val store = InMemoryPreferenceStore()
         val prefs = TranslationPreferences(store)
+        // A fresh install lands on AUTO: the page decides, not a setting left over from another
+        // series. Pinning a mode must still change the stamp, or cached pages would survive it.
+        val auto = prefs.outputStamp()
+        prefs.setRenderStyle(TranslationRenderStyle.SIMPLE)
         val simple = prefs.outputStamp()
         prefs.setRenderStyle(TranslationRenderStyle.TYPESET)
         val typeset = prefs.outputStamp()
         prefs.setRenderStyle(TranslationRenderStyle.BUBBLE)
         val bubble = prefs.outputStamp()
+        assertTrue(auto.contains("auto"))
         assertTrue(simple.contains("simple"))
         assertTrue(typeset.contains("typeset"))
         assertTrue(bubble.contains("bubble"))
+        assertFalse(auto == simple)
         assertFalse(simple == typeset)
         assertFalse(typeset == bubble)
     }

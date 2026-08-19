@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:ch35-4360dbde.jpg pipeline: original path (900x16000, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Read 2 lettering region(s) from 4 line(s) as 'en'
 D/SimplePageReader:   region Rect(284, 8734 - 709, 8935): SHE'S / DODGING ALL / OF THAT..!
@@ -8,5 +9,5 @@ D/PageTranslator: Merged 5 overlapping balloon detection(s)
 D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
 D/PageTranslator: No balloon for Rect(284, 8734 - 709, 8935): best containment 10%
 D/PageTranslator: Grouped 1 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(145, 8444 - 848, 8960) around Rect(284, 8734 - 709, 8935)
 D/UndispatchedCoroutine: regression:ch35-4360dbde.jpg rendering 1/1 translated bubbles
+D/BubbleRenderer: Simple: Rect(284, 8734 - 709, 8935) textBlock=true vertical=false lines=3 bounds=Rect(300, 8741 - 693, 8928)

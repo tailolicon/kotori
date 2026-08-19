@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best zh scored 9); reading as Latin
 D/SimplePageReader: Companion 'en' pass: +2 line(s), replaced 0 junk reading(s)
 D/SimplePageReader: Not one paragraph: Rect(46, 145 - 768, 266) + Rect(29, 392 - 771, 478) — type 121 vs 42, same paper: true
@@ -32,15 +33,14 @@ D/PageTranslator: No balloon for Rect(1, 722 - 772, 868): best containment 7%
 D/PageTranslator: No balloon for Rect(472, 936 - 781, 969): best containment 59%
 D/PageTranslator: No balloon for Rect(39, 1210 - 761, 1383): best containment 21%
 D/PageTranslator: Grouped 10 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(2, 257 - 798, 613) around Rect(0, 388 - 800, 482)
-D/PageTranslator: Recovered paper balloon Rect(2, 451 - 798, 791) around Rect(50, 576 - 732, 666)
-D/PageTranslator: Recovered paper balloon Rect(2, 512 - 798, 1078) around Rect(1, 722 - 772, 868)
-D/PageTranslator: Recovered paper balloon Rect(371, 902 - 798, 1003) around Rect(472, 936 - 781, 969)
-D/PageTranslator: Recovered paper balloon Rect(2, 1097 - 798, 1470) around Rect(39, 1210 - 761, 1383)
-D/PageTranslator: Merged 2 region(s) that share a recovered balloon
-D/UndispatchedCoroutine: regression:asg123-0659af12.jpg rendering 8/8 translated bubbles
-D/BubbleRenderer: Typeset: BubbleBox(left=2, top=451, right=798, bottom=1078, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Typeset: BubbleBox(left=171, top=5514, right=591, bottom=5600, confidence=0.305982, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Typeset: BubbleBox(left=454, top=6318, right=691, bottom=6359, confidence=0.78491825, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Typeset: BubbleBox(left=365, top=5957, right=596, bottom=5994, confidence=0.7952665, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Typeset: BubbleBox(left=299, top=3874, right=513, bottom=3913, confidence=0.92030555, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/UndispatchedCoroutine: regression:asg123-0659af12.jpg rendering 10/10 translated bubbles
+D/BubbleRenderer: Simple: Rect(39, 1210 - 761, 1383) textBlock=true vertical=false lines=2 bounds=Rect(66, 1216 - 734, 1377)
+D/BubbleRenderer: Simple: Rect(1, 722 - 772, 868) textBlock=true vertical=false lines=3 bounds=Rect(30, 727 - 743, 863)
+D/BubbleRenderer: Simple: Rect(0, 388 - 800, 482) textBlock=true vertical=false lines=2 bounds=Rect(29, 392 - 771, 478)
+D/BubbleRenderer: Simple: Rect(50, 576 - 732, 666) textBlock=true vertical=false lines=2 bounds=Rect(75, 580 - 707, 662)
+D/BubbleRenderer: Simple: Rect(164, 4431 - 549, 4537) textBlock=true vertical=false lines=3 bounds=Rect(178, 4435 - 535, 4533)
+D/BubbleRenderer: Simple: Rect(178, 5519 - 556, 5589) textBlock=true vertical=false lines=2 bounds=Rect(192, 5523 - 542, 5585)
+D/BubbleRenderer: Simple: Rect(472, 936 - 781, 969) textBlock=true vertical=false lines=1 bounds=Rect(483, 940 - 770, 965)
+D/BubbleRenderer: Simple: Rect(370, 5955 - 596, 5994) textBlock=true vertical=false lines=1 bounds=Rect(378, 5959 - 588, 5990)
+D/BubbleRenderer: Simple: Rect(457, 6323 - 689, 6354) textBlock=true vertical=false lines=1 bounds=Rect(466, 6327 - 680, 6350)
+D/BubbleRenderer: Simple: Rect(309, 3877 - 514, 3910) textBlock=true vertical=false lines=1 bounds=Rect(317, 3881 - 506, 3906)

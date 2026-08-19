@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg pipeline: original path (1280x10920, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Dropping V as noise rather than dialogue
 D/SimplePageReader: Read 3 lettering region(s) from 4 line(s) as 'en'
@@ -12,8 +13,6 @@ D/PageTranslator: No balloon for Rect(633, 3520 - 1255, 3590): best containment 
 D/PageTranslator: No balloon for Rect(401, 8278 - 1021, 8348): best containment 11%
 D/PageTranslator: Grouped 2 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg rendering 2/2 translated bubbles
-D/BubbleRenderer: Simple: BubbleBox(left=633, top=3520, right=1255, bottom=3590, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=633, top=3520, right=1255, bottom=3590, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: bubble=BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 2875 surviving px of original lettering
-D/BubbleRenderer: Typeset: BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(633, 3520 - 1255, 3590) textBlock=true vertical=false lines=1 bounds=Rect(656, 3524 - 1232, 3586)
+D/BubbleRenderer: Simple: Rect(401, 8278 - 1021, 8348) textBlock=true vertical=false lines=1 bounds=Rect(424, 8282 - 998, 8344)
+D/BubbleRenderer: bubble=BubbleBox(left=401, top=8278, right=1021, bottom=8348, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 2811 surviving px of original lettering

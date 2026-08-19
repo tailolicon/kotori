@@ -144,14 +144,34 @@ class PageTranslator(
             styleHint = preferences.styleHint.get(),
         )
 
-        if (
-            MangaPipeline.shouldHandle(
-                source.width,
-                source.height,
-                currentProvider().displayName,
-                currentProvider().supportsVisionOcr,
-            )
-        ) {
+        // Routing asks the page, and asks it twice: is this the shape of a bound page, and is it
+        // written in Japanese. Shape alone is not enough — a webtoon slice is 676x952 and a manga
+        // page is 900x1300 — and getting that wrong put webtoon credits pages through the balloon
+        // filler, which merged their columns into one grey block. The script probe reads a single
+        // band, and only pages that already passed the shape test ever pay for it.
+        val mayBeManga = MangaPipeline.mayHandle(
+            source.width,
+            source.height,
+            currentProvider().displayName,
+            currentProvider().supportsVisionOcr,
+        )
+        val pageScript = if (mayBeManga) {
+            localWork.withLock { runCatching { simpleReader.probeScript(source) }.getOrDefault("") }
+        } else {
+            ""
+        }
+        val useMangaPort = MangaPipeline.shouldHandle(
+            source.width,
+            source.height,
+            pageScript,
+            currentProvider().displayName,
+            currentProvider().supportsVisionOcr,
+        )
+        logcat {
+            "$diagnosticLabel pipeline: ${if (useMangaPort) "manga port" else "original path"} " +
+                "(${source.width}x${source.height}, script='${pageScript.ifEmpty { "not probed" }}')"
+        }
+        if (useMangaPort) {
             val outcome = try {
                 mangaTranslator.translate(source, translationContext, currentProvider(), diagnosticLabel)
             } catch (error: CancellationException) {
@@ -177,6 +197,9 @@ class PageTranslator(
         val startedAt = System.currentTimeMillis()
         var lockedAt = startedAt
         var localDoneAt = startedAt
+        // What the page turned out to need. Set once the page has been read; the renderer is never
+        // handed AUTO, because by then the question has an answer.
+        var resolvedStyle = preferences.renderStyle()
 
         // Detection and OCR hold the lock; the provider call deliberately does not.
         //
@@ -308,11 +331,19 @@ class PageTranslator(
                 // one or two words per row — translated and unreadable. The balloon around it has
                 // the room. A reader should not have to know that, so the page says so.
                 //
-                // Deliberately gated on the page being a page. Forcing balloon fills onto a colour
-                // webtoon strip is how neon ovals used to get painted over, and a strip that merely
-                // happens to read as Japanese must not trigger it.
-                val typeset = renderStyle == TranslationRenderStyle.TYPESET ||
-                    (read.language == "ja" && pageFormat == PageFormat.MANGA)
+                // Deliberately gated on the page being a page. Flooding balloons on a colour webtoon
+                // is how neon ovals used to get painted over and how a dark credits panel becomes a
+                // slab, so a strip that merely happens to read as Japanese must not trigger it.
+                val typeset = when (renderStyle) {
+                    TranslationRenderStyle.TYPESET -> true
+                    TranslationRenderStyle.SIMPLE -> false
+                    else -> read.language == "ja" && pageFormat == PageFormat.MANGA
+                }
+                resolvedStyle = if (typeset) {
+                    TranslationRenderStyle.TYPESET
+                } else {
+                    TranslationRenderStyle.SIMPLE
+                }
                 var placed = placeInBalloons(blocks, blockTexts, balloons, preferBalloon = typeset)
                 if (typeset) {
                     placed = recoverPaperBalloons(source, placed.first, placed.second)
@@ -599,7 +630,7 @@ class PageTranslator(
             bubbles,
             preferences.font.get(),
             horizontalSeams,
-            style = preferences.renderStyle(),
+            style = resolvedStyle,
         )
         // Stage timings, because "translation is slow" is not actionable without them: waiting for
         // the single-lane local stages, running them, waiting on the network, and drawing are four

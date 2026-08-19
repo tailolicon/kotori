@@ -545,6 +545,22 @@ class TranslationManager(
         progressLabel = label
         progressTotal = totalPages
         progressDone.set(0)
+        fetchedPages = 0
+        publishProgress()
+    }
+
+    @Volatile private var fetchedPages = 0
+
+    /**
+     * [pages] of the chapter have been downloaded but not yet translated.
+     *
+     * Reported separately because the two numbers mean different things to the reader and conflating
+     * them is what made the panel lie: it counted downloads and said "7/42 trang" while one page was
+     * rendered. Downloads move the label, never the bar.
+     */
+    fun reportFetched(pages: Int) {
+        if (progressTotal <= 0) return
+        fetchedPages = pages
         publishProgress()
     }
 
@@ -561,7 +577,9 @@ class TranslationManager(
         // A quota or credentials message is the one line that explains why pages stopped; a
         // progress bar must not paint over it.
         if (_status.value is TranslationStatus.Failed) return
-        _status.value = TranslationStatus.Working(progressDone.get().coerceAtMost(total), total, progressLabel)
+        val done = progressDone.get().coerceAtMost(total)
+        val label = if (fetchedPages > done) "$progressLabel · đang tải $fetchedPages" else progressLabel
+        _status.value = TranslationStatus.Working(done, total, label)
     }
 
     /** The look-ahead finished or was abandoned; stop reporting a chapter that is no longer running. */

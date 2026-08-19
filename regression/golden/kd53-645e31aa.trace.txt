@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Dropping R as noise rather than dialogue
 D/SimplePageReader: Read 14 lettering region(s) from 21 line(s) as 'en'
@@ -29,22 +30,19 @@ D/PageTranslator: No balloon for Rect(481, 10701 - 706, 10743): best containment
 D/PageTranslator: No balloon for Rect(395, 11479 - 641, 11525): best containment 25%
 D/PageTranslator: No balloon for Rect(156, 11872 - 642, 11952): best containment 0%
 D/PageTranslator: Grouped 14 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(213, 308 - 724, 756) around Rect(251, 444 - 677, 611)
-D/PageTranslator: Recovered paper balloon Rect(129, 4396 - 427, 4541) around Rect(140, 4458 - 411, 4509)
-D/PageTranslator: Recovered paper balloon Rect(474, 5304 - 737, 5656) around Rect(493, 5520 - 679, 5672)
-D/PageTranslator: Recovered paper balloon Rect(149, 7870 - 448, 8008) around Rect(154, 7918 - 434, 7960)
-D/PageTranslator: Recovered paper balloon Rect(370, 9202 - 662, 9338) around Rect(392, 9256 - 635, 9302)
-D/PageTranslator: Recovered paper balloon Rect(54, 9613 - 355, 9702) around Rect(58, 9655 - 348, 9693)
-D/PageTranslator: Recovered paper balloon Rect(454, 10674 - 737, 10791) around Rect(481, 10701 - 706, 10743)
-D/PageTranslator: Recovered paper balloon Rect(370, 11434 - 673, 11579) around Rect(395, 11479 - 641, 11525)
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 4
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 6
 D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg rendering 12/14 translated bubbles
-D/BubbleRenderer: Simple: BubbleBox(left=370, top=11434, right=673, bottom=11579, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Simple: BubbleBox(left=156, top=11872, right=642, bottom=11952, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=156, top=11872, right=642, bottom=11952, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=54, top=9613, right=355, bottom=9702, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: bubble=BubbleBox(left=72, top=1262, right=289, bottom=1305, confidence=0.3774248, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 653 surviving px of original lettering
-D/BubbleRenderer: Typeset: BubbleBox(left=72, top=1262, right=289, bottom=1305, confidence=0.3774248, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=143, top=11016, right=382, bottom=11049, confidence=0.22460723, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=143, top=11016, right=382, bottom=11049, confidence=0.22460723, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(251, 444 - 677, 611) textBlock=true vertical=false lines=4 bounds=Rect(267, 450 - 661, 605)
+D/BubbleRenderer: Simple: Rect(209, 1817 - 596, 1994) textBlock=true vertical=false lines=3 bounds=Rect(223, 1824 - 582, 1987)
+D/BubbleRenderer: Simple: Rect(156, 11872 - 642, 11952) textBlock=true vertical=false lines=1 bounds=Rect(174, 11876 - 624, 11948)
+D/BubbleRenderer: Simple: Rect(140, 4458 - 411, 4509) textBlock=true vertical=false lines=1 bounds=Rect(150, 4462 - 401, 4505)
+D/BubbleRenderer: Simple: Rect(154, 7918 - 434, 7960) textBlock=true vertical=false lines=1 bounds=Rect(164, 7922 - 424, 7956)
+D/BubbleRenderer: Simple: Rect(395, 11479 - 641, 11525) textBlock=true vertical=false lines=1 bounds=Rect(404, 11483 - 632, 11521)
+D/BubbleRenderer: Simple: Rect(392, 9256 - 635, 9302) textBlock=true vertical=false lines=1 bounds=Rect(401, 9260 - 626, 9298)
+D/BubbleRenderer: Simple: Rect(58, 9655 - 348, 9693) textBlock=true vertical=false lines=1 bounds=Rect(69, 9659 - 337, 9689)
+D/BubbleRenderer: Simple: Rect(481, 10701 - 706, 10743) textBlock=true vertical=false lines=1 bounds=Rect(489, 10705 - 698, 10739)
+D/BubbleRenderer: Simple: Rect(402, 8490 - 664, 8523) textBlock=true vertical=false lines=1 bounds=Rect(412, 8494 - 654, 8519)
+D/BubbleRenderer: Simple: Rect(119, 11017 - 373, 11051) textBlock=true vertical=false lines=1 bounds=Rect(128, 11021 - 364, 11047)
+D/BubbleRenderer: Simple: Rect(83, 1273 - 297, 1305) textBlock=true vertical=false lines=2 bounds=Rect(91, 1277 - 289, 1301)
+D/BubbleRenderer: bubble=BubbleBox(left=83, top=1273, right=297, bottom=1305, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 669 surviving px of original lettering

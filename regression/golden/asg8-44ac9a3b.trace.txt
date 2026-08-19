@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg pipeline: original path (1280x9255, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
 D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 0 junk reading(s)
 D/SimplePageReader: Dropping !! as noise rather than dialogue
@@ -14,9 +15,7 @@ D/PageTranslator: No balloon for Rect(411, 3092 - 1251, 3194): best containment 
 D/PageTranslator: No balloon for Rect(209, 5182 - 991, 5268): best containment 8%
 D/PageTranslator: No balloon for Rect(532, 5605 - 1018, 5797): best containment 12%
 D/PageTranslator: Grouped 3 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(599, 2948 - 1250, 3227) around Rect(411, 3092 - 1251, 3194)
-D/PageTranslator: Recovered paper balloon Rect(418, 5420 - 1112, 6072) around Rect(532, 5605 - 1018, 5797)
 D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg rendering 3/3 translated bubbles
-D/BubbleRenderer: bubble=BubbleBox(left=599, top=2948, right=1250, bottom=3227, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) ghost gate: erased 17087 surviving px of original lettering
-D/BubbleRenderer: Simple: BubbleBox(left=209, top=5182, right=991, bottom=5268, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=209, top=5182, right=991, bottom=5268, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(532, 5605 - 1018, 5797) textBlock=true vertical=false lines=3 bounds=Rect(550, 5612 - 1000, 5790)
+D/BubbleRenderer: Simple: Rect(411, 3092 - 1251, 3194) textBlock=true vertical=false lines=1 bounds=Rect(442, 3096 - 1220, 3190)
+D/BubbleRenderer: Simple: Rect(209, 5182 - 991, 5268) textBlock=true vertical=false lines=1 bounds=Rect(238, 5186 - 962, 5264)

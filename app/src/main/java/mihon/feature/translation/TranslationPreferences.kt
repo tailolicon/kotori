@@ -143,12 +143,30 @@ class TranslationPreferences(
 
     fun renderStyle(): TranslationRenderStyle {
         if (renderStylePref.isSet()) return renderStylePref.get()
-        return if (simpleRender.get()) TranslationRenderStyle.SIMPLE else TranslationRenderStyle.BUBBLE
+        return if (simpleRender.get()) TranslationRenderStyle.SIMPLE else TranslationRenderStyle.AUTO
     }
 
     fun setRenderStyle(style: TranslationRenderStyle) {
         renderStylePref.set(style)
         simpleRender.set(style == TranslationRenderStyle.SIMPLE)
+    }
+
+    /**
+     * One-shot move of existing installs onto [TranslationRenderStyle.AUTO].
+     *
+     * A style pinned before AUTO existed cannot be told apart from one the reader chose, and the
+     * pinned value was doing real damage: an install left on TYPESET after manga work rendered every
+     * webtoon as flooded dark slabs. Everyone starts on the automatic choice once; the picker is
+     * still there, under "Nâng cao", for anyone who wants to force a mode back.
+     */
+    private val renderStyleMigrated: Preference<Boolean> =
+        preferenceStore.getBoolean("pref_translation_render_style_auto_v1", false)
+
+    init {
+        if (!renderStyleMigrated.get()) {
+            setRenderStyle(TranslationRenderStyle.AUTO)
+            renderStyleMigrated.set(true)
+        }
     }
 
     /** Upper bound for the on-disk translated-page cache, in mebibytes. */
@@ -238,7 +256,7 @@ class TranslationPreferences(
          * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
          * reader had already seen came back with the defect intact.
          */
-        const val RENDERER_VERSION = "r106"
+        const val RENDERER_VERSION = "r107"
     }
 
     /**

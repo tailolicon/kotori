@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best zh scored 2); reading as Latin
 D/SimplePageReader: Not one paragraph: Rect(630, 6789 - 1230, 6854) + Rect(30, 6920 - 900, 7055) — type 65 vs 27, same paper: false
 D/SimplePageReader: Read 7 lettering region(s) from 17 line(s) as 'en'
@@ -18,14 +19,11 @@ D/PageTranslator: No balloon for Rect(0, 6915 - 932, 7060): best containment 69%
 D/PageTranslator: No balloon for Rect(568, 7466 - 1152, 7647): best containment 47%
 D/PageTranslator: No balloon for Rect(180, 9988 - 828, 10060): best containment 7%
 D/PageTranslator: Grouped 7 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(73, 2672 - 745, 3284) around Rect(142, 2925 - 704, 3103)
-D/PageTranslator: Recovered paper balloon Rect(2, 6877 - 1246, 7269) around Rect(0, 6915 - 932, 7060)
-D/PageTranslator: Recovered paper balloon Rect(376, 7208 - 1278, 7853) around Rect(568, 7466 - 1152, 7647)
 D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg rendering 7/7 translated bubbles
-D/BubbleRenderer: Typeset: BubbleBox(left=171, top=5468, right=815, bottom=5640, confidence=0.19308272, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=605, top=1945, right=1254, bottom=2018, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=605, top=1945, right=1254, bottom=2018, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=606, top=6785, right=1254, bottom=6858, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=606, top=6785, right=1254, bottom=6858, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=180, top=9988, right=828, bottom=10060, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=180, top=9988, right=828, bottom=10060, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/BubbleRenderer: Simple: Rect(0, 6915 - 932, 7060) textBlock=true vertical=false lines=4 bounds=Rect(30, 6920 - 900, 7055)
+D/BubbleRenderer: Simple: Rect(148, 5468 - 796, 5635) textBlock=true vertical=false lines=4 bounds=Rect(172, 5474 - 772, 5629)
+D/BubbleRenderer: Simple: Rect(568, 7466 - 1152, 7647) textBlock=true vertical=false lines=3 bounds=Rect(590, 7473 - 1130, 7640)
+D/BubbleRenderer: Simple: Rect(142, 2925 - 704, 3103) textBlock=true vertical=false lines=3 bounds=Rect(163, 2932 - 683, 3096)
+D/BubbleRenderer: Simple: Rect(605, 1945 - 1254, 2018) textBlock=true vertical=false lines=1 bounds=Rect(629, 1949 - 1230, 2014)
+D/BubbleRenderer: Simple: Rect(606, 6785 - 1254, 6858) textBlock=true vertical=false lines=1 bounds=Rect(630, 6789 - 1230, 6854)
+D/BubbleRenderer: Simple: Rect(180, 9988 - 828, 10060) textBlock=true vertical=false lines=1 bounds=Rect(204, 9992 - 804, 10056)

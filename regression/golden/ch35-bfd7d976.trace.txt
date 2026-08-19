@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:ch35-bfd7d976.jpg pipeline: original path (900x1563, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
 D/SimplePageReader: Read 4 lettering region(s) from 11 line(s) as 'en'
 D/SimplePageReader:   region Rect(137, 134 - 518, 301): HOW DO YOU / KNOW ABOUT / THAT?!
@@ -11,8 +12,8 @@ D/PageTranslator: No balloon for Rect(473, 474 - 794, 587): best containment 0%
 D/PageTranslator: No balloon for Rect(132, 752 - 521, 868): best containment 0%
 D/PageTranslator: No balloon for Rect(425, 1062 - 679, 1164): best containment 65%
 D/PageTranslator: Grouped 4 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(66, 2 - 589, 419) around Rect(137, 134 - 518, 301)
-D/PageTranslator: Recovered paper balloon Rect(369, 369 - 835, 693) around Rect(473, 474 - 794, 587)
-D/PageTranslator: Recovered paper balloon Rect(4, 586 - 649, 1034) around Rect(132, 752 - 521, 868)
-D/PageTranslator: Recovered paper balloon Rect(342, 968 - 728, 1258) around Rect(425, 1062 - 679, 1164)
 D/UndispatchedCoroutine: regression:ch35-bfd7d976.jpg rendering 4/4 translated bubbles
+D/BubbleRenderer: Simple: Rect(137, 134 - 518, 301) textBlock=true vertical=false lines=3 bounds=Rect(151, 140 - 504, 295)
+D/BubbleRenderer: Simple: Rect(132, 752 - 521, 868) textBlock=true vertical=false lines=3 bounds=Rect(146, 756 - 507, 864)
+D/BubbleRenderer: Simple: Rect(473, 474 - 794, 587) textBlock=true vertical=false lines=3 bounds=Rect(485, 478 - 782, 583)
+D/BubbleRenderer: Simple: Rect(425, 1062 - 679, 1164) textBlock=true vertical=false lines=2 bounds=Rect(434, 1066 - 670, 1160)

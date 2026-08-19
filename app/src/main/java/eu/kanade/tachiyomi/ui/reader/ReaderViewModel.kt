@@ -446,19 +446,22 @@ class ReaderViewModel @JvmOverloads constructor(
                 // image sent, so a manhwa chapter split into dozens of short images costs dozens of
                 // times what the same content costs joined. Collect a run, hand it over whole.
                 //
-                // The run starts at one page and doubles up to that batch size. Fixed at forty, the
-                // loop downloaded forty pages before translating any of them — so the page actually
-                // on screen waited behind thirty-nine the reader would not reach for ten minutes,
-                // and the panel showed a count climbing through pages that were merely fetched.
-                // Ramping makes the first page almost immediate and still reaches the batch size
-                // that keeps a manhwa chapter affordable, for a handful of extra calls per chapter.
+                // The run size is deliberately fixed and large. Ramping it — one page, then two,
+                // then four — was tried to make the progress bar move sooner and was a mistake on
+                // exactly the material this batching exists for: a webtoon slice sent on its own is
+                // no longer part of a strip, so balloons straddling a cut arrive clipped and the
+                // page is the shape of a bound page rather than of the strip it belongs to. The
+                // reader does not wait for this loop anyway — the page they are looking at is
+                // translated on demand when the viewer decodes it.
                 val run = mutableListOf<Pair<Int, () -> java.io.InputStream>>()
-                var runTarget = 1
+                var fetched = 0
                 for (page in ordered) {
                     // A rate-limited provider fails every page from here on; marching through the
                     // rest of the window would just spend the recovering quota on more failures.
                     if (translationManager.isRateLimited()) break@prefetch
                     fetchPage(readerChapter, page)
+                    fetched++
+                    translationManager.reportFetched(fetched)
                     val source = (page as? TranslatedReaderPage)?.originalStream() ?: page.stream
                     if (source != null) {
                         run += page.index to source
@@ -470,10 +473,9 @@ class ReaderViewModel @JvmOverloads constructor(
                         // short of the total and the panel looks stuck for the rest of the chapter.
                         translationManager.reportPagesHandled(1)
                     }
-                    if (run.size >= runTarget) {
+                    if (run.size >= TRANSLATION_RUN_PAGES) {
                         translateRun(readerChapter, run.toList())
                         run.clear()
-                        runTarget = (runTarget * 2).coerceAtMost(TRANSLATION_RUN_PAGES)
                     }
                 }
                 if (run.isNotEmpty()) translateRun(readerChapter, run.toList())

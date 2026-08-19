@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:ch35-d2448b25.jpg pipeline: original path (900x1478, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 2); reading as Latin
 D/SimplePageReader: Read 2 lettering region(s) from 8 line(s) as 'en'
 D/SimplePageReader:   region Rect(124, 320 - 626, 567): I DON'T CARE / WHAT HAPPENS / TO THE DENISE / OF VELTUS.
@@ -6,5 +7,6 @@ D/UndispatchedCoroutine: Reading this page as 'en' rather than the configured so
 D/PageTranslator: Merged 2 overlapping balloon detection(s)
 D/PageTranslator: No balloon for Rect(124, 320 - 626, 567): best containment 8%
 D/PageTranslator: Grouped 2 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(35, 184 - 790, 922) around Rect(124, 320 - 626, 567)
 D/UndispatchedCoroutine: regression:ch35-d2448b25.jpg rendering 2/2 translated bubbles
+D/BubbleRenderer: Simple: Rect(244, 790 - 800, 1014) textBlock=true vertical=false lines=4 bounds=Rect(265, 798 - 779, 1006)
+D/BubbleRenderer: Simple: Rect(124, 320 - 626, 567) textBlock=true vertical=false lines=4 bounds=Rect(143, 329 - 607, 558)

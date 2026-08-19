@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:asg8-16f89bd3.jpg pipeline: original path (676x952, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best ja scored 1); reading as Latin
 D/SimplePageReader: Not one paragraph: Rect(440, 542 - 595, 581) + Rect(491, 586 - 582, 667) — type 39 vs 21, same paper: true
 D/SimplePageReader: Read 10 lettering region(s) from 25 line(s) as 'en'
@@ -23,19 +24,14 @@ D/PageTranslator: No balloon for Rect(49, 646 - 298, 770): best containment 13%
 D/PageTranslator: No balloon for Rect(487, 743 - 611, 935): best containment 6%
 D/PageTranslator: No balloon for Rect(30, 863 - 310, 920): best containment 26%
 D/PageTranslator: Grouped 10 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(346, 2 - 488, 48) around Rect(372, 0 - 462, 26)
-D/PageTranslator: Recovered paper balloon Rect(152, 425 - 558, 576) around Rect(232, 478 - 478, 523)
-D/PageTranslator: Recovered paper balloon Rect(2, 415 - 393, 716) around Rect(38, 525 - 306, 606)
-D/PageTranslator: Recovered paper balloon Rect(2, 471 - 379, 945) around Rect(49, 646 - 298, 770)
-D/PageTranslator: Recovered paper balloon Rect(2, 791 - 402, 950) around Rect(30, 863 - 310, 920)
-D/PageTranslator: Merged 4 region(s) that share a recovered balloon
-D/UndispatchedCoroutine: regression:asg8-16f89bd3.jpg rendering 6/6 translated bubbles
-D/BubbleRenderer: Typeset: BubbleBox(left=2, top=415, right=402, bottom=950, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=152, top=425, right=601, bottom=585, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=152, top=425, right=601, bottom=585, confidence=0.15, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=487, top=743, right=611, bottom=935, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=487, top=743, right=611, bottom=935, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=486, top=580, right=586, bottom=731, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=486, top=580, right=586, bottom=731, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
-D/BubbleRenderer: Simple: BubbleBox(left=216, top=6, right=300, bottom=23, confidence=0.39830726, isTextBlock=false, isFallbackTextBlock=false) has no flat interior; erasing glyphs
-D/BubbleRenderer: Typeset: BubbleBox(left=216, top=6, right=300, bottom=23, confidence=0.39830726, isTextBlock=false, isFallbackTextBlock=false) could not be lettered without overprint; leaving source
+D/UndispatchedCoroutine: regression:asg8-16f89bd3.jpg rendering 10/10 translated bubbles
+D/BubbleRenderer: Simple: Rect(49, 646 - 298, 770) textBlock=true vertical=false lines=4 bounds=Rect(58, 651 - 289, 765)
+D/BubbleRenderer: Simple: Rect(487, 743 - 611, 935) textBlock=true vertical=false lines=6 bounds=Rect(492, 750 - 606, 928)
+D/BubbleRenderer: Simple: Rect(38, 525 - 306, 606) textBlock=true vertical=false lines=3 bounds=Rect(48, 529 - 296, 602)
+D/BubbleRenderer: Simple: Rect(30, 863 - 310, 920) textBlock=true vertical=false lines=2 bounds=Rect(40, 867 - 300, 916)
+D/BubbleRenderer: Simple: Rect(486, 580 - 586, 731) textBlock=true vertical=false lines=5 bounds=Rect(490, 586 - 582, 725)
+D/BubbleRenderer: Simple: Rect(232, 478 - 478, 523) textBlock=true vertical=false lines=1 bounds=Rect(241, 482 - 469, 519)
+D/BubbleRenderer: Simple: Rect(434, 538 - 601, 585) textBlock=true vertical=false lines=1 bounds=Rect(440, 542 - 595, 581)
+D/BubbleRenderer: Simple: Rect(93, 822 - 249, 846) textBlock=true vertical=false lines=1 bounds=Rect(99, 826 - 243, 842)
+D/BubbleRenderer: Simple: Rect(372, 0 - 462, 26) textBlock=true vertical=false lines=1 bounds=Rect(376, 4 - 458, 22)
+D/BubbleRenderer: Simple: Rect(213, 5 - 301, 23) textBlock=true vertical=false lines=1 bounds=Rect(217, 9 - 297, 19)

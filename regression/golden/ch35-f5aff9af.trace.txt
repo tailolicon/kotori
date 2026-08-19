@@ -1,3 +1,4 @@
+D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg pipeline: original path (900x16000, script='not probed')
 D/SimplePageReader: Probe found no CJK worth trusting (best en scored 0); reading as Latin
 D/SimplePageReader: Read 8 lettering region(s) from 30 line(s) as 'en'
 D/SimplePageReader:   region Rect(75, 4240 - 590, 4392): ...YOU ACTUALLY / SHOWED UP WITHOUT / RUNNING AWAY?
@@ -19,11 +20,12 @@ D/PageTranslator: No balloon for Rect(76, 13297 - 714, 13563): best containment 
 D/PageTranslator: No balloon for Rect(318, 14652 - 738, 14877): best containment 4%
 D/PageTranslator: No balloon for Rect(97, 15505 - 572, 15676): best containment 7%
 D/PageTranslator: Grouped 8 region(s) by balloon
-D/PageTranslator: Recovered paper balloon Rect(25, 5566 - 898, 6195) around Rect(210, 5627 - 774, 5861)
-D/PageTranslator: Recovered paper balloon Rect(38, 6338 - 862, 7071) around Rect(74, 6585 - 825, 6784)
-D/PageTranslator: Recovered paper balloon Rect(2, 9319 - 742, 10003) around Rect(108, 9669 - 586, 9913)
-D/PageTranslator: Recovered paper balloon Rect(155, 11038 - 861, 11730) around Rect(221, 11318 - 795, 11576)
-D/PageTranslator: Recovered paper balloon Rect(2, 12916 - 898, 13591) around Rect(76, 13297 - 714, 13563)
-D/PageTranslator: Recovered paper balloon Rect(224, 14412 - 835, 15002) around Rect(318, 14652 - 738, 14877)
-D/PageTranslator: Recovered paper balloon Rect(36, 15343 - 632, 15922) around Rect(97, 15505 - 572, 15676)
 D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg rendering 8/8 translated bubbles
+D/BubbleRenderer: Simple: Rect(76, 13297 - 714, 13563) textBlock=true vertical=false lines=5 bounds=Rect(100, 13307 - 690, 13553)
+D/BubbleRenderer: Simple: Rect(74, 6585 - 825, 6784) textBlock=true vertical=false lines=3 bounds=Rect(102, 6592 - 797, 6777)
+D/BubbleRenderer: Simple: Rect(221, 11318 - 795, 11576) textBlock=true vertical=false lines=4 bounds=Rect(242, 11328 - 774, 11566)
+D/BubbleRenderer: Simple: Rect(210, 5627 - 774, 5861) textBlock=true vertical=false lines=4 bounds=Rect(231, 5636 - 753, 5852)
+D/BubbleRenderer: Simple: Rect(108, 9669 - 586, 9913) textBlock=true vertical=false lines=4 bounds=Rect(126, 9678 - 568, 9904)
+D/BubbleRenderer: Simple: Rect(318, 14652 - 738, 14877) textBlock=true vertical=false lines=4 bounds=Rect(334, 14660 - 722, 14869)
+D/BubbleRenderer: Simple: Rect(97, 15505 - 572, 15676) textBlock=true vertical=false lines=3 bounds=Rect(115, 15511 - 554, 15670)
+D/BubbleRenderer: Simple: Rect(75, 4240 - 590, 4392) textBlock=true vertical=false lines=3 bounds=Rect(94, 4246 - 571, 4386)
