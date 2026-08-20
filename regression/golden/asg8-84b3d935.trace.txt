@@ -1,5 +1,6 @@
-D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'zh' scored 3); leaving the script open
+D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best 'ko' scored 1); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=116
 D/SimplePageReader: Not one paragraph: Rect(630, 6789 - 1230, 6854) + Rect(30, 6920 - 900, 7055) — type 65 vs 27, same paper: false
 D/SimplePageReader: Read 7 lettering region(s) from 17 line(s) as 'en'
 D/SimplePageReader:   region Rect(605, 1945 - 1254, 2018): KAISCANS.COM
@@ -10,15 +11,7 @@ D/SimplePageReader:   region Rect(0, 6915 - 932, 7060): TL/N: THE DARKNESS UNDER
 D/SimplePageReader:   region Rect(568, 7466 - 1152, 7647): BUT THE TIMING OF / /TS CHARGED ATTACK IS / UNPREDICTABLE!
 D/SimplePageReader:   region Rect(180, 9988 - 828, 10060): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (405 chars); remembering it
-D/PageTranslator: Merged 13 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(605, 1945 - 1254, 2018): best containment 9%
-D/PageTranslator: No balloon for Rect(142, 2925 - 704, 3103): best containment 5%
-D/PageTranslator: No balloon for Rect(606, 6785 - 1254, 6858): best containment 32%
-D/PageTranslator: No balloon for Rect(0, 6915 - 932, 7060): best containment 69%
-D/PageTranslator: No balloon for Rect(568, 7466 - 1152, 7647): best containment 47%
-D/PageTranslator: No balloon for Rect(180, 9988 - 828, 10060): best containment 7%
-D/PageTranslator: Grouped 7 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg rendering 7/7 translated bubbles
 D/BubbleRenderer: Simple: Rect(0, 6915 - 932, 7060) textBlock=true vertical=false lines=4 bounds=Rect(30, 6920 - 900, 7055)
 D/BubbleRenderer: Simple: Rect(148, 5468 - 796, 5635) textBlock=true vertical=false lines=4 bounds=Rect(172, 5474 - 772, 5629)

@@ -1,40 +1,6 @@
-D/UndispatchedCoroutine: regression:ch35-1216589a.jpg pipeline: original path (900x16000, script='not probed')
-D/SimplePageReader: Read 9 lettering region(s) from 29 line(s) as 'en'
-D/SimplePageReader:   region Rect(163, 199 - 563, 393): A GIRL LIKE THAT / IS NOW GETTING / IMPALED ON MY / COCK...!
-D/SimplePageReader:   region Rect(182, 3670 - 538, 3799): S0 THIS IS WHAT / A PUSSY FEELS / LIKE...?!
-D/SimplePageReader:   region Rect(241, 5670 - 631, 5848): ITS ON / A WHOLE OTHER / LEVEL COMPARED / TO MY HAND...!
-D/SimplePageReader:   region Rect(153, 6536 - 492, 6630): HOW DOI EVEN / DESCRIBE IT,
-D/SimplePageReader:   region Rect(30, 8152 - 301, 8410): MOngh
-D/SimplePageReader:   region Rect(284, 8370 - 527, 8543): ITS LIKE / IT FEELS / ALVE?
-D/SimplePageReader:   region Rect(129, 9532 - 595, 9704): I CAN FEEL EVERY / HORMONE IN MY BODY / GOING ABSOLUTELY / WILDI
-D/SimplePageReader:   region Rect(162, 10587 - 437, 10745): CLENCHING / TIGHT LIKE ITS / GOING TO / BURST.
-D/SimplePageReader:   region Rect(319, 12420 - 604, 12555): A HEAT SO / INTENSE IT FEELS / LIKE MY COCK IS / MELTING.
-D/UndispatchedCoroutine: Dropped BubbleBox(left=30, top=8152, right=301, bottom=8410, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: MOngh
-D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/PageTranslator: Merged 13 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 5 balloon(s) the page pass could not read
-D/UndispatchedCoroutine: Recovered Rect(296, 12287 - 688, 12400): A HEAT SO / INTENSE IT FEELS / LIKE MY COCK IS / MELTING.
-D/PageTranslator: No balloon for Rect(163, 199 - 563, 393): best containment 7%
-D/PageTranslator: No balloon for Rect(182, 3670 - 538, 3799): best containment 12%
-D/PageTranslator: No balloon for Rect(241, 5670 - 631, 5848): best containment 10%
-D/PageTranslator: No balloon for Rect(284, 8370 - 527, 8543): best containment 15%
-D/PageTranslator: No balloon for Rect(129, 9532 - 595, 9704): best containment 13%
-D/PageTranslator: No balloon for Rect(162, 10587 - 437, 10745): best containment 13%
-D/PageTranslator: No balloon for Rect(319, 12420 - 604, 12555): best containment 20%
-D/PageTranslator: Grouped 9 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299394 pages=4 rendering 9/9 translated bubbles
-D/BubbleRenderer: Simple: Rect(129, 9532 - 595, 9704) textBlock=true vertical=false lines=4 bounds=Rect(146, 9538 - 578, 9698)
-D/BubbleRenderer: Simple: Rect(163, 199 - 563, 393) textBlock=true vertical=false lines=4 bounds=Rect(178, 206 - 548, 386)
-D/BubbleRenderer: Simple: Rect(241, 5670 - 631, 5848) textBlock=true vertical=false lines=4 bounds=Rect(255, 5677 - 617, 5841)
-D/BubbleRenderer: Simple: Rect(182, 3670 - 538, 3799) textBlock=true vertical=false lines=3 bounds=Rect(195, 3675 - 525, 3794)
-D/BubbleRenderer: Simple: Rect(296, 12287 - 688, 12400) textBlock=false vertical=false lines=4 bounds=Rect(330, 12425 - 593, 12550)
-D/BubbleRenderer: Simple: Rect(162, 10587 - 437, 10745) textBlock=true vertical=false lines=4 bounds=Rect(172, 10593 - 427, 10739)
-D/BubbleRenderer: Simple: Rect(284, 8370 - 527, 8543) textBlock=true vertical=false lines=3 bounds=Rect(293, 8376 - 518, 8537)
-D/BubbleRenderer: Simple: Rect(319, 12420 - 604, 12555) textBlock=true vertical=false lines=4 bounds=Rect(330, 12425 - 593, 12550)
-D/BubbleRenderer: Simple: BubbleBox(left=319, top=12420, right=604, bottom=12555, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) repeats text already lettered nearby
-D/BubbleRenderer: Simple: Rect(153, 6536 - 492, 6630) textBlock=true vertical=false lines=2 bounds=Rect(166, 6540 - 479, 6626)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=5 pipeline: original path (720x12561, script='en')
+D/UndispatchedCoroutine: regression:ch35-1216589a.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=0, en=49
 D/SimplePageReader: Read 10 lettering region(s) from 28 line(s) as 'en'
 D/SimplePageReader:   region Rect(109, 160 - 625, 388): YOUVE ALSO / DONE YOUR BEST / TO FILL YOURSELF, / MY LADY.
 D/SimplePageReader:   region Rect(547, 1073 - 801, 1199): YOU ARE / FULL.
@@ -47,25 +13,7 @@ D/SimplePageReader:   region Rect(353, 9332 - 547, 9440): I...
 D/SimplePageReader:   region Rect(110, 11987 - 792, 12258): I DON'T / WANT TO LOSE / TOMORROW...
 D/SimplePageReader:   region Rect(223, 13999 - 677, 14320): THEN / WIN!
 D/UndispatchedCoroutine: This series reads as 'en' (220 chars); remembering it
-D/PageTranslator: Merged 4 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(109, 160 - 625, 388): best containment 0%
-D/PageTranslator: No balloon for Rect(547, 1073 - 801, 1199): best containment 14%
-D/PageTranslator: No balloon for Rect(97, 2054 - 495, 2260): best containment 10%
-D/PageTranslator: No balloon for Rect(152, 4165 - 750, 4374): best containment 3%
-D/PageTranslator: No balloon for Rect(250, 7285 - 730, 7494): best containment 4%
-D/PageTranslator: No balloon for Rect(105, 8612 - 292, 8722): best containment 38%
-D/PageTranslator: No balloon for Rect(353, 9332 - 547, 9440): best containment 13%
-D/PageTranslator: No balloon for Rect(110, 11987 - 792, 12258): best containment 1%
-D/PageTranslator: No balloon for Rect(223, 13999 - 677, 14320): best containment 0%
-D/PageTranslator: Grouped 10 region(s) by balloon
-D/SimplePageReader: Read 6 lettering region(s) from 15 line(s) as 'en'
-D/SimplePageReader:   region Rect(121, 272 - 519, 382): EVERY THRUST SENDS / A JOLT ALL THE WAY / TO MY BRAIN
-D/SimplePageReader:   region Rect(209, 2093 - 506, 2183): I CAN'T THINK / STRAIGHT...!!
-D/SimplePageReader:   region Rect(154, 2842 - 423, 3001): S0 THIS / IS WHATIT / MEANS
-D/SimplePageReader:   region Rect(171, 4853 - 553, 4960): TO THRUST INTO / A WOMAN...!
-D/SimplePageReader:   region Rect(168, 8012 - 603, 8195): PULL IT OUT / RIGHT NOW...!
-D/SimplePageReader:   region Rect(101, 9988 - 497, 10150): Yeah, that's right! / P you pul| it out lke / that, l torgi
+D/UndispatchedCoroutine: regression:ch35-1216589a.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:ch35-1216589a.jpg rendering 10/10 translated bubbles
 D/BubbleRenderer: Simple: Rect(110, 11987 - 792, 12258) textBlock=true vertical=false lines=3 bounds=Rect(135, 11997 - 767, 12248)
 D/BubbleRenderer: Simple: Rect(223, 13999 - 677, 14320) textBlock=true vertical=false lines=2 bounds=Rect(240, 14011 - 660, 14308)

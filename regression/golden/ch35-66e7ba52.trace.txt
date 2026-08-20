@@ -1,6 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg pipeline: original path (900x3102, script='not probed')
+D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg pipeline: original path (900x3102, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
-D/SimplePageReader:   region Rect(155, 9616 - 515, 9772): I.. I GAME / INSIDE... PARK / JIMIN...
 D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
-D/PageTranslator: Merged 1 overlapping balloon detection(s)
+D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg skipping the balloon detector: WEBTOON lettered in place

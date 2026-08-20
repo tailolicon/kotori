@@ -1,18 +1,13 @@
-D/UndispatchedCoroutine: regression:asg8-33701eba.jpg pipeline: original path (1280x8730, script='not probed')
+D/UndispatchedCoroutine: regression:asg8-33701eba.jpg pipeline: original path (1280x8730, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 5 region(s): ko=0, ja=0, zh=0, en=67
 D/SimplePageReader: Read 4 lettering region(s) from 5 line(s) as 'en'
 D/SimplePageReader:   region Rect(623, 2321 - 1254, 2392): KAISCANS.COM
 D/SimplePageReader:   region Rect(86, 3258 - 670, 3378): A HIDDEN ELITE MUTANT / ACTUALLY APPEARED!
 D/SimplePageReader:   region Rect(169, 4634 - 801, 4706): KAISCANS.COM
 D/SimplePageReader:   region Rect(619, 7856 - 1216, 7940): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (67 chars); remembering it
-D/PageTranslator: Merged 6 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(623, 2321 - 1254, 2392): best containment 11%
-D/PageTranslator: No balloon for Rect(86, 3258 - 670, 3378): best containment 16%
-D/PageTranslator: No balloon for Rect(169, 4634 - 801, 4706): best containment 14%
-D/PageTranslator: No balloon for Rect(619, 7856 - 1216, 7940): best containment 10%
-D/PageTranslator: Grouped 4 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-33701eba.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-33701eba.jpg rendering 4/4 translated bubbles
 D/BubbleRenderer: Simple: Rect(86, 3258 - 670, 3378) textBlock=true vertical=false lines=2 bounds=Rect(108, 3262 - 648, 3374)
 D/BubbleRenderer: Simple: Rect(619, 7856 - 1216, 7940) textBlock=true vertical=false lines=1 bounds=Rect(641, 7860 - 1194, 7936)

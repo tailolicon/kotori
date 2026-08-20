@@ -274,7 +274,7 @@ class TranslationPreferences(
          * on two devices purely by which one happened to hold a cache. If a change alters a single
          * pixel of output, it belongs in the same commit as a bump here.
          */
-        const val RENDERER_VERSION = "r108"
+        const val RENDERER_VERSION = "r109"
     }
 
     /**

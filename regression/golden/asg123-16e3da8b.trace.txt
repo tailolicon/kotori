@@ -1,5 +1,6 @@
-D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg pipeline: original path (800x6735, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'ko' scored 2); leaving the script open
+D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg pipeline: original path (800x6735, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=5, zh=0, en=110
 D/SimplePageReader: Read 5 lettering region(s) from 14 line(s) as 'en'
 D/SimplePageReader:   region Rect(76, 116 - 324, 155): VERY GOOD!
 D/SimplePageReader:   region Rect(334, 919 - 732, 1060): ALL WAR ZONES WILL / HEAD TO THE FINAL / BATTLEFELD IVE SET / UP TONIGHT!
@@ -7,11 +8,7 @@ D/SimplePageReader:   region Rect(79, 1383 - 509, 1490): AT THAT TIME, I WILL / 
 D/SimplePageReader:   region Rect(282, 3860 - 776, 4022): ENDING THE NATIONAL WAR / IN H8 HOURS SHOULD GIVE / THOSE OLD FOGIES BACK / HOME GQUITE A SURPRISE!
 D/SimplePageReader:   region Rect(76, 5528 - 512, 5602): IT REALLY IS SOMETHNG / TO LOOK FORWARD TO!
 D/UndispatchedCoroutine: This series reads as 'en' (206 chars); remembering it
-D/PageTranslator: Merged 1 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(334, 919 - 732, 1060): best containment 68%
-D/PageTranslator: No balloon for Rect(79, 1383 - 509, 1490): best containment 0%
-D/PageTranslator: Grouped 5 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg123-16e3da8b.jpg rendering 5/5 translated bubbles
 D/BubbleRenderer: Simple: Rect(282, 3860 - 776, 4022) textBlock=true vertical=false lines=4 bounds=Rect(300, 3866 - 758, 4016)
 D/BubbleRenderer: Simple: Rect(334, 919 - 732, 1060) textBlock=true vertical=false lines=4 bounds=Rect(349, 924 - 717, 1055)

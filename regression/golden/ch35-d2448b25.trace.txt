@@ -1,5 +1,6 @@
-D/UndispatchedCoroutine: regression:ch35-d2448b25.jpg pipeline: original path (900x1478, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
+D/UndispatchedCoroutine: regression:ch35-d2448b25.jpg pipeline: original path (900x1478, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=1, en=69
 D/SimplePageReader: Read 2 lettering region(s) from 8 line(s) as 'en'
 D/SimplePageReader:   region Rect(124, 320 - 626, 567): I DON'T CARE / WHAT HAPPENS / TO THE DENISE / OF VELTUS.
 D/SimplePageReader:   region Rect(244, 790 - 800, 1014): THE ONE / I'M ROOTING FOR / IS SIMPLY THE GIRL / NAMED DENISE.

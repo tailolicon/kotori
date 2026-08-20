@@ -62,15 +62,39 @@ class SimplePageReader {
         // the whole thing with a guessed recogniser first and correcting afterwards costs a full
         // page pass, and the guess used to come from a single app-wide setting — which is how a
         // Korean series carried on being read as Japanese after the reader left a Japanese one.
-        val configured = if (sourceLanguage.isBlank() || sourceLanguage == AUTO) {
-            // An inconclusive probe means "no opinion", not "Latin". Reading a page with the Latin
-            // recogniser on no evidence is how a Korean raw lost most of its balloons.
-            probeLanguage(bitmap).ifBlank { "en" }
-        } else {
-            sourceLanguage
-        }
+        // [sourceLanguage] is a *hint* — the script this series was found to be in last time — never
+        // a declaration. Treating it as settled is what let one bad guess follow a series forever on
+        // one device while the other read it correctly.
+        val probed = sourceLanguage.takeIf { it.isNotBlank() && it != AUTO } ?: probeLanguage(bitmap)
+        // An inconclusive probe means "no opinion", not "Latin".
+        val configured = probed.ifBlank { "en" }
         var lines = readPage(bitmap, configured)
         var language = configured
+
+        // Whatever script was chosen, check it against the lettering this page actually holds.
+        //
+        // This is the difference between two devices rendering the same chapter differently. The
+        // band probe reads three slices of a fourteen-thousand-pixel strip, and a series whose
+        // dialogue is sparse can put none of it in those slices: on the raw that exposed this the
+        // probe found *two* Hangul characters, gave up, and the page was read with the Latin
+        // recogniser — most balloons missing, some half erased, some with the translation printed
+        // over the Korean still underneath. The other device's first page happened to have dialogue
+        // where the bands landed, so it got Korean and read the whole series correctly. Worse, each
+        // device then *remembered* its guess for the series, so one good page and one bad page set
+        // two installs on permanently different courses.
+        //
+        // The evidence is there either way: the first pass finds *where* the lettering is even when
+        // it cannot read it. Re-reading a handful of those rectangles with every recogniser costs a
+        // few small crops and settles the question on the dialogue itself. Cheap enough to do
+        // whenever the answer is in doubt, which is the only way a wrong guess ever gets undone.
+        if (lines.isNotEmpty() && (probed.isBlank() || looksMisread(lines, configured))) {
+            val better = scriptFromRegions(bitmap, lines, configured)
+            if (better != null && better != configured) {
+                logcat { "'$configured' was a guess; the lettering reads as '$better'. Reading again" }
+                lines = readPage(bitmap, better)
+                language = better
+            }
+        }
 
         // A page the configured recogniser barely reads is usually written in another script, not
         // blank: English aggregators mix Japanese raw chapters into the same series, and a reader
@@ -411,7 +435,7 @@ class SimplePageReader {
         // does mix scripts shows it: the primary recogniser returns Hangul for the Korean balloons
         // and letter-shaped noise for the Spanish ones, so both alphabets are present in its own
         // output. A page written in one script shows nothing, and pays nothing.
-        if (!primaryLikelyMixed(primary) && !primaryLooksMisread(primary, language)) return primary
+        if (!primaryLikelyMixed(primary) && !looksMisread(primary, language)) return primary
         val merged = primary.toMutableList()
         var added = 0
         var replaced = 0
@@ -446,25 +470,6 @@ class SimplePageReader {
         if (added == 0 && replaced == 0) return primary
         logcat { "Companion '$language' pass: +$added line(s), replaced $replaced junk reading(s)" }
         return merged
-    }
-
-    /**
-     * The primary recogniser returned letter-shaped noise where another script actually is.
-     *
-     * The cheap mixed-script test counts alphabets and misses this: a page of English with one
-     * Korean sign has almost no Hangul in the *primary* output precisely because the Latin
-     * recogniser could not read it — it reports two junk glyphs instead. Those junk readings are
-     * the evidence, and a couple of them is worth one extra pass; one is not, or a smudge on the
-     * artwork would buy the page a whole second read.
-     */
-    private fun primaryLooksMisread(lines: List<ReadLine>, language: String): Boolean {
-        val expected = ScriptKindDetector.ofLanguage(language)
-        val junk = lines.count { line ->
-            val text = line.line.text
-            text.count { it.isLetterOrDigit() } >= MIN_COMPANION_LETTERS &&
-                ScriptKindDetector.looksLikeJunk(text, expected)
-        }
-        return junk >= MIN_MISREAD_LINES
     }
 
     private fun primaryLikelyMixed(lines: List<ReadLine>): Boolean {
@@ -653,20 +658,158 @@ class SimplePageReader {
     /**
      * Bands to sample when nobody has said what script the page is in.
      *
-     * A bound page gets one band from the middle, which is where its dialogue is. A webtoon strip
-     * gets several, spread down its length: one band out of fourteen thousand pixels is a sample of
-     * about six per cent of the page, and if it happens to land on artwork the probe sees nothing
-     * and the whole strip is then read with the wrong recogniser.
+     * Sampled **where the ink is**, not at fixed positions. Every version of this that picked bands
+     * by position — the middle, or three spread down the strip — failed the same way: a webtoon is
+     * fourteen thousand pixels of mostly artwork, so the slices land on drawings, the probe finds
+     * two characters or none, and the whole page is then read with the wrong recogniser. Half the
+     * balloons come back missing and the reader sees a chapter that is worse on one device than on
+     * another purely by where that device's first page happened to put its dialogue.
+     *
+     * Finding the ink is a thumbnail and a row histogram — no OCR, a few milliseconds — and it puts
+     * the sample on the lettering by construction.
      */
     private fun probeBands(bitmap: Bitmap): List<Bitmap> {
         if (bitmap.height <= BAND_HEIGHT) return listOf(bitmap)
         val wanted = if (bitmap.height > BAND_HEIGHT * TALL_PAGE_BANDS) TALL_PAGE_BANDS else 1
-        if (wanted == 1) return listOf(probeBand(bitmap))
-        val usable = bitmap.height - BAND_HEIGHT
-        return (1..wanted).map { index ->
-            val top = (usable.toLong() * index / (wanted + 1)).toInt().coerceIn(0, usable)
-            Bitmap.createBitmap(bitmap, 0, top, bitmap.width, BAND_HEIGHT)
+        val tops = inkRichBandTops(bitmap, wanted)
+        if (tops.isEmpty()) return listOf(probeBand(bitmap))
+        return tops.map { top ->
+            val height = min(BAND_HEIGHT, bitmap.height - top)
+            Bitmap.createBitmap(bitmap, 0, top, bitmap.width, height)
         }
+    }
+
+    /**
+     * Tops of the [wanted] bands holding the most ink, never overlapping.
+     *
+     * Ink is dark pixels on a thumbnail: lettering is dark and dense, flat artwork and gutters are
+     * not. Good enough to aim a probe, which is all it has to be.
+     */
+    private fun inkRichBandTops(bitmap: Bitmap, wanted: Int): List<Int> {
+        val thumbWidth = min(PROFILE_WIDTH, bitmap.width)
+        val thumbHeight = (bitmap.height.toLong() * thumbWidth / bitmap.width)
+            .coerceIn(1, PROFILE_MAX_HEIGHT.toLong()).toInt()
+        val thumb = runCatching { Bitmap.createScaledBitmap(bitmap, thumbWidth, thumbHeight, true) }
+            .getOrNull() ?: return emptyList()
+        try {
+            val pixels = IntArray(thumbWidth * thumbHeight)
+            thumb.getPixels(pixels, 0, thumbWidth, 0, 0, thumbWidth, thumbHeight)
+            val ink = IntArray(thumbHeight)
+            for (y in 0 until thumbHeight) {
+                val row = y * thumbWidth
+                var dark = 0
+                for (x in 0 until thumbWidth) {
+                    val c = pixels[row + x]
+                    val grey = ((c shr 16 and 0xFF) * 299 + (c shr 8 and 0xFF) * 587 + (c and 0xFF) * 114) / 1000
+                    if (grey < INK_THRESHOLD) dark++
+                }
+                ink[y] = dark
+            }
+
+            val bandRows = max(1, (BAND_HEIGHT.toLong() * thumbHeight / bitmap.height).toInt())
+            if (bandRows >= thumbHeight) return listOf(0)
+            val window = IntArray(thumbHeight - bandRows + 1)
+            var running = 0
+            for (y in 0 until bandRows) running += ink[y]
+            window[0] = running
+            for (start in 1 until window.size) {
+                running += ink[start + bandRows - 1] - ink[start - 1]
+                window[start] = running
+            }
+
+            val chosen = ArrayList<Int>(wanted)
+            val taken = BooleanArray(window.size)
+            repeat(wanted) {
+                var best = -1
+                var bestInk = 0
+                for (start in window.indices) {
+                    if (taken[start] || window[start] <= bestInk) continue
+                    bestInk = window[start]
+                    best = start
+                }
+                if (best < 0 || bestInk <= 0) return@repeat
+                chosen += best
+                for (start in max(0, best - bandRows) until min(window.size, best + bandRows)) {
+                    taken[start] = true
+                }
+            }
+            if (chosen.isEmpty()) return emptyList()
+            val maxTop = bitmap.height - 1
+            return chosen
+                .map { (it.toLong() * bitmap.height / thumbHeight).toInt().coerceIn(0, maxTop) }
+                .sorted()
+        } finally {
+            if (thumb !== bitmap) thumb.recycle()
+        }
+    }
+
+    /**
+     * Which script the lettering the Latin pass *located* is actually written in.
+     *
+     * Crops the biggest recognised rectangles and reads each with the CJK recognisers, scoring only
+     * their own script. A Korean page hands back Hangul here even when a band probe found nothing,
+     * because these crops are the dialogue rather than a slice of the page that might be all artwork.
+     * An English page scores nothing for any of them and keeps the Latin reading.
+     *
+     * @return the winning language, or null to keep what the caller already has
+     */
+    private fun scriptFromRegions(bitmap: Bitmap, lines: List<ReadLine>, current: String): String? {
+        val candidates = lines
+            .map { it.line.rect }
+            .filter { it.width() >= MIN_REGION_PROBE_SIDE && it.height() >= MIN_REGION_PROBE_SIDE }
+            .sortedByDescending { it.width().toLong() * it.height() }
+            .take(MAX_REGION_PROBES)
+        if (candidates.isEmpty()) return null
+
+        val crops = candidates.mapNotNull { rect ->
+            val pad = (rect.height() * REGION_PROBE_PAD).toInt().coerceIn(2, 24)
+            val left = (rect.left - pad).coerceIn(0, bitmap.width - 1)
+            val top = (rect.top - pad).coerceIn(0, bitmap.height - 1)
+            val right = (rect.right + pad).coerceIn(left + 1, bitmap.width)
+            val bottom = (rect.bottom + pad).coerceIn(top + 1, bitmap.height)
+            runCatching { Bitmap.createBitmap(bitmap, left, top, right - left, bottom - top) }.getOrNull()
+        }
+        if (crops.isEmpty()) return null
+
+        try {
+            // Latin is scored too, so this can correct a wrong CJK guess as readily as a wrong Latin
+            // one. A series remembered as Korean that is actually an English scanlation has to be
+            // able to come back, or the memory is a trap rather than a shortcut.
+            val scores = LinkedHashMap<String, Int>()
+            for (candidate in REGION_PROBE_ORDER) {
+                val score = withRecognizer(candidate) { recognizer ->
+                    crops.sumOf { crop ->
+                        scriptCharactersIn(readBand(recognizer, crop, 0, padEdges = false), candidate)
+                    }
+                }
+                scores[candidate] = score
+                if (score >= REGION_PROBE_CONFIDENT) break
+            }
+            val best = scores.maxByOrNull { it.value } ?: return null
+            if (best.value < MIN_REGION_PROBE_CHARACTERS) return null
+            // Only overrule the reading in hand on a clear win; every recogniser finds a little of
+            // every page, and swapping on a one-character margin would flip pages back and forth.
+            val incumbent = scores[current] ?: 0
+            if (best.key != current && best.value < incumbent * REGION_PROBE_MARGIN) return null
+            logcat {
+                "Region probe over ${crops.size} region(s): " +
+                    scores.entries.joinToString { "${it.key}=${it.value}" }
+            }
+            return best.key
+        } finally {
+            crops.forEach { if (it !== bitmap) it.recycle() }
+        }
+    }
+
+    /** True when the readings look like noise for the script they were read with. */
+    private fun looksMisread(lines: List<ReadLine>, language: String): Boolean {
+        val expected = ScriptKindDetector.ofLanguage(language)
+        val junk = lines.count { line ->
+            val text = line.line.text
+            text.count { it.isLetterOrDigit() } >= MIN_COMPANION_LETTERS &&
+                ScriptKindDetector.looksLikeJunk(text, expected)
+        }
+        return junk >= MIN_MISREAD_LINES
     }
 
     /** Characters belonging to [language]'s own script, ignoring anything every recogniser reads. */
@@ -741,6 +884,42 @@ class SimplePageReader {
 
         /** Bands sampled on a long strip before committing to a recogniser. */
         const val TALL_PAGE_BANDS = 3
+
+        /** Thumbnail width the ink profile is measured on. */
+        const val PROFILE_WIDTH = 64
+
+        /** Cap on the profile's height, so a 30,000px strip does not build a huge thumbnail. */
+        const val PROFILE_MAX_HEIGHT = 4096
+
+        /** Grey level below which a thumbnail pixel counts as ink. */
+        const val INK_THRESHOLD = 140
+
+        /** Recognised rectangles re-read to settle the script when the band probe found nothing. */
+        const val MAX_REGION_PROBES = 6
+
+        /** Smaller than this and a rectangle is a speck, not a line of dialogue. */
+        const val MIN_REGION_PROBE_SIDE = 16
+
+        /** Padding around a rectangle, as a fraction of its height; crops clip glyph edges. */
+        const val REGION_PROBE_PAD = 0.25f
+
+        /**
+         * Own-script characters across those crops before the page is re-read.
+         *
+         * Low on purpose: these are the regions the first pass already decided hold lettering, so a
+         * handful of Hangul or kana here is real. The band probe needs a high bar because it samples
+         * blindly; this one does not.
+         */
+        const val MIN_REGION_PROBE_CHARACTERS = 4
+
+        /** Enough to stop trying the rest. */
+        const val REGION_PROBE_CONFIDENT = 20
+
+        /** Every recogniser, Latin included, so a wrong CJK guess can be corrected back. */
+        val REGION_PROBE_ORDER = listOf("ko", "ja", "zh", "en")
+
+        /** How far a challenger must beat the reading in hand before the page is read again. */
+        const val REGION_PROBE_MARGIN = 2
 
         /** Scripts to try when the configured one reads nothing off a page. */
         val SCRIPT_FALLBACK_ORDER = listOf("ja", "zh", "ko", "en")

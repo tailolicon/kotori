@@ -70,7 +70,7 @@ android {
         // semantic version, while debug/update/preview append `-${commitCount}` through their
         // versionNameSuffix — so a milestone reads as a milestone, and every other build still
         // says exactly which commit it came from.
-        versionName = "1.0.22"
+        versionName = "1.0.23"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")

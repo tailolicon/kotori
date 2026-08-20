@@ -1,22 +1,6 @@
-D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed')
+D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/SimplePageReader: Companion 'en' pass: +0 line(s), replaced 1 junk reading(s)
-D/SimplePageReader: Not one paragraph: Rect(297, 4492 - 564, 4593) + Rect(454, 4632 - 666, 4721) — type 29 vs 89, same paper: false
-D/SimplePageReader: Dropping 3 as noise rather than dialogue
-D/SimplePageReader: Read 13 lettering region(s) from 41 line(s) as 'en'
-D/SimplePageReader:   region Rect(118, 943 - 437, 1080): NO MATTER HOW / MUCH I FLIRTED, / EVERYONE WAS TỎO / PUSSY BECAUSE OF / MY DAD.
-D/SimplePageReader:   region Rect(351, 1677 - 564, 1874): IN THAT / SENSE,I / REALLY, / RE~ALLÝ / LIKE YOU.
-D/SimplePageReader:   region Rect(209, 3563 - 413, 3638): JUNG / WOO-JIN.
-D/SimplePageReader:   region Rect(366, 4229 - 720, 4287): MIANGALSFX.COM
-D/SimplePageReader:   region Rect(251, 4294 - 375, 4368): HELL / YEAH~!!
-D/SimplePageReader:   region Rect(286, 4488 - 575, 4597): I'M FINALLY / NOT A VIRGIN / ANYMORE~!!
-D/SimplePageReader:   region Rect(446, 4628 - 674, 4725): 까아앗v
-D/SimplePageReader:   region Rect(145, 7064 - 608, 7169): FUCK YEAH! I'M NOT A / VIRGIN ANYMORE / EITHER!!!
-D/SimplePageReader:   region Rect(296, 9027 - 557, 9133): THAT IS SO / TYPICAL OF / PARK Jl-MIN,
-D/SimplePageReader:   region Rect(460, 9195 - 695, 9348): I CAN'T BELIEVE / SHE'S SCREAMING / LIKE THAT JUST / BECAUSE SHE / LOST HER / VIRGINITY.
-D/SimplePageReader:   region Rect(248, 10065 - 444, 10231): SHE'S NOT / DOING / THAT ON / PURPOSE, / IS SHE?
-D/SimplePageReader:   region Rect(420, 10580 - 667, 10698): HEY, / JUNG / WO0-JIN~!
-D/SimplePageReader:   region Rect(400, 13488 - 720, 13538): PAMAMGA1SFX.CON
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=1, en=38
 D/SimplePageReader: Dropping R as noise rather than dialogue
 D/SimplePageReader: Read 14 lettering region(s) from 21 line(s) as 'en'
 D/SimplePageReader:   region Rect(251, 444 - 677, 611): HOLY FCK! / THIS BTCH'S MANA IS / DISRLIPTING MY SPIRIT / TRANSFER!!
@@ -34,44 +18,7 @@ D/SimplePageReader:   region Rect(119, 11017 - 373, 11051): COMPRESSION.
 D/SimplePageReader:   region Rect(395, 11479 - 641, 11525): GUIDANCE.
 D/SimplePageReader:   region Rect(156, 11872 - 642, 11952): [TELEKINESIS (S)I
 D/UndispatchedCoroutine: This series reads as 'en' (206 chars); remembering it
-D/BubbleDetector: Kept 48 unsupported bubble(s) from strip detection
-D/PageTranslator: Merged 11 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
-D/PageTranslator: Ignoring oversized balloon Rect(71, 3365 - 521, 3813) for Rect(209, 3563 - 413, 3638)
-D/PageTranslator: Ignoring oversized balloon Rect(155, 4223 - 702, 4625) for Rect(366, 4229 - 720, 4287)
-D/PageTranslator: Ignoring oversized balloon Rect(19, 8854 - 707, 9253) for Rect(296, 9027 - 557, 9133)
-D/PageTranslator: No balloon for Rect(460, 9195 - 695, 9348): best containment 59%
-D/PageTranslator: Ignoring oversized balloon Rect(31, 9882 - 658, 10402) for Rect(248, 10065 - 444, 10231)
-D/PageTranslator: Grouped 11 region(s) by balloon, joining 2 that shared one
-D/UndispatchedCoroutine: chapter=299393 pages=12, 13, 14 rendering 11/11 translated bubbles
-D/BubbleRenderer: Simple: Rect(145, 7064 - 608, 7169) textBlock=true vertical=false lines=3 bounds=Rect(162, 7068 - 591, 7165)
-D/BubbleRenderer: Simple: Rect(118, 943 - 437, 1080) textBlock=true vertical=false lines=5 bounds=Rect(130, 948 - 425, 1075)
-D/BubbleRenderer: Simple: Rect(351, 1677 - 564, 1874) textBlock=true vertical=false lines=5 bounds=Rect(359, 1684 - 556, 1867)
-D/BubbleRenderer: Simple: Rect(460, 9195 - 695, 9348) textBlock=true vertical=false lines=6 bounds=Rect(469, 9201 - 686, 9342)
-D/BubbleRenderer: Simple: Rect(248, 10065 - 444, 10231) textBlock=true vertical=false lines=5 bounds=Rect(255, 10071 - 437, 10225)
-D/BubbleRenderer: Simple: Rect(420, 10580 - 667, 10698) textBlock=true vertical=false lines=3 bounds=Rect(429, 10584 - 658, 10694)
-D/BubbleRenderer: Simple: Rect(296, 9027 - 557, 9133) textBlock=true vertical=false lines=3 bounds=Rect(306, 9031 - 547, 9129)
-D/BubbleRenderer: Simple: Rect(446, 4628 - 674, 4725) textBlock=true vertical=false lines=1 bounds=Rect(454, 4632 - 666, 4721)
-D/BubbleRenderer: bubble=BubbleBox(left=446, top=4628, right=674, bottom=4725, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 5461 surviving px of original lettering
-D/BubbleRenderer: Simple: Rect(366, 4229 - 720, 4287) textBlock=true vertical=false lines=6 bounds=Rect(256, 4233 - 709, 4593)
-D/BubbleRenderer: Simple: Rect(400, 13488 - 720, 13538) textBlock=true vertical=false lines=1 bounds=Rect(412, 13492 - 708, 13534)
-D/BubbleRenderer: Simple: Rect(209, 3563 - 413, 3638) textBlock=true vertical=false lines=2 bounds=Rect(217, 3567 - 405, 3634)
-D/PageTranslator: Merged 32 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
-D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
-D/PageTranslator: Stitched 3 pages into 720x13885 strip
-D/UndispatchedCoroutine: chapter=299393 pages=15, 16, 17 pipeline: original path (720x13885, script='en')
-D/PageTranslator: No balloon for Rect(251, 444 - 677, 611): best containment 13%
-D/PageTranslator: No balloon for Rect(523, 2808 - 667, 2941): best containment 2%
-D/PageTranslator: No balloon for Rect(140, 4458 - 411, 4509): best containment 28%
-D/PageTranslator: No balloon for Rect(493, 5520 - 679, 5672): best containment 0%
-D/PageTranslator: No balloon for Rect(154, 7918 - 434, 7960): best containment 32%
-D/PageTranslator: No balloon for Rect(392, 9256 - 635, 9302): best containment 56%
-D/PageTranslator: No balloon for Rect(58, 9655 - 348, 9693): best containment 55%
-D/PageTranslator: No balloon for Rect(481, 10701 - 706, 10743): best containment 36%
-D/PageTranslator: No balloon for Rect(395, 11479 - 641, 11525): best containment 25%
-D/PageTranslator: No balloon for Rect(156, 11872 - 642, 11952): best containment 0%
-D/PageTranslator: Grouped 14 region(s) by balloon
+D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 4
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 6
 D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg rendering 12/14 translated bubbles

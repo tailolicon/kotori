@@ -1,5 +1,6 @@
-D/UndispatchedCoroutine: regression:asg8-9c9986fa.jpg pipeline: original path (1280x13000, script='not probed')
+D/UndispatchedCoroutine: regression:asg8-9c9986fa.jpg pipeline: original path (1280x13000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=84
 D/SimplePageReader: Read 6 lettering region(s) from 14 line(s) as 'en'
 D/SimplePageReader:   region Rect(157, 1706 - 736, 1772): KAISCANS.COM
 D/SimplePageReader:   region Rect(666, 2442 - 1242, 2694): I NEED TO DEAL WITH / IT QUICKLY, IN CASE THE / CLIMBER APPEARS / AGAIN...
@@ -8,15 +9,7 @@ D/SimplePageReader:   region Rect(54, 6729 - 494, 6974): YOU FELL INTO MY / TRAP
 D/SimplePageReader:   region Rect(156, 10304 - 738, 10370): KAISCANS.COM
 D/SimplePageReader:   region Rect(348, 11947 - 988, 12234): MIDDLE LEVEL 2 MUTANT / [CLIMBERI / IS COMING!
 D/UndispatchedCoroutine: This series reads as 'en' (168 chars); remembering it
-D/PageTranslator: Merged 29 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(157, 1706 - 736, 1772): best containment 16%
-D/PageTranslator: No balloon for Rect(666, 2442 - 1242, 2694): best containment 7%
-D/PageTranslator: No balloon for Rect(677, 6542 - 1255, 6608): best containment 12%
-D/PageTranslator: No balloon for Rect(54, 6729 - 494, 6974): best containment 9%
-D/PageTranslator: No balloon for Rect(156, 10304 - 738, 10370): best containment 15%
-D/PageTranslator: No balloon for Rect(348, 11947 - 988, 12234): best containment 9%
-D/PageTranslator: Grouped 6 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-9c9986fa.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-9c9986fa.jpg rendering 6/6 translated bubbles
 D/BubbleRenderer: Simple: Rect(348, 11947 - 988, 12234) textBlock=true vertical=false lines=3 bounds=Rect(372, 11958 - 964, 12223)
 D/BubbleRenderer: Simple: Rect(666, 2442 - 1242, 2694) textBlock=true vertical=false lines=4 bounds=Rect(687, 2451 - 1221, 2685)

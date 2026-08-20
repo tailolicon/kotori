@@ -1,37 +1,6 @@
-D/UndispatchedCoroutine: regression:asg8-e96789f9.jpg pipeline: original path (1280x12530, script='not probed')
+D/UndispatchedCoroutine: regression:asg8-e96789f9.jpg pipeline: original path (1280x12530, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/SimplePageReader: Dropping AN as noise rather than dialogue
-D/SimplePageReader: Read 8 lettering region(s) from 30 line(s) as 'en'
-D/SimplePageReader:   region Rect(132, 127 - 418, 307): HEY, FUCK! / PULL IT / OUT...!
-D/SimplePageReader:   region Rect(183, 2105 - 636, 2373): I SAID PULL IT / OUT..!I TOLD / YOU TO PO IT IN / THE BACK...!
-D/SimplePageReader:   region Rect(143, 2990 - 583, 3143): UNBELIEVABLE. / YOU HAD YOU PUSSY ALL / EXPOSED SQUIRMING / AROUND
-D/SimplePageReader:   region Rect(157, 5376 - 573, 5512): AND YOU ACTUALLY / THOVGHT THAT THERE / WAS ANY CHANCE IN HELL / ID LISTEN TO YOU?
-D/SimplePageReader:   region Rect(160, 6294 - 628, 6430): THERE'S PROBABLY / NEVER BEEN ANYONE GUTSY / ENOUGH TO SHOVE IT INTO / PARK JIMIN'S PUS5Y
-D/SimplePageReader:   region Rect(15, 7586 - 221, 7739): Angl
-D/SimplePageReader:   region Rect(137, 8767 - 504, 8967): DOING EVERYTHING / AS SHE PLEASED / DOING DRUGS AND / NEVER GETTING / CAVGHT FOR IT
-D/SimplePageReader:   region Rect(289, 9800 - 605, 9983): THE ONLY / DAVGHTER OF / A POWERFUL / FAMILY..
-D/PageTranslator: Merged 20 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 3 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(132, 127 - 418, 307): best containment 24%
-D/PageTranslator: No balloon for Rect(183, 2105 - 636, 2373): best containment 2%
-D/PageTranslator: No balloon for Rect(143, 2990 - 583, 3143): best containment 12%
-D/PageTranslator: No balloon for Rect(157, 5376 - 573, 5512): best containment 53%
-D/PageTranslator: No balloon for Rect(160, 6294 - 628, 6430): best containment 67%
-D/PageTranslator: No balloon for Rect(15, 7586 - 221, 7739): best containment 41%
-D/PageTranslator: No balloon for Rect(137, 8767 - 504, 8967): best containment 15%
-D/PageTranslator: No balloon for Rect(289, 9800 - 605, 9983): best containment 10%
-D/PageTranslator: Grouped 8 region(s) by balloon
-D/UndispatchedCoroutine: Dropping unchanged translation for bubble 6
-D/UndispatchedCoroutine: chapter=299394 pages=3 rendering 7/8 translated bubbles
-D/BubbleRenderer: Simple: Rect(183, 2105 - 636, 2373) textBlock=true vertical=false lines=4 bounds=Rect(200, 2115 - 619, 2363)
-D/BubbleRenderer: Simple: Rect(137, 8767 - 504, 8967) textBlock=true vertical=false lines=5 bounds=Rect(151, 8774 - 490, 8960)
-D/BubbleRenderer: Simple: Rect(143, 2990 - 583, 3143) textBlock=true vertical=false lines=4 bounds=Rect(159, 2996 - 567, 3137)
-D/BubbleRenderer: Simple: Rect(160, 6294 - 628, 6430) textBlock=true vertical=false lines=4 bounds=Rect(177, 6299 - 611, 6425)
-D/BubbleRenderer: Simple: Rect(289, 9800 - 605, 9983) textBlock=true vertical=false lines=4 bounds=Rect(301, 9807 - 593, 9976)
-D/BubbleRenderer: Simple: Rect(157, 5376 - 573, 5512) textBlock=true vertical=false lines=4 bounds=Rect(172, 5381 - 558, 5507)
-D/BubbleRenderer: Simple: Rect(132, 127 - 418, 307) textBlock=true vertical=false lines=3 bounds=Rect(143, 134 - 407, 300)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=4 pipeline: original path (720x12881, script='en')
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=106
 D/SimplePageReader: Read 10 lettering region(s) from 30 line(s) as 'en'
 D/SimplePageReader:   region Rect(245, 455 - 832, 639): WHAT HAPPENED? WHY / DID THE ALARM RING SO / SUDDENLY?
 D/SimplePageReader:   region Rect(201, 1882 - 881, 1958): KAISCANS.COM
@@ -44,17 +13,7 @@ D/SimplePageReader:   region Rect(62, 10041 - 802, 10382): THIS IS THE FIRST TIM
 D/SimplePageReader:   region Rect(811, 10895 - 1165, 11080): WAIT, WAIT A / MINUTE, LOOK / AT THIS!!
 D/SimplePageReader:   region Rect(571, 11976 - 1251, 12050): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (544 chars); remembering it
-D/PageTranslator: Merged 53 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(245, 455 - 832, 639): best containment 13%
-D/PageTranslator: No balloon for Rect(201, 1882 - 881, 1958): best containment 9%
-D/PageTranslator: No balloon for Rect(428, 2306 - 1177, 2527): best containment 23%
-D/PageTranslator: No balloon for Rect(162, 5879 - 819, 6079): best containment 37%
-D/PageTranslator: No balloon for Rect(720, 8314 - 1142, 8468): best containment 20%
-D/PageTranslator: No balloon for Rect(184, 8832 - 865, 8908): best containment 14%
-D/PageTranslator: No balloon for Rect(62, 10041 - 802, 10382): best containment 4%
-D/PageTranslator: No balloon for Rect(571, 11976 - 1251, 12050): best containment 11%
-D/PageTranslator: Grouped 10 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-e96789f9.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-e96789f9.jpg rendering 10/10 translated bubbles
 D/BubbleRenderer: Simple: Rect(62, 10041 - 802, 10382) textBlock=true vertical=false lines=6 bounds=Rect(89, 10054 - 775, 10369)
 D/BubbleRenderer: Simple: Rect(428, 2306 - 1177, 2527) textBlock=true vertical=false lines=4 bounds=Rect(456, 2314 - 1149, 2519)

@@ -1,69 +1,13 @@
-D/UndispatchedCoroutine: regression:ch35-c4d49261.jpg pipeline: original path (900x16000, script='not probed')
-D/PageTranslator: Merged 12 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(242, 2336 - 574, 2555): best containment 26%
-D/PageTranslator: No balloon for Rect(26, 3357 - 686, 3626): best containment 2%
-D/PageTranslator: No balloon for Rect(125, 4382 - 537, 4613): best containment 19%
-D/PageTranslator: No balloon for Rect(110, 7193 - 598, 7331): best containment 13%
-D/PageTranslator: No balloon for Rect(36, 10030 - 678, 10283): best containment 2%
-D/PageTranslator: No balloon for Rect(36, 11798 - 444, 12110): best containment 0%
-D/PageTranslator: No balloon for Rect(95, 12609 - 619, 12806): best containment 4%
-D/PageTranslator: Grouped 8 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299394 pages=13 rendering 8/8 translated bubbles
-D/BubbleRenderer: Simple: Rect(26, 3357 - 686, 3626) textBlock=true vertical=false lines=6 bounds=Rect(50, 3367 - 662, 3616)
-D/BubbleRenderer: Simple: Rect(36, 10030 - 678, 10283) textBlock=true vertical=false lines=5 bounds=Rect(60, 10039 - 654, 10274)
-D/BubbleRenderer: Simple: Rect(36, 11798 - 444, 12110) textBlock=true vertical=false lines=2 bounds=Rect(51, 11810 - 429, 12098)
-D/BubbleRenderer: bubble=BubbleBox(left=36, top=11798, right=444, bottom=12110, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) ghost gate: erased 16125 surviving px of original lettering
-D/BubbleRenderer: Simple: Rect(95, 12609 - 619, 12806) textBlock=true vertical=false lines=3 bounds=Rect(114, 12616 - 600, 12799)
-D/BubbleRenderer: Simple: Rect(125, 4382 - 537, 4613) textBlock=true vertical=false lines=4 bounds=Rect(140, 4391 - 522, 4604)
-D/BubbleRenderer: Simple: Rect(242, 2336 - 574, 2555) textBlock=true vertical=false lines=5 bounds=Rect(254, 2344 - 562, 2547)
-D/BubbleRenderer: Simple: Rect(110, 7193 - 598, 7331) textBlock=true vertical=false lines=2 bounds=Rect(128, 7198 - 580, 7326)
-D/BubbleRenderer: Simple: Rect(404, 4904 - 528, 4988) textBlock=true vertical=false lines=1 bounds=Rect(409, 4908 - 523, 4984)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=14 pipeline: original path (720x14000, script='en')
-D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
-D/SimplePageReader: Not one paragraph: Rect(115, 11087 - 544, 11266) + Rect(271, 11360 - 591, 11507) — type 179 vs 86, same paper: true
-D/SimplePageReader: Read 8 lettering region(s) from 23 line(s) as 'en'
-D/SimplePageReader:   region Rect(79, 2084 - 643, 2323): YOU AND / I DON'T LIVE IN / DIFFERENT WORLDS / AFTER ALL.
-D/SimplePageReader:   region Rect(362, 2892 - 626, 3029): FUCK... HEY! / I TOLD YOU / TO STOP.
-D/SimplePageReader:   region Rect(115, 5656 - 517, 5821): I REALLY / WON'T LET THIS / SLIDE.!
-D/SimplePageReader:   region Rect(92, 6522 - 654, 6802): NOW I THINK I / UNDERSTAND. VWHAT / I SHOULD HAVE DONE / ALL ALONG TO NOT / GET BULLIED.
-D/SimplePageReader:   region Rect(60, 10173 - 656, 10406): AND THAT TOWERING / ILLUSION OF A WALL / I FELT FOR ALL / THIS TIME,
-D/SimplePageReader:   region Rect(98, 11080 - 561, 11273): STOP..!
-D/SimplePageReader:   region Rect(258, 11354 - 604, 11513): STOP IT!! / FUCK!
-D/SimplePageReader:   region Rect(7, 13209 - 235, 13245): WOMEGASCANS.ORG
-D/UndispatchedCoroutine: Dropped BubbleBox(left=98, top=11080, right=561, bottom=11273, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: STOP..!
+D/UndispatchedCoroutine: regression:ch35-c4d49261.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=0, en=47
 D/SimplePageReader: Read 3 lettering region(s) from 7 line(s) as 'en'
 D/SimplePageReader:   region Rect(141, 1693 - 380, 1761): ...THEN!
 D/SimplePageReader:   region Rect(266, 2001 - 702, 2135): LET THE / DUEL BEGIN!
 D/SimplePageReader:   region Rect(234, 4236 - 662, 4435): NO NEED / TO DRAG THIS / OUT! ILL END IT / IN ONE GO!!
 D/UndispatchedCoroutine: This series reads as 'en' (53 chars); remembering it
-D/PageTranslator: Merged 10 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
-D/PageTranslator: Merged 8 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(79, 2084 - 643, 2323): best containment 1%
-D/PageTranslator: No balloon for Rect(92, 6522 - 654, 6802): best containment 1%
-D/PageTranslator: No balloon for Rect(60, 10173 - 656, 10406): best containment 9%
-D/PageTranslator: No balloon for Rect(258, 11354 - 604, 11513): best containment 0%
-D/PageTranslator: No balloon for Rect(7, 13209 - 235, 13245): best containment 57%
-D/PageTranslator: Grouped 7 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299394 pages=14 rendering 7/7 translated bubbles
-D/BubbleRenderer: Simple: Rect(92, 6522 - 654, 6802) textBlock=true vertical=false lines=5 bounds=Rect(113, 6532 - 633, 6792)
-D/BubbleRenderer: Simple: Rect(60, 10173 - 656, 10406) textBlock=true vertical=false lines=4 bounds=Rect(82, 10182 - 634, 10397)
-D/BubbleRenderer: Simple: Rect(79, 2084 - 643, 2323) textBlock=true vertical=false lines=4 bounds=Rect(100, 2093 - 622, 2314)
-D/BubbleRenderer: Simple: Rect(115, 5656 - 517, 5821) textBlock=true vertical=false lines=3 bounds=Rect(130, 5662 - 502, 5815)
-D/BubbleRenderer: Simple: Rect(258, 11354 - 604, 11513) textBlock=true vertical=false lines=2 bounds=Rect(271, 11360 - 591, 11507)
-D/BubbleRenderer: Simple: Rect(362, 2892 - 626, 3029) textBlock=true vertical=false lines=3 bounds=Rect(372, 2897 - 616, 3024)
-D/BubbleRenderer: Simple: Rect(7, 13209 - 235, 13245) textBlock=true vertical=false lines=1 bounds=Rect(15, 13213 - 227, 13241)
-D/BubbleRenderer: Simple: BubbleBox(left=7, top=13209, right=235, bottom=13245, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) paper and lettering were not separable
-D/PageTranslator: No balloon for Rect(141, 1693 - 380, 1761): best containment 36%
-D/PageTranslator: No balloon for Rect(266, 2001 - 702, 2135): best containment 8%
-D/PageTranslator: No balloon for Rect(234, 4236 - 662, 4435): best containment 7%
-D/PageTranslator: Grouped 3 region(s) by balloon
+D/UndispatchedCoroutine: regression:ch35-c4d49261.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:ch35-c4d49261.jpg rendering 3/3 translated bubbles
 D/BubbleRenderer: Simple: Rect(234, 4236 - 662, 4435) textBlock=true vertical=false lines=4 bounds=Rect(250, 4243 - 646, 4428)
 D/BubbleRenderer: Simple: Rect(266, 2001 - 702, 2135) textBlock=true vertical=false lines=2 bounds=Rect(282, 2006 - 686, 2130)
 D/BubbleRenderer: Simple: Rect(141, 1693 - 380, 1761) textBlock=true vertical=false lines=1 bounds=Rect(150, 1697 - 371, 1757)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=15 pipeline: original path (720x10947, script='en')

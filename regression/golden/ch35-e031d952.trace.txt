@@ -1,9 +1,8 @@
-D/UndispatchedCoroutine: regression:ch35-e031d952.jpg pipeline: original path (900x2241, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
+D/UndispatchedCoroutine: regression:ch35-e031d952.jpg pipeline: original path (900x2241, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 3 region(s): ko=0, ja=1, zh=0, en=22
 D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
 D/SimplePageReader:   region Rect(158, 1490 - 746, 1748): PLEASE / REALIZE THAT / VALUE.
-D/PageTranslator: Merged 1 overlapping balloon detection(s)
-D/PageTranslator: No balloon for Rect(158, 1490 - 746, 1748): best containment 12%
-D/PageTranslator: Grouped 1 region(s) by balloon
+D/UndispatchedCoroutine: regression:ch35-e031d952.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:ch35-e031d952.jpg rendering 1/1 translated bubbles
 D/BubbleRenderer: Simple: Rect(158, 1490 - 746, 1748) textBlock=true vertical=false lines=3 bounds=Rect(180, 1500 - 724, 1738)

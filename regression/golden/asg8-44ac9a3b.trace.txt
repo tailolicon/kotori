@@ -1,20 +1,13 @@
-D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg pipeline: original path (1280x9255, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
-D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 0 junk reading(s)
+D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg pipeline: original path (1280x9255, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=58
 D/SimplePageReader: Dropping !! as noise rather than dialogue
-D/SimplePageReader: Read 4 lettering region(s) from 6 line(s) as 'en'
+D/SimplePageReader: Read 3 lettering region(s) from 6 line(s) as 'en'
 D/SimplePageReader:   region Rect(411, 3092 - 1251, 3194): KAISCANS.COM
 D/SimplePageReader:   region Rect(209, 5182 - 991, 5268): KAISCANS.COM
 D/SimplePageReader:   region Rect(532, 5605 - 1018, 5797): DAMN IT! I STILL / ENDED UP FIGHTING / TWO AT ONCE!!
-D/SimplePageReader:   region Rect(885, 7305 - 1280, 7379): R0决看漫可
-D/UndispatchedCoroutine: This series reads as 'en' (64 chars); remembering it
-D/UndispatchedCoroutine: Dropped BubbleBox(left=885, top=7305, right=1280, bottom=7379, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: R0决看漫可
-D/PageTranslator: Merged 4 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(411, 3092 - 1251, 3194): best containment 6%
-D/PageTranslator: No balloon for Rect(209, 5182 - 991, 5268): best containment 8%
-D/PageTranslator: No balloon for Rect(532, 5605 - 1018, 5797): best containment 12%
-D/PageTranslator: Grouped 3 region(s) by balloon
+D/UndispatchedCoroutine: This series reads as 'en' (58 chars); remembering it
+D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg rendering 3/3 translated bubbles
 D/BubbleRenderer: Simple: Rect(532, 5605 - 1018, 5797) textBlock=true vertical=false lines=3 bounds=Rect(550, 5612 - 1000, 5790)
 D/BubbleRenderer: Simple: Rect(411, 3092 - 1251, 3194) textBlock=true vertical=false lines=1 bounds=Rect(442, 3096 - 1220, 3190)

@@ -1,37 +1,33 @@
-D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg pipeline: original path (800x5901, script='not probed')
-D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 1 junk reading(s)
+D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg pipeline: original path (800x5901, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Page reads best as 'ja' (20 ja-script chars across the probe bands)
+D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=1, en=61
+D/SimplePageReader: 'ja' was a guess; the lettering reads as 'en'. Reading again
 D/SimplePageReader: Not one paragraph: Rect(119, 5147 - 270, 5173) + Rect(119, 5175 - 704, 5533) — type 26 vs 207, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(119, 5175 - 704, 5533) + Rect(352, 5563 - 711, 5613) — type 207 vs 20, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(119, 5175 - 704, 5533) + Rect(417, 5684 - 693, 5739) — type 207 vs 55, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(119, 5175 - 704, 5533) + Rect(438, 5769 - 713, 5797) — type 207 vs 28, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(417, 5684 - 693, 5739) + Rect(438, 5769 - 713, 5797) — type 55 vs 28, same paper: true
 D/SimplePageReader: Dropping AA as noise rather than dialogue
-D/SimplePageReader: Read 10 lettering region(s) from 15 line(s) as 'en'
+D/SimplePageReader: Dropping 7 as noise rather than dialogue
+D/SimplePageReader: Read 9 lettering region(s) from 15 line(s) as 'en'
 D/SimplePageReader:   region Rect(111, 1813 - 353, 1852): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
 D/SimplePageReader:   region Rect(158, 2324 - 389, 2397): THE GOOD / SHOW IS ON!
 D/SimplePageReader:   region Rect(141, 4322 - 508, 4357): STEALTH ITEM - ON!
-D/SimplePageReader:   region Rect(270, 4479 - 784, 5050): 7 / |未经许可,不能转裁,一经发现,必追究法律责任。
 D/SimplePageReader:   region Rect(113, 5143 - 276, 5177): READ ONLY AT
 D/SimplePageReader:   region Rect(96, 5161 - 727, 5547): THUNDER / SCANS
 D/SimplePageReader:   region Rect(338, 5559 - 725, 5617): PLEASE SUPPORT US BY READING THIS AT / OUR SITE! YOUR SUPPORT MEANS THE WORLD!
 D/SimplePageReader:   region Rect(406, 5680 - 704, 5743): REACH DUT!
 D/SimplePageReader:   region Rect(427, 5765 - 724, 5801): DIGCORD.GG/TdFnC2EtjW
 D/SimplePageReader:   region Rect(362, 5836 - 724, 5871): ER EN-THUNDER5CANS.COM
-D/UndispatchedCoroutine: This series reads as 'en' (216 chars); remembering it
+D/UndispatchedCoroutine: This series reads as 'en' (196 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=96, top=5161, right=727, bottom=5547, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: THUNDER
 D/UndispatchedCoroutine: SCANS
-D/PageTranslator: Merged 8 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 5 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(270, 4479 - 784, 5050): best containment 2%
-D/PageTranslator: No balloon for Rect(113, 5143 - 276, 5177): best containment 66%
-D/PageTranslator: No balloon for Rect(338, 5559 - 725, 5617): best containment 0%
-D/PageTranslator: No balloon for Rect(406, 5680 - 704, 5743): best containment 31%
-D/PageTranslator: No balloon for Rect(427, 5765 - 724, 5801): best containment 54%
-D/PageTranslator: No balloon for Rect(362, 5836 - 724, 5871): best containment 69%
-D/PageTranslator: Grouped 9 region(s) by balloon
-D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg rendering 9/9 translated bubbles
-D/BubbleRenderer: Simple: Rect(270, 4479 - 784, 5050) textBlock=true vertical=false lines=2 bounds=Rect(289, 4500 - 765, 5029)
+D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg skipping the balloon detector: WEBTOON lettered in place
+D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg rendering 8/8 translated bubbles
 D/BubbleRenderer: Simple: Rect(338, 5559 - 725, 5617) textBlock=true vertical=false lines=2 bounds=Rect(352, 5563 - 711, 5613)
 D/BubbleRenderer: Simple: Rect(406, 5680 - 704, 5743) textBlock=true vertical=false lines=1 bounds=Rect(417, 5684 - 693, 5739)
 D/BubbleRenderer: Simple: Rect(158, 2324 - 389, 2397) textBlock=true vertical=false lines=2 bounds=Rect(167, 2328 - 380, 2393)

@@ -1,85 +1,18 @@
-D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed')
+D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
-D/SimplePageReader: Not one paragraph: Rect(106, 1544 - 605, 1604) + Rect(107, 1617 - 603, 1642) — type 60 vs 25, same paper: true
-D/SimplePageReader: Dropping 1 as noise rather than dialogue
-D/SimplePageReader: Read 20 lettering region(s) from 40 line(s) as 'en'
-D/SimplePageReader:   region Rect(162, 82 - 558, 133): NMEGA SCANS
-D/SimplePageReader:   region Rect(127, 811 - 594, 878): I BANGED ALL MIY CLASSMATES / AFTER GRADUATION
-D/SimplePageReader:   region Rect(194, 1011 - 276, 1041): Staff
-D/SimplePageReader:   region Rect(488, 1008 - 572, 1041): Staff
-D/SimplePageReader:   region Rect(195, 1122 - 274, 1154): Staff
-D/SimplePageReader:   region Rect(493, 1125 - 578, 1159): Staff
-D/SimplePageReader:   region Rect(263, 1298 - 461, 1332): discordog/osconm
-D/SimplePageReader:   region Rect(86, 1540 - 625, 1608): NMEGA SCANS
-D/SimplePageReader:   region Rect(87, 1613 - 623, 1646): READ EARLY ON OMEGASCANS.ORG
-D/SimplePageReader:   region Rect(154, 2501 - 470, 2595): ...THANKS FOR / THE MEAL.
-D/SimplePageReader:   region Rect(113, 4054 - 387, 4146): YOU WANT TO DO / THIS TO0, RIGHT? / RIGHT?!
-D/SimplePageReader:   region Rect(211, 4793 - 583, 4950): YEAH. IT'S A SPECIAL / ONCE-IN-A-LIFETIME / BANQUET FOR YOU, / SO ENJOY!
-D/SimplePageReader:   region Rect(543, 6522 - 705, 6547): OMEGASCANS.ORG
-D/SimplePageReader:   region Rect(109, 6644 - 466, 6732): TAKE IT AS YOUR / FAMILYS HONOR
-D/SimplePageReader:   region Rect(226, 7499 - 654, 7681): DON'T GET ADDICTED / TO MY ASS, AND GET / DUMPED BY YOUR FUTURE / GIRLFRIEND, ASKING / HER FOR IT TOO
-D/SimplePageReader:   region Rect(103, 7893 - 519, 7996): THIS POOR ASS / FUCKING LOSERS DICK / 1S GONNA CARVE
-D/SimplePageReader:   region Rect(66, 9555 - 385, 9627): ILL TAKE / ACCOUNTABILITY...!
-D/SimplePageReader:   region Rect(450, 9873 - 589, 9923): FOR...
-D/SimplePageReader:   region Rect(148, 10762 - 265, 10894): IT... / ...
-D/SimplePageReader:   region Rect(68, 13830 - 678, 14030): AN ARTWORK INTO / THIS BULLYING WENCHS / PUSSY THAT SHE CAN / NEVER ERASE!!
-D/DispatchedCoroutine: Dropped BubbleBox(left=162, top=82, right=558, bottom=133, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NMEGA SCANS
-D/DispatchedCoroutine: Dropped BubbleBox(left=86, top=1540, right=625, bottom=1608, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NMEGA SCANS
-D/PageTranslator: Merged 12 overlapping balloon detection(s)
-D/PageTranslator: No balloon for Rect(127, 811 - 594, 878): best containment 12%
-D/PageTranslator: No balloon for Rect(87, 1613 - 623, 1646): best containment 0%
-D/PageTranslator: No balloon for Rect(113, 4054 - 387, 4146): best containment 27%
-D/PageTranslator: No balloon for Rect(211, 4793 - 583, 4950): best containment 10%
-D/PageTranslator: No balloon for Rect(148, 10762 - 265, 10894): best containment 9%
-D/PageTranslator: No balloon for Rect(68, 13830 - 678, 14030): best containment 4%
-D/PageTranslator: Grouped 18 region(s) by balloon
-D/DispatchedCoroutine: Dropping unchanged translation for bubble 2
-D/DispatchedCoroutine: Dropping unchanged translation for bubble 3
-D/DispatchedCoroutine: Dropping unchanged translation for bubble 4
-D/DispatchedCoroutine: Dropping unchanged translation for bubble 5
-D/DispatchedCoroutine: chapter=299394 page=0 rendering 14/18 translated bubbles
-D/BubbleRenderer: Simple: Rect(68, 13830 - 678, 14030) textBlock=true vertical=false lines=4 bounds=Rect(91, 13837 - 655, 14023)
-D/BubbleRenderer: Simple: Rect(226, 7499 - 654, 7681) textBlock=true vertical=false lines=5 bounds=Rect(242, 7506 - 638, 7674)
-D/BubbleRenderer: Simple: Rect(211, 4793 - 583, 4950) textBlock=true vertical=false lines=4 bounds=Rect(225, 4799 - 569, 4944)
-D/BubbleRenderer: Simple: Rect(103, 7893 - 519, 7996) textBlock=true vertical=false lines=3 bounds=Rect(118, 7897 - 504, 7992)
-D/BubbleRenderer: Simple: Rect(109, 6644 - 466, 6732) textBlock=true vertical=false lines=2 bounds=Rect(122, 6648 - 453, 6728)
-D/BubbleRenderer: Simple: Rect(127, 811 - 594, 878) textBlock=true vertical=false lines=2 bounds=Rect(144, 815 - 577, 874)
-D/BubbleRenderer: Simple: Rect(154, 2501 - 470, 2595) textBlock=true vertical=false lines=2 bounds=Rect(166, 2505 - 458, 2591)
-D/BubbleRenderer: Simple: Rect(113, 4054 - 387, 4146) textBlock=true vertical=false lines=3 bounds=Rect(123, 4058 - 377, 4142)
-D/BubbleRenderer: Simple: Rect(66, 9555 - 385, 9627) textBlock=true vertical=false lines=2 bounds=Rect(78, 9559 - 373, 9623)
-D/BubbleRenderer: Simple: Rect(87, 1613 - 623, 1646) textBlock=true vertical=false lines=1 bounds=Rect(107, 1617 - 603, 1642)
-D/BubbleRenderer: Simple: Rect(148, 10762 - 265, 10894) textBlock=true vertical=false lines=2 bounds=Rect(152, 10767 - 261, 10889)
-D/BubbleRenderer: Simple: Rect(450, 9873 - 589, 9923) textBlock=true vertical=false lines=1 bounds=Rect(455, 9877 - 584, 9919)
-D/BubbleRenderer: Simple: Rect(263, 1298 - 461, 1332) textBlock=true vertical=false lines=1 bounds=Rect(270, 1302 - 454, 1328)
-D/BubbleRenderer: Simple: Rect(543, 6522 - 705, 6547) textBlock=true vertical=false lines=1 bounds=Rect(549, 6526 - 699, 6543)
-D/SimplePageReader: Companion 'en' pass: +1 line(s), replaced 1 junk reading(s)
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=93
 D/SimplePageReader: Read 6 lettering region(s) from 19 line(s) as 'en'
 D/SimplePageReader:   region Rect(643, 472 - 1256, 541): KAISCANS.COM
 D/SimplePageReader:   region Rect(459, 3905 - 1054, 4167): I WAS ABLE TO KILL / BOTH OF THEM, THAT'S / AN ESPECIALLY GO0D / ATTACK.
 D/SimplePageReader:   region Rect(188, 6771 - 830, 7142): NOT ONLY CAN IT CAUSE AN / IRREGULAR LIMB CRUSHING / EFFECT ON THE FIRST HIT / TARGET, BUT THE SWORD / AURA ALSO HAS A REGIONAL / EFFECT.
 D/SimplePageReader:   region Rect(444, 7902 - 1110, 8079): I HAVE KNOWN BETTER THAN / TO RISK ATTACKING TWO AT / THE SAME TIME.
 D/SimplePageReader:   region Rect(165, 9197 - 778, 9266): KAISCANS.COM
-D/SimplePageReader:   region Rect(108, 10944 - 1096, 11415): 快看漫画 / NO, THAT'S NOT IT, THE / ATTACK'S SPECIAL EFFECT / WAS NOT NECESSARILY / TRIGGERED...
-D/UndispatchedCoroutine: This series reads as 'en' (291 chars); remembering it
-D/PageTranslator: Merged 13 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/SimplePageReader: Read 6 lettering region(s) from 12 line(s) as 'en'
-D/SimplePageReader:   region Rect(145, 5334 - 574, 5524): WeWAIT...! / 1 SAIP SOMETHING'S
-D/SimplePageReader:   region Rect(170, 7905 - 434, 7993): NI WI-I
-D/SimplePageReader:   region Rect(390, 9232 - 542, 9304): Mal
-D/SimplePageReader:   region Rect(285, 9808 - 603, 9932): A PLACE NO ONE / WAS EVER ABLE / TO REACH.!
-D/SimplePageReader:   region Rect(99, 10163 - 381, 10291): HEY! PULL / IT OUT..!
-D/SimplePageReader:   region Rect(307, 12193 - 650, 12340): T'M SERIOUSLY / GOING TO KILL / YOu.
-D/PageTranslator: No balloon for Rect(643, 472 - 1256, 541): best containment 0%
-D/PageTranslator: No balloon for Rect(459, 3905 - 1054, 4167): best containment 5%
-D/PageTranslator: No balloon for Rect(188, 6771 - 830, 7142): best containment 4%
-D/PageTranslator: No balloon for Rect(444, 7902 - 1110, 8079): best containment 37%
-D/PageTranslator: No balloon for Rect(165, 9197 - 778, 9266): best containment 16%
-D/PageTranslator: No balloon for Rect(108, 10944 - 1096, 11415): best containment 2%
-D/PageTranslator: Grouped 6 region(s) by balloon
+D/SimplePageReader:   region Rect(396, 11132 - 1090, 11408): NO, THAT'S NOT IT, THE / ATTACK'S SPECIAL EFFECT / WAS NOT NECESSARILY / TRIGGERED...
+D/UndispatchedCoroutine: This series reads as 'en' (287 chars); remembering it
+D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg rendering 6/6 translated bubbles
-D/BubbleRenderer: Simple: Rect(108, 10944 - 1096, 11415) textBlock=true vertical=false lines=5 bounds=Rect(140, 10961 - 1064, 11398)
 D/BubbleRenderer: Simple: Rect(188, 6771 - 830, 7142) textBlock=true vertical=false lines=6 bounds=Rect(212, 6785 - 806, 7128)
+D/BubbleRenderer: Simple: Rect(396, 11132 - 1090, 11408) textBlock=true vertical=false lines=4 bounds=Rect(422, 11142 - 1064, 11398)
 D/BubbleRenderer: Simple: Rect(459, 3905 - 1054, 4167) textBlock=true vertical=false lines=4 bounds=Rect(481, 3915 - 1032, 4157)
 D/BubbleRenderer: Simple: Rect(444, 7902 - 1110, 8079) textBlock=true vertical=false lines=3 bounds=Rect(469, 7909 - 1085, 8072)
 D/BubbleRenderer: Simple: Rect(643, 472 - 1256, 541) textBlock=true vertical=false lines=1 bounds=Rect(666, 476 - 1233, 537)

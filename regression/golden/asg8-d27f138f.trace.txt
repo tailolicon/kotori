@@ -1,90 +1,23 @@
-D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg pipeline: original path (1280x12755, script='not probed')
-D/PageTranslator: Merged 14 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
-D/SimplePageReader: Page reads best as 'zh' (25 zh-script chars across the probe bands)
-D/PageTranslator: No balloon for Rect(390, 9232 - 542, 9304): best containment 0%
-D/PageTranslator: No balloon for Rect(99, 10163 - 381, 10291): best containment 15%
-D/PageTranslator: No balloon for Rect(307, 12193 - 650, 12340): best containment 0%
-D/PageTranslator: Grouped 6 region(s) by balloon
-D/UndispatchedCoroutine: Dropping unchanged translation for bubble 3
-D/UndispatchedCoroutine: chapter=299394 pages=1 rendering 5/6 translated bubbles
-D/BubbleRenderer: Simple: Rect(145, 5334 - 574, 5524) textBlock=true vertical=false lines=2 bounds=Rect(161, 5341 - 558, 5517)
-D/BubbleRenderer: Simple: Rect(307, 12193 - 650, 12340) textBlock=true vertical=false lines=3 bounds=Rect(320, 12198 - 637, 12335)
-D/BubbleRenderer: Simple: Rect(285, 9808 - 603, 9932) textBlock=true vertical=false lines=3 bounds=Rect(297, 9813 - 591, 9927)
-D/BubbleRenderer: Simple: Rect(99, 10163 - 381, 10291) textBlock=true vertical=false lines=2 bounds=Rect(109, 10168 - 371, 10286)
-D/BubbleRenderer: Simple: Rect(170, 7905 - 434, 7993) textBlock=true vertical=false lines=1 bounds=Rect(180, 7909 - 424, 7989)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=2 pipeline: original path (720x12095, script='en')
-D/SimplePageReader: Companion 'zh' pass: +0 line(s), replaced 1 junk reading(s)
-D/SimplePageReader: Not one paragraph: Rect(264, 1924 - 966, 2213) + Rect(380, 2199 - 916, 2253) — type 289 vs 54, same paper: false
-D/SimplePageReader: Not one paragraph: Rect(264, 1924 - 966, 2213) + Rect(322, 2260 - 937, 2387) — type 289 vs 127, same paper: false
-D/SimplePageReader: Not one paragraph: Rect(380, 2199 - 916, 2253) + Rect(322, 2260 - 937, 2387) — type 54 vs 127, same paper: true
-D/SimplePageReader: Read 15 lettering region(s) from 26 line(s) as 'zh'
-D/SimplePageReader:   region Rect(236, 1912 - 994, 2225): 末日剑神
+D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg pipeline: original path (1280x12755, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=103
+D/SimplePageReader: Read 8 lettering region(s) from 21 line(s) as 'en'
 D/SimplePageReader:   region Rect(359, 2195 - 937, 2257): DoomSDAY SwORD GoD
-D/SimplePageReader:   region Rect(297, 2255 - 962, 2392): 我震惊全球F
-D/SimplePageReader:   region Rect(388, 2679 - 869, 2739): 快快看浸画独家
-D/SimplePageReader:   region Rect(406, 2858 - 752, 2908): 出品:快看浸画
-D/SimplePageReader:   region Rect(385, 2927 - 790, 3223): 主笔:六一+插秧 / F: 춥E호
-D/SimplePageReader:   region Rect(407, 3010 - 655, 3060): 编剧:少阳
-D/SimplePageReader:   region Rect(396, 3086 - 924, 3144): 助手:yusheng&慧意
-D/SimplePageReader:   region Rect(407, 3238 - 657, 3288): 麦编:香雨
+D/SimplePageReader:   region Rect(398, 2850 - 886, 3153): H: / E:–+ / : BE / B)F: yusheng&H
 D/SimplePageReader:   region Rect(633, 5962 - 1255, 6032): KAISCANS.COM
 D/SimplePageReader:   region Rect(252, 6493 - 1105, 6822): WHEN I FOUGHT AGAINST IT IN MY / PREVIOUS LIFE, I WAS ALREADY / LEVEL 2 AND WEARING THE BLUE / EQUIPMENT. EVERY COLLISION / WOULD CAUSE AN INJURY...
 D/SimplePageReader:   region Rect(168, 8024 - 790, 8094): KAISCANS.COM
 D/SimplePageReader:   region Rect(459, 9337 - 1145, 9635): WITH THIS TYPE OF PHYSICAL / STRENGTH, IF YOU'RE EVEN A / TINY BIT SLOWER, YOU MIGHT / GET TORN TO PIECES BY THE / CLIMBER IN AN INSTANT.
 D/SimplePageReader:   region Rect(110, 10332 - 750, 10503): IF I REMEMBER CORRECTLY, / THE CLIMBER SHOULD BE / AROUND HERE.
 D/SimplePageReader:   region Rect(633, 11148 - 1255, 11218): KAISCANS.COM
-D/UndispatchedCoroutine: This series reads as 'zh' (361 chars); remembering it
-D/UndispatchedCoroutine: Dropped BubbleBox(left=236, top=1912, right=994, bottom=2225, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 末日剑神
+D/UndispatchedCoroutine: This series reads as 'en' (323 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=359, top=2195, right=937, bottom=2257, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: DoomSDAY SwORD GoD
-D/UndispatchedCoroutine: Dropped BubbleBox(left=297, top=2255, right=962, bottom=2392, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: 我震惊全球F
-D/PageTranslator: Merged 7 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/SimplePageReader: Read 4 lettering region(s) from 8 line(s) as 'en'
-D/SimplePageReader:   region Rect(54, 2708 - 235, 2734): OMEGASCANS.ORG
-D/SimplePageReader:   region Rect(218, 5970 - 626, 6126): YOu, / FUCKER...!!
-D/SimplePageReader:   region Rect(28, 8256 - 506, 8413): LKP
-D/SimplePageReader:   region Rect(156, 11342 - 566, 11514): THAT HAVGHTY / PARK JIMIN IS NOW / A QUVERING MESS / BENEATH ME...!
-D/UndispatchedCoroutine: Dropped BubbleBox(left=28, top=8256, right=506, bottom=8413, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: LKP
-D/PageTranslator: No balloon for Rect(388, 2679 - 869, 2739): best containment 64%
-D/PageTranslator: No balloon for Rect(406, 2858 - 752, 2908): best containment 54%
-D/PageTranslator: No balloon for Rect(385, 2927 - 790, 3223): best containment 5%
-D/PageTranslator: No balloon for Rect(407, 3010 - 655, 3060): best containment 45%
-D/PageTranslator: No balloon for Rect(396, 3086 - 924, 3144): best containment 23%
-D/PageTranslator: No balloon for Rect(407, 3238 - 657, 3288): best containment 45%
-D/PageTranslator: No balloon for Rect(633, 5962 - 1255, 6032): best containment 19%
-D/PageTranslator: No balloon for Rect(252, 6493 - 1105, 6822): best containment 3%
-D/PageTranslator: No balloon for Rect(168, 8024 - 790, 8094): best containment 11%
-D/PageTranslator: No balloon for Rect(459, 9337 - 1145, 9635): best containment 5%
-D/PageTranslator: No balloon for Rect(110, 10332 - 750, 10503): best containment 26%
-D/PageTranslator: No balloon for Rect(633, 11148 - 1255, 11218): best containment 3%
-D/PageTranslator: Grouped 12 region(s) by balloon
-D/PageTranslator: Merged 6 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 3 balloon(s) the page pass could not read
-D/PageTranslator: Re-read Rect(385, 2927 - 790, 3223) as JAPANESE: 主等: 六ー+括模編別:少旧助手: yushengと制作: 春日文化
-D/PageTranslator: No balloon for Rect(218, 5970 - 626, 6126): best containment 0%
-D/PageTranslator: No balloon for Rect(156, 11342 - 566, 11514): best containment 1%
-D/PageTranslator: Grouped 3 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299394 pages=2 rendering 3/3 translated bubbles
-D/BubbleRenderer: Simple: Rect(156, 11342 - 566, 11514) textBlock=true vertical=false lines=4 bounds=Rect(171, 11348 - 551, 11508)
-D/BubbleRenderer: Simple: Rect(218, 5970 - 626, 6126) textBlock=true vertical=false lines=2 bounds=Rect(233, 5976 - 611, 6120)
-D/BubbleRenderer: Simple: Rect(54, 2708 - 235, 2734) textBlock=true vertical=false lines=1 bounds=Rect(61, 2712 - 228, 2730)
-D/TranslationManager: Translated 1 page(s) at native page resolution for chapter 299394
-D/UndispatchedCoroutine: chapter=299394 pages=3 pipeline: original path (720x12048, script='en')
-D/DispatchedCoroutine: chapter=299395 page=13 pipeline: original path (720x11785, script='en')
-D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg rendering 12/12 translated bubbles
+D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg skipping the balloon detector: WEBTOON lettered in place
+D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg rendering 7/7 translated bubbles
 D/BubbleRenderer: Simple: Rect(252, 6493 - 1105, 6822) textBlock=true vertical=false lines=5 bounds=Rect(284, 6505 - 1073, 6810)
 D/BubbleRenderer: Simple: Rect(459, 9337 - 1145, 9635) textBlock=true vertical=false lines=5 bounds=Rect(484, 9348 - 1120, 9624)
-D/BubbleRenderer: Simple: Rect(385, 2927 - 790, 3223) textBlock=true vertical=false lines=4 bounds=Rect(414, 2938 - 798, 3209)
+D/BubbleRenderer: Simple: Rect(398, 2850 - 886, 3153) textBlock=true vertical=false lines=4 bounds=Rect(416, 2861 - 868, 3142)
 D/BubbleRenderer: Simple: Rect(110, 10332 - 750, 10503) textBlock=true vertical=false lines=3 bounds=Rect(134, 10338 - 726, 10497)
 D/BubbleRenderer: Simple: Rect(633, 5962 - 1255, 6032) textBlock=true vertical=false lines=1 bounds=Rect(656, 5966 - 1232, 6028)
 D/BubbleRenderer: Simple: Rect(168, 8024 - 790, 8094) textBlock=true vertical=false lines=1 bounds=Rect(191, 8028 - 767, 8090)
 D/BubbleRenderer: Simple: Rect(633, 11148 - 1255, 11218) textBlock=true vertical=false lines=1 bounds=Rect(656, 11152 - 1232, 11214)
-D/BubbleRenderer: Simple: Rect(396, 3086 - 924, 3144) textBlock=true vertical=false lines=1 bounds=Rect(416, 3090 - 904, 3140)
-D/BubbleRenderer: Skipping BubbleBox(left=396, top=3086, right=924, bottom=3144, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): Rect(398, 3079 - 922, 3151) is already lettered
-D/BubbleRenderer: Simple: Rect(388, 2679 - 869, 2739) textBlock=true vertical=false lines=1 bounds=Rect(406, 2683 - 851, 2735)
-D/BubbleRenderer: Simple: Rect(406, 2858 - 752, 2908) textBlock=true vertical=false lines=1 bounds=Rect(419, 2862 - 739, 2904)
-D/BubbleRenderer: Simple: Rect(407, 3238 - 657, 3288) textBlock=true vertical=false lines=1 bounds=Rect(416, 3242 - 648, 3284)
-D/BubbleRenderer: Simple: Rect(407, 3010 - 655, 3060) textBlock=true vertical=false lines=1 bounds=Rect(416, 3014 - 646, 3056)
-D/BubbleRenderer: Skipping BubbleBox(left=407, top=3010, right=655, bottom=3060, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false): Rect(401, 3005 - 661, 3065) is already lettered

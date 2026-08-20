@@ -1,35 +1,6 @@
-D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg pipeline: original path (900x16000, script='not probed')
-D/SimplePageReader: Not one paragraph: Rect(139, 9366 - 536, 9495) + Rect(367, 9659 - 515, 9749) — type 129 vs 49, same paper: true
-D/SimplePageReader: Read 10 lettering region(s) from 32 line(s) as 'en'
-D/SimplePageReader:   region Rect(50, 80 - 637, 190): MANGA18FX.COM / Read Manga Online in English Free
-D/SimplePageReader:   region Rect(152, 301 - 592, 545): YOU AND I / AREN'T FROM / DIFFERENT / WORLDS AFTER / ALL.
-D/SimplePageReader:   region Rect(431, 1122 - 570, 1296): FUCK... / HEY, I / TOLD / YOU TO / STOP.
-D/SimplePageReader:   region Rect(143, 3919 - 501, 4039): I'M SERIOUSLY / GOING TO RUIN / YOU...!
-D/SimplePageReader:   region Rect(98, 4772 - 643, 5059): I THINK I GET / IT NOW. WHAT I / SHOULD HAVE / DONE TO AVOID / BEING BULLIED.
-D/SimplePageReader:   region Rect(74, 8431 - 664, 8662): AND THAT TALL, / ILLUSORY WALL I / FELT ALL THIS / TIME...
-D/SimplePageReader:   region Rect(400, 8903 - 720, 8951): PMANGALSFX.COM
-D/SimplePageReader:   region Rect(123, 9361 - 552, 9500): STOP...!!
-D/SimplePageReader:   region Rect(361, 9655 - 521, 9753): STOP, / STOP!
-D/SimplePageReader:   region Rect(144, 12274 - 572, 12502): IT'S ALL / CRUMBLING / DOWN RIGHT / HERE..!
-D/UndispatchedCoroutine: Dropped BubbleBox(left=123, top=9361, right=552, bottom=9500, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: STOP...!!
-D/SimplePageReader: Probe inconclusive (best 'ja' scored 2); leaving the script open
-D/BubbleDetector: Kept 20 unsupported bubble(s) from strip detection
-D/PageTranslator: Merged 5 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
-D/PageTranslator: Grouped 9 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299393 pages=0, 1, 2 rendering 9/9 translated bubbles
-D/BubbleRenderer: Simple: Rect(98, 4772 - 643, 5059) textBlock=true vertical=false lines=5 bounds=Rect(118, 4783 - 623, 5048)
-D/BubbleRenderer: Simple: Rect(74, 8431 - 664, 8662) textBlock=true vertical=false lines=4 bounds=Rect(96, 8440 - 642, 8653)
-D/BubbleRenderer: Simple: Rect(152, 301 - 592, 545) textBlock=true vertical=false lines=5 bounds=Rect(168, 310 - 576, 536)
-D/BubbleRenderer: Simple: Rect(144, 12274 - 572, 12502) textBlock=true vertical=false lines=4 bounds=Rect(160, 12282 - 556, 12494)
-D/BubbleRenderer: Simple: Rect(50, 80 - 637, 190) textBlock=true vertical=false lines=2 bounds=Rect(72, 84 - 615, 186)
-D/BubbleRenderer: Simple: Rect(143, 3919 - 501, 4039) textBlock=true vertical=false lines=3 bounds=Rect(156, 3923 - 488, 4035)
-D/BubbleRenderer: Simple: Rect(431, 1122 - 570, 1296) textBlock=true vertical=false lines=5 bounds=Rect(436, 1128 - 565, 1290)
-D/BubbleRenderer: Simple: Rect(361, 9655 - 521, 9753) textBlock=true vertical=false lines=2 bounds=Rect(367, 9659 - 515, 9749)
-D/BubbleRenderer: Simple: Rect(400, 8903 - 720, 8951) textBlock=true vertical=false lines=1 bounds=Rect(412, 8907 - 708, 8947)
-D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
-D/PageTranslator: Stitched 3 pages into 720x13837 strip
-D/UndispatchedCoroutine: chapter=299393 pages=3, 4, 5 pipeline: original path (720x13837, script='en')
+D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=1, zh=1, en=82
 D/SimplePageReader: Read 8 lettering region(s) from 30 line(s) as 'en'
 D/SimplePageReader:   region Rect(75, 4240 - 590, 4392): ...YOU ACTUALLY / SHOWED UP WITHOUT / RUNNING AWAY?
 D/SimplePageReader:   region Rect(210, 5627 - 774, 5861): I THOUGHT / YOU'D BE SCARED / SINCE THE VENUE IS / MY MANSION.
@@ -40,16 +11,7 @@ D/SimplePageReader:   region Rect(76, 13297 - 714, 13563): ARE YOU SURE YOU / DO
 D/SimplePageReader:   region Rect(318, 14652 - 738, 14877): I'M TRYING / NOT TO CAUSE / UNNECESSARY / DISTRACTION.
 D/SimplePageReader:   region Rect(97, 15505 - 572, 15676): I WANTIT TO / BE A DUEL IN ITS / PUREST FORM,
 D/UndispatchedCoroutine: This series reads as 'en' (331 chars); remembering it
-D/PageTranslator: Merged 4 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(210, 5627 - 774, 5861): best containment 0%
-D/PageTranslator: No balloon for Rect(74, 6585 - 825, 6784): best containment 4%
-D/PageTranslator: No balloon for Rect(108, 9669 - 586, 9913): best containment 1%
-D/PageTranslator: No balloon for Rect(221, 11318 - 795, 11576): best containment 6%
-D/PageTranslator: No balloon for Rect(76, 13297 - 714, 13563): best containment 2%
-D/PageTranslator: No balloon for Rect(318, 14652 - 738, 14877): best containment 4%
-D/PageTranslator: No balloon for Rect(97, 15505 - 572, 15676): best containment 7%
-D/PageTranslator: Grouped 8 region(s) by balloon
+D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg rendering 8/8 translated bubbles
 D/BubbleRenderer: Simple: Rect(76, 13297 - 714, 13563) textBlock=true vertical=false lines=5 bounds=Rect(100, 13307 - 690, 13553)
 D/BubbleRenderer: Simple: Rect(74, 6585 - 825, 6784) textBlock=true vertical=false lines=3 bounds=Rect(102, 6592 - 797, 6777)
@@ -59,14 +21,3 @@ D/BubbleRenderer: Simple: Rect(108, 9669 - 586, 9913) textBlock=true vertical=fa
 D/BubbleRenderer: Simple: Rect(318, 14652 - 738, 14877) textBlock=true vertical=false lines=4 bounds=Rect(334, 14660 - 722, 14869)
 D/BubbleRenderer: Simple: Rect(97, 15505 - 572, 15676) textBlock=true vertical=false lines=3 bounds=Rect(115, 15511 - 554, 15670)
 D/BubbleRenderer: Simple: Rect(75, 4240 - 590, 4392) textBlock=true vertical=false lines=3 bounds=Rect(94, 4246 - 571, 4386)
-D/SimplePageReader: Not one paragraph: Rect(164, 9079 - 539, 9126) + Rect(164, 9146 - 539, 9161) — type 47 vs 15, same paper: true
-D/SimplePageReader: Read 8 lettering region(s) from 17 line(s) as 'en'
-D/SimplePageReader:   region Rect(262, 1667 - 592, 1931): HAH.
-D/SimplePageReader:   region Rect(398, 4122 - 719, 4180): MANGALSECOM
-D/SimplePageReader:   region Rect(162, 5762 - 410, 5918): HA... THIS / FEELS / IMPOSSIBLY / GOOD.
-D/SimplePageReader:   region Rect(180, 6465 - 549, 6635): INDISCRIMINATE / CREAMPIE INSIDE A / CHAEBOL / DAUGHTER'S VIRGIN / PUSSY...
-D/SimplePageReader:   region Rect(150, 8558 - 471, 8614): I THINK I'M GETTING / ADDICTED.
-D/SimplePageReader:   region Rect(149, 9075 - 554, 9130): MANGA18FX.COM
-D/SimplePageReader:   region Rect(149, 9142 - 554, 9165): READ MANGA ONLINE WITHOUT ANNOYING ADS
-D/SimplePageReader:   region Rect(203, 12215 - 482, 12318): I'M CUMMING / AGAIN...!!!
-D/UndispatchedCoroutine: Dropped BubbleBox(left=262, top=1667, right=592, bottom=1931, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: HAH.

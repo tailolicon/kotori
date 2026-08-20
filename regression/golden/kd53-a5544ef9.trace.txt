@@ -1,34 +1,6 @@
-D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed')
-D/SimplePageReader: Probe inconclusive (best 'ko' scored 1); leaving the script open
-D/SimplePageReader: Dropping A as noise rather than dialogue
-D/SimplePageReader: Read 9 lettering region(s) from 24 line(s) as 'en'
-D/SimplePageReader:   region Rect(104, 0 - 644, 363): JHAAAAA y
-D/SimplePageReader:   region Rect(275, 1238 - 563, 1325): IT'S FILLING / UP AGAIN...1
-D/SimplePageReader:   region Rect(108, 3476 - 430, 3690): YEAH, AH, / INSIDE... / CUM IT ALL / INSIDEME.
-D/SimplePageReader:   region Rect(335, 5125 - 577, 5479): FILL ME / UP, / RIGHT / INSIDE / JIMIN'S / PUSSY.
-D/SimplePageReader:   region Rect(301, 7519 - 628, 7581): FILL ME!Y
-D/SimplePageReader:   region Rect(199, 8313 - 378, 8367): I'M / CUMMING...!
-D/SimplePageReader:   region Rect(290, 8506 - 524, 8650): GET READY / TO TAKE / ALL THIS / CUM!
-D/SimplePageReader:   region Rect(221, 9491 - 623, 9638): IT INSIDE!
-D/SimplePageReader:   region Rect(288, 13626 - 551, 13729): AFTER / GRADUATION
-D/UndispatchedCoroutine: Dropped BubbleBox(left=104, top=0, right=644, bottom=363, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: JHAAAAA y
-D/BubbleDetector: Kept 46 unsupported bubble(s) from strip detection
-D/PageTranslator: Merged 18 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
-D/PageTranslator: Ignoring oversized balloon Rect(4, 7956 - 673, 8745) for Rect(199, 8313 - 378, 8367)
-D/PageTranslator: Grouped 8 region(s) by balloon
-D/UndispatchedCoroutine: chapter=299393 pages=24, 25, 26 rendering 8/8 translated bubbles
-D/BubbleRenderer: Simple: Rect(335, 5125 - 577, 5479) textBlock=true vertical=false lines=6 bounds=Rect(344, 5138 - 568, 5466)
-D/BubbleRenderer: Simple: Rect(108, 3476 - 430, 3690) textBlock=true vertical=false lines=4 bounds=Rect(120, 3484 - 418, 3682)
-D/BubbleRenderer: Simple: Rect(221, 9491 - 623, 9638) textBlock=true vertical=false lines=1 bounds=Rect(236, 9496 - 608, 9633)
-D/BubbleRenderer: Simple: Rect(290, 8506 - 524, 8650) textBlock=true vertical=false lines=4 bounds=Rect(299, 8511 - 515, 8645)
-D/BubbleRenderer: Simple: Rect(288, 13626 - 551, 13729) textBlock=true vertical=false lines=2 bounds=Rect(298, 13630 - 541, 13725)
-D/BubbleRenderer: Simple: Rect(275, 1238 - 563, 1325) textBlock=true vertical=false lines=2 bounds=Rect(286, 1242 - 552, 1321)
-D/BubbleRenderer: Simple: Rect(301, 7519 - 628, 7581) textBlock=true vertical=false lines=1 bounds=Rect(313, 7523 - 616, 7577)
-D/BubbleRenderer: Simple: Rect(199, 8313 - 378, 8367) textBlock=true vertical=false lines=2 bounds=Rect(206, 8317 - 371, 8363)
-D/TranslationManager: Translated 3 page(s) as one continuous strip for chapter 299393
-D/PageTranslator: Stitched 3 pages into 720x13855 strip
-D/UndispatchedCoroutine: chapter=299393 pages=27, 28, 29 pipeline: original path (720x13855, script='en')
+D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Probe inconclusive (best 'ja' scored 3); leaving the script open
+D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=0, zh=1, en=102
 D/SimplePageReader: Read 9 lettering region(s) from 34 line(s) as 'en'
 D/SimplePageReader:   region Rect(238, 102 - 668, 306): AS YOU / CAN SEE, MY DOLLS / ARE FORGED FROM / 'MYTHRIUM',
 D/SimplePageReader:   region Rect(113, 1267 - 535, 1379): A NOBLE / METAL THAT COMPLETELY / RESISTS MANA,
@@ -40,14 +12,7 @@ D/SimplePageReader:   region Rect(83, 7201 - 296, 7234): YOU CAN READ THE CHAPTE
 D/SimplePageReader:   region Rect(194, 7660 - 598, 7818): THAT'S / THE END OF THE / ENTERTAINMENT.
 D/SimplePageReader:   region Rect(382, 10913 - 663, 11073): BE TORN / TO SHREDS / AND DIE.
 D/UndispatchedCoroutine: This series reads as 'en' (392 chars); remembering it
-D/PageTranslator: Merged 14 overlapping balloon detection(s)
-D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
-D/PageTranslator: No balloon for Rect(253, 1926 - 711, 2169): best containment 68%
-D/PageTranslator: No balloon for Rect(71, 3051 - 606, 3294): best containment 44%
-D/PageTranslator: No balloon for Rect(112, 3843 - 675, 4048): best containment 7%
-D/PageTranslator: No balloon for Rect(90, 5517 - 692, 5771): best containment 10%
-D/PageTranslator: No balloon for Rect(194, 7660 - 598, 7818): best containment 11%
-D/PageTranslator: Grouped 9 region(s) by balloon
+D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg skipping the balloon detector: WEBTOON lettered in place
 D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg rendering 9/9 translated bubbles
 D/BubbleRenderer: Simple: Rect(90, 5517 - 692, 5771) textBlock=true vertical=false lines=5 bounds=Rect(112, 5526 - 670, 5762)
 D/BubbleRenderer: Simple: Rect(71, 3051 - 606, 3294) textBlock=true vertical=false lines=5 bounds=Rect(91, 3060 - 586, 3285)
