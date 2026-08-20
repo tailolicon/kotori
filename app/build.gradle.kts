@@ -1,4 +1,4 @@
-import mihon.gradle.Config
+﻿import mihon.gradle.Config
 import mihon.gradle.getBuildTime
 import mihon.gradle.getLatestCommitCount
 import mihon.gradle.getLatestCommitSha
@@ -68,9 +68,9 @@ android {
 
         // The release name is written down; the commit count is not. Release builds carry a plain
         // semantic version, while debug/update/preview append `-${commitCount}` through their
-        // versionNameSuffix — so a milestone reads as a milestone, and every other build still
+        // versionNameSuffix â€” so a milestone reads as a milestone, and every other build still
         // says exactly which commit it came from.
-        versionName = "1.0.23"
+        versionName = "1.0.24"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -137,7 +137,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
-            // Kotori has always shipped as `app.mihon.dev` — every build a reader has ever
+            // Kotori has always shipped as `app.mihon.dev` â€” every build a reader has ever
             // installed, from the first test APK onwards, carries that id. Leaving it off here made
             // `assembleRelease` produce `app.mihon` instead, which Android treats as an unrelated
             // app: it installs alongside the real one, starts with an empty library, and cannot be
@@ -204,7 +204,7 @@ android {
     }
 
     // Offline translation (llama.cpp). Built for phone (arm64) and MuMu emulator (x86_64).
-    // Source is vendored/pinned via app/src/main/cpp/CMakeLists.txt — GGUF weights are NOT bundled.
+    // Source is vendored/pinned via app/src/main/cpp/CMakeLists.txt â€” GGUF weights are NOT bundled.
     externalNativeBuild {
         cmake {
             path("src/main/cpp/CMakeLists.txt")
@@ -216,7 +216,7 @@ android {
         abi {
             isEnable = true
             // No universal apk: at ~480 MB it was the largest artifact of every release and nobody
-            // installed it. 32-bit is gone for the same reason — Kotori's readers are on arm64, and
+            // installed it. 32-bit is gone for the same reason â€” Kotori's readers are on arm64, and
             // building four splits plus a universal turned every release into a 1.1 GB upload.
             // x86_64 stays only so the emulator can run what the phone will run.
             isUniversalApk = false

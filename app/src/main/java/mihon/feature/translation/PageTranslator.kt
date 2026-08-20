@@ -308,10 +308,18 @@ class PageTranslator(
                 // ONNX detector was 10.6s of the original 136s page, and this whole mode exists
                 // because reading the page once got that page to 4.3s by skipping it.
                 //
-                // So it runs where it earns its keep. A webtoon strip lettered in its own footprint
-                // needs no balloon, and paying for one there put twenty to forty seconds back onto
-                // exactly the pages the fast path was built for.
-                val needsBalloons = typeset || pageFormat == PageFormat.MANGA
+                // It also does a second job that a strip very much needs, and skipping it here for
+                // speed was a mistake that shipped: it is what tells the reader that two recognised
+                // fragments belong to *one* balloon. ML Kit routinely splits a Korean balloon into an
+                // upper and a lower region; without a balloon to join them each fragment is erased
+                // and lettered on its own, so half the bubble keeps its Korean and the translation
+                // written into the lower half spills out of the bubble. That is what "ô thoại có
+                // phần tô trắng chèn thẳng ra ngoài" is.
+                //
+                // So it runs wherever there is lettering to group — which is everywhere — and the
+                // speed comes from the passes that were genuinely redundant instead: the page is
+                // read once, the script is probed once per series, and strips no longer queue.
+                val needsBalloons = true
                 val balloons = if (!needsBalloons) {
                     logcat { "$diagnosticLabel skipping the balloon detector: $pageFormat lettered in place" }
                     emptyList()
