@@ -267,8 +267,14 @@ class TranslationPreferences(
          * nothing and is exactly how a masking bug survives several rounds of testing. Shipped that
          * way once — 1.0.14 fixed a balloon defect and left the constant alone, so every page the
          * reader had already seen came back with the defect intact.
+         *
+         * And again in 1.0.21: the script probe, the companion re-read and the balloon detector all
+         * changed which text a page yields and where it goes, and this stayed at r107 from 1.0.20.
+         * A reader who updated kept being served 1.0.20's pages, so the same chapter looked different
+         * on two devices purely by which one happened to hold a cache. If a change alters a single
+         * pixel of output, it belongs in the same commit as a bump here.
          */
-        const val RENDERER_VERSION = "r107"
+        const val RENDERER_VERSION = "r108"
     }
 
     /**

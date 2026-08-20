@@ -186,9 +186,15 @@ class PageTranslator(
             currentProvider().displayName,
             currentProvider().supportsVisionOcr,
         )
+        // Everything that can make the same chapter come out differently on two devices, on one
+        // line. Settings are per install, the cache key is derived from them, and the model can step
+        // down when a quota runs out — so "it looks different on my phone" is answerable by
+        // comparing this line rather than by guessing.
         logcat {
             "$diagnosticLabel pipeline: ${if (useMangaPort) "manga port" else "original path"} " +
-                "(${source.width}x${source.height}, script='${pageScript.ifEmpty { "not probed" }}')"
+                "(${source.width}x${source.height}, script='${pageScript.ifEmpty { "not probed" }}', " +
+                "style=${preferences.renderStyle()}, model=${currentProvider().displayName}, " +
+                "target=${preferences.targetLanguage.get()}, stamp=${preferences.outputStamp()})"
         }
         if (useMangaPort) {
             val outcome = try {
