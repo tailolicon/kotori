@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg pipeline: original path (800x14634, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg pipeline: original path (800x14634, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=0, zh=0, en=94
 D/SimplePageReader: Dropping N as noise rather than dialogue
@@ -16,7 +16,15 @@ D/SimplePageReader:   region Rect(325, 10908 - 720, 10999): HAAAAAP!
 D/SimplePageReader:   region Rect(302, 13914 - 658, 14130): KUGH...!! / THIS B*TCH IS / THE ONE WHO WAS / BEHIND THAT OLD / HAG EARLIER...
 D/SimplePageReader:   region Rect(172, 14283 - 440, 14440): SHE / PIPN'TRUN / AWAY?!
 D/UndispatchedCoroutine: This series reads as 'en' (424 chars); remembering it
-D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 27 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(359, 5031 - 591, 5192): best containment 21%
+D/PageTranslator: No balloon for Rect(408, 5851 - 629, 5922): best containment 17%
+D/PageTranslator: No balloon for Rect(176, 8313 - 616, 8528): best containment 21%
+D/PageTranslator: No balloon for Rect(325, 10908 - 720, 10999): best containment 0%
+D/PageTranslator: No balloon for Rect(302, 13914 - 658, 14130): best containment 28%
+D/PageTranslator: No balloon for Rect(172, 14283 - 440, 14440): best containment 45%
+D/PageTranslator: Grouped 12 region(s) by balloon
 D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg rendering 12/12 translated bubbles
 D/BubbleRenderer: Simple: Rect(131, 6414 - 653, 6694) textBlock=true vertical=false lines=6 bounds=Rect(150, 6424 - 634, 6684)
 D/BubbleRenderer: Simple: Rect(157, 4370 - 681, 4590) textBlock=true vertical=false lines=5 bounds=Rect(176, 4378 - 662, 4582)

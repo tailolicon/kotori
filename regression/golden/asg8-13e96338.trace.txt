@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-13e96338.jpg pipeline: original path (1280x7555, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-13e96338.jpg pipeline: original path (1280x7555, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=114
 D/SimplePageReader: Read 4 lettering region(s) from 12 line(s) as 'en'
@@ -7,7 +7,13 @@ D/SimplePageReader:   region Rect(540, 2490 - 1250, 2570): KAISCANS.COM
 D/SimplePageReader:   region Rect(147, 3760 - 918, 4161): BY ADDING THE LENGTH OF THE / ARM PLUS THE LENGTH OF THE / SWORD AURA AT ITS SHORTEST / LENGTH; EVEN IF IT'S A ONE-TARGET / ATTACK, IT SHOULD BE ENOUGH TO / ATTACK TWO MUTANTS AT THE / SAME TIME!
 D/SimplePageReader:   region Rect(192, 6026 - 902, 6104): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (191 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-13e96338.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 1 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(351, 172 - 713, 391): best containment 8%
+D/PageTranslator: No balloon for Rect(540, 2490 - 1250, 2570): best containment 7%
+D/PageTranslator: No balloon for Rect(147, 3760 - 918, 4161): best containment 3%
+D/PageTranslator: No balloon for Rect(192, 6026 - 902, 6104): best containment 8%
+D/PageTranslator: Grouped 4 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-13e96338.jpg rendering 4/4 translated bubbles
 D/BubbleRenderer: Simple: Rect(147, 3760 - 918, 4161) textBlock=true vertical=false lines=7 bounds=Rect(176, 3775 - 889, 4146)
 D/BubbleRenderer: Simple: Rect(351, 172 - 713, 391) textBlock=true vertical=false lines=3 bounds=Rect(364, 180 - 700, 383)

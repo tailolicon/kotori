@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg pipeline: original path (800x6350, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg pipeline: original path (800x6350, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'zh' scored 4); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=3, zh=0, en=128
 D/SimplePageReader: Read 10 lettering region(s) from 44 line(s) as 'en'
@@ -14,7 +14,11 @@ D/SimplePageReader:   region Rect(22, 5433 - 465, 5577): AFTER ALL, HUAXIA'S / S
 D/SimplePageReader:   region Rect(94, 6130 - 337, 6166): YOU CAN READ THE CHAPTER ON: / EN-THUNDERSCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (736 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=168, top=1660, right=679, bottom=1710, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: NATIDNAL WAR POINTS LEADERBOARO
-D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 28 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(112, 1131 - 627, 1394): best containment 26%
+D/PageTranslator: No balloon for Rect(260, 1759 - 577, 2226): best containment 18%
+D/PageTranslator: Grouped 9 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg123-38fd0b1e.jpg rendering 9/9 translated bubbles
 D/BubbleRenderer: Simple: Rect(260, 1759 - 577, 2226) textBlock=true vertical=false lines=8 bounds=Rect(272, 1776 - 565, 2209)
 D/BubbleRenderer: Simple: Rect(112, 1131 - 627, 1394) textBlock=true vertical=false lines=7 bounds=Rect(131, 1141 - 608, 1384)

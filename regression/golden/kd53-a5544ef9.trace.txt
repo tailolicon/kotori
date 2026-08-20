@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 3); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=0, zh=1, en=102
 D/SimplePageReader: Read 9 lettering region(s) from 34 line(s) as 'en'
@@ -12,7 +12,14 @@ D/SimplePageReader:   region Rect(83, 7201 - 296, 7234): YOU CAN READ THE CHAPTE
 D/SimplePageReader:   region Rect(194, 7660 - 598, 7818): THAT'S / THE END OF THE / ENTERTAINMENT.
 D/SimplePageReader:   region Rect(382, 10913 - 663, 11073): BE TORN / TO SHREDS / AND DIE.
 D/UndispatchedCoroutine: This series reads as 'en' (392 chars); remembering it
-D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 14 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(253, 1926 - 711, 2169): best containment 68%
+D/PageTranslator: No balloon for Rect(71, 3051 - 606, 3294): best containment 44%
+D/PageTranslator: No balloon for Rect(112, 3843 - 675, 4048): best containment 7%
+D/PageTranslator: No balloon for Rect(90, 5517 - 692, 5771): best containment 10%
+D/PageTranslator: No balloon for Rect(194, 7660 - 598, 7818): best containment 11%
+D/PageTranslator: Grouped 9 region(s) by balloon
 D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg rendering 9/9 translated bubbles
 D/BubbleRenderer: Simple: Rect(90, 5517 - 692, 5771) textBlock=true vertical=false lines=5 bounds=Rect(112, 5526 - 670, 5762)
 D/BubbleRenderer: Simple: Rect(71, 3051 - 606, 3294) textBlock=true vertical=false lines=5 bounds=Rect(91, 3060 - 586, 3285)

@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg pipeline: original path (1280x12755, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg pipeline: original path (1280x12755, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=103
 D/SimplePageReader: Read 8 lettering region(s) from 21 line(s) as 'en'
@@ -12,7 +12,16 @@ D/SimplePageReader:   region Rect(110, 10332 - 750, 10503): IF I REMEMBER CORREC
 D/SimplePageReader:   region Rect(633, 11148 - 1255, 11218): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (323 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=359, top=2195, right=937, bottom=2257, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: DoomSDAY SwORD GoD
-D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 7 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(398, 2850 - 886, 3153): best containment 6%
+D/PageTranslator: No balloon for Rect(633, 5962 - 1255, 6032): best containment 19%
+D/PageTranslator: No balloon for Rect(252, 6493 - 1105, 6822): best containment 3%
+D/PageTranslator: No balloon for Rect(168, 8024 - 790, 8094): best containment 11%
+D/PageTranslator: No balloon for Rect(459, 9337 - 1145, 9635): best containment 5%
+D/PageTranslator: No balloon for Rect(110, 10332 - 750, 10503): best containment 26%
+D/PageTranslator: No balloon for Rect(633, 11148 - 1255, 11218): best containment 3%
+D/PageTranslator: Grouped 7 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-d27f138f.jpg rendering 7/7 translated bubbles
 D/BubbleRenderer: Simple: Rect(252, 6493 - 1105, 6822) textBlock=true vertical=false lines=5 bounds=Rect(284, 6505 - 1073, 6810)
 D/BubbleRenderer: Simple: Rect(459, 9337 - 1145, 9635) textBlock=true vertical=false lines=5 bounds=Rect(484, 9348 - 1120, 9624)

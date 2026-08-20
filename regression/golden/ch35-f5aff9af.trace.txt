@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=1, zh=1, en=82
 D/SimplePageReader: Read 8 lettering region(s) from 30 line(s) as 'en'
@@ -11,7 +11,16 @@ D/SimplePageReader:   region Rect(76, 13297 - 714, 13563): ARE YOU SURE YOU / DO
 D/SimplePageReader:   region Rect(318, 14652 - 738, 14877): I'M TRYING / NOT TO CAUSE / UNNECESSARY / DISTRACTION.
 D/SimplePageReader:   region Rect(97, 15505 - 572, 15676): I WANTIT TO / BE A DUEL IN ITS / PUREST FORM,
 D/UndispatchedCoroutine: This series reads as 'en' (331 chars); remembering it
-D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(210, 5627 - 774, 5861): best containment 0%
+D/PageTranslator: No balloon for Rect(74, 6585 - 825, 6784): best containment 4%
+D/PageTranslator: No balloon for Rect(108, 9669 - 586, 9913): best containment 1%
+D/PageTranslator: No balloon for Rect(221, 11318 - 795, 11576): best containment 6%
+D/PageTranslator: No balloon for Rect(76, 13297 - 714, 13563): best containment 2%
+D/PageTranslator: No balloon for Rect(318, 14652 - 738, 14877): best containment 4%
+D/PageTranslator: No balloon for Rect(97, 15505 - 572, 15676): best containment 7%
+D/PageTranslator: Grouped 8 region(s) by balloon
 D/UndispatchedCoroutine: regression:ch35-f5aff9af.jpg rendering 8/8 translated bubbles
 D/BubbleRenderer: Simple: Rect(76, 13297 - 714, 13563) textBlock=true vertical=false lines=5 bounds=Rect(100, 13307 - 690, 13553)
 D/BubbleRenderer: Simple: Rect(74, 6585 - 825, 6784) textBlock=true vertical=false lines=3 bounds=Rect(102, 6592 - 797, 6777)

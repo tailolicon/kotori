@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg pipeline: original path (1280x12100, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg pipeline: original path (1280x12100, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'zh' scored 1); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=85
 D/SimplePageReader: Dropping 0 as noise rather than dialogue
@@ -10,11 +10,21 @@ D/SimplePageReader:   region Rect(457, 5681 - 841, 5815): CAN ONLY BE / RESISTED
 D/SimplePageReader:   region Rect(494, 9564 - 1248, 9648): KAISCANS.COM
 D/SimplePageReader:   region Rect(227, 11482 - 799, 11742): TSK~ THIS TRAP WAS / TRULY UNNECESSARY... / NOW THE DAMAGE IS / EVEN BIGGER.
 D/UndispatchedCoroutine: This series reads as 'en' (184 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg skipping the balloon detector: WEBTOON lettered in place
-D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg rendering 6/6 translated bubbles
+D/PageTranslator: Merged 17 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/UndispatchedCoroutine: Recovered Rect(418, 5513 - 883, 5600): CAN ONLY BE
+D/PageTranslator: No balloon for Rect(490, 257 - 1123, 463): best containment 6%
+D/PageTranslator: No balloon for Rect(492, 1906 - 1248, 1990): best containment 10%
+D/PageTranslator: No balloon for Rect(204, 5148 - 960, 5232): best containment 9%
+D/PageTranslator: No balloon for Rect(494, 9564 - 1248, 9648): best containment 15%
+D/PageTranslator: No balloon for Rect(227, 11482 - 799, 11742): best containment 25%
+D/PageTranslator: Grouped 7 region(s) by balloon
+D/UndispatchedCoroutine: regression:asg8-a39e8b73.jpg rendering 7/7 translated bubbles
 D/BubbleRenderer: Simple: Rect(227, 11482 - 799, 11742) textBlock=true vertical=false lines=4 bounds=Rect(248, 11492 - 778, 11732)
 D/BubbleRenderer: Simple: Rect(490, 257 - 1123, 463) textBlock=true vertical=false lines=4 bounds=Rect(513, 265 - 1100, 455)
 D/BubbleRenderer: Simple: Rect(492, 1906 - 1248, 1990) textBlock=true vertical=false lines=1 bounds=Rect(520, 1910 - 1220, 1986)
 D/BubbleRenderer: Simple: Rect(204, 5148 - 960, 5232) textBlock=true vertical=false lines=1 bounds=Rect(232, 5152 - 932, 5228)
 D/BubbleRenderer: Simple: Rect(494, 9564 - 1248, 9648) textBlock=true vertical=false lines=1 bounds=Rect(522, 9568 - 1220, 9644)
 D/BubbleRenderer: Simple: Rect(457, 5681 - 841, 5815) textBlock=true vertical=false lines=2 bounds=Rect(471, 5686 - 827, 5810)
+D/BubbleRenderer: Simple: Rect(418, 5513 - 883, 5600) textBlock=false vertical=false lines=1 bounds=Rect(470, 5681 - 825, 5738)
+D/BubbleRenderer: Simple: BubbleBox(left=418, top=5513, right=883, bottom=5600, confidence=0.6671096, isTextBlock=false, isFallbackTextBlock=false) repeats text already lettered nearby

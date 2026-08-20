@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=93
 D/SimplePageReader: Read 6 lettering region(s) from 19 line(s) as 'en'
@@ -9,7 +9,15 @@ D/SimplePageReader:   region Rect(444, 7902 - 1110, 8079): I HAVE KNOWN BETTER T
 D/SimplePageReader:   region Rect(165, 9197 - 778, 9266): KAISCANS.COM
 D/SimplePageReader:   region Rect(396, 11132 - 1090, 11408): NO, THAT'S NOT IT, THE / ATTACK'S SPECIAL EFFECT / WAS NOT NECESSARILY / TRIGGERED...
 D/UndispatchedCoroutine: This series reads as 'en' (287 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 13 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(643, 472 - 1256, 541): best containment 0%
+D/PageTranslator: No balloon for Rect(459, 3905 - 1054, 4167): best containment 5%
+D/PageTranslator: No balloon for Rect(188, 6771 - 830, 7142): best containment 4%
+D/PageTranslator: No balloon for Rect(444, 7902 - 1110, 8079): best containment 37%
+D/PageTranslator: No balloon for Rect(165, 9197 - 778, 9266): best containment 16%
+D/PageTranslator: No balloon for Rect(396, 11132 - 1090, 11408): best containment 5%
+D/PageTranslator: Grouped 6 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg rendering 6/6 translated bubbles
 D/BubbleRenderer: Simple: Rect(188, 6771 - 830, 7142) textBlock=true vertical=false lines=6 bounds=Rect(212, 6785 - 806, 7128)
 D/BubbleRenderer: Simple: Rect(396, 11132 - 1090, 11408) textBlock=true vertical=false lines=4 bounds=Rect(422, 11142 - 1064, 11398)

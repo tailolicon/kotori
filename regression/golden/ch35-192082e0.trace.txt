@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=0, en=89
 D/SimplePageReader: Read 11 lettering region(s) from 41 line(s) as 'en'
@@ -14,7 +14,20 @@ D/SimplePageReader:   region Rect(127, 11813 - 774, 12101): WHAT ABOUT / THE YOU
 D/SimplePageReader:   region Rect(136, 13825 - 652, 14146): WHAT / ABOUT THE / YOU WHo SMILES / WHILE LEARNING / MAGIC..
 D/SimplePageReader:   region Rect(277, 14379 - 789, 14523): ...WITHOUT / REALIZING IT?
 D/UndispatchedCoroutine: This series reads as 'en' (414 chars); remembering it
-D/UndispatchedCoroutine: regression:ch35-192082e0.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 11 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(79, 247 - 819, 489): best containment 3%
+D/PageTranslator: No balloon for Rect(50, 2208 - 580, 2419): best containment 4%
+D/PageTranslator: No balloon for Rect(303, 2614 - 807, 2814): best containment 5%
+D/PageTranslator: No balloon for Rect(259, 3478 - 640, 3619): best containment 4%
+D/PageTranslator: No balloon for Rect(141, 5276 - 800, 5486): best containment 1%
+D/PageTranslator: No balloon for Rect(135, 8051 - 669, 8358): best containment 3%
+D/PageTranslator: No balloon for Rect(76, 9730 - 509, 9942): best containment 2%
+D/PageTranslator: No balloon for Rect(224, 10143 - 810, 10382): best containment 4%
+D/PageTranslator: No balloon for Rect(127, 11813 - 774, 12101): best containment 2%
+D/PageTranslator: No balloon for Rect(136, 13825 - 652, 14146): best containment 15%
+D/PageTranslator: No balloon for Rect(277, 14379 - 789, 14523): best containment 5%
+D/PageTranslator: Grouped 11 region(s) by balloon
 D/UndispatchedCoroutine: regression:ch35-192082e0.jpg rendering 11/11 translated bubbles
 D/BubbleRenderer: Simple: Rect(127, 11813 - 774, 12101) textBlock=true vertical=false lines=5 bounds=Rect(151, 11824 - 750, 12090)
 D/BubbleRenderer: Simple: Rect(79, 247 - 819, 489) textBlock=true vertical=false lines=4 bounds=Rect(106, 256 - 792, 480)

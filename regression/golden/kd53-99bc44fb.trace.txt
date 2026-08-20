@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:kd53-99bc44fb.jpg pipeline: original path (800x13459, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-99bc44fb.jpg pipeline: original path (800x13459, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=0, en=69
 D/SimplePageReader: Read 7 lettering region(s) from 20 line(s) as 'en'
@@ -10,7 +10,14 @@ D/SimplePageReader:   region Rect(49, 4256 - 565, 4474): FOR / GATHERING ALL THO
 D/SimplePageReader:   region Rect(210, 5582 - 591, 5642): THANK YOU.
 D/SimplePageReader:   region Rect(207, 7662 - 531, 7816): YOU / FCKING...!
 D/UndispatchedCoroutine: This series reads as 'en' (238 chars); remembering it
-D/UndispatchedCoroutine: regression:kd53-99bc44fb.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 9 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(217, 92 - 605, 170): best containment 16%
+D/PageTranslator: No balloon for Rect(178, 710 - 622, 982): best containment 37%
+D/PageTranslator: No balloon for Rect(148, 3449 - 730, 3701): best containment 65%
+D/PageTranslator: No balloon for Rect(210, 5582 - 591, 5642): best containment 0%
+D/PageTranslator: No balloon for Rect(207, 7662 - 531, 7816): best containment 64%
+D/PageTranslator: Grouped 7 region(s) by balloon
 D/UndispatchedCoroutine: regression:kd53-99bc44fb.jpg rendering 7/7 translated bubbles
 D/BubbleRenderer: Simple: Rect(148, 3449 - 730, 3701) textBlock=true vertical=false lines=5 bounds=Rect(170, 3458 - 708, 3692)
 D/BubbleRenderer: Simple: Rect(178, 710 - 622, 982) textBlock=true vertical=false lines=4 bounds=Rect(194, 720 - 606, 972)

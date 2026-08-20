@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg pipeline: original path (800x11498, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg pipeline: original path (800x11498, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=89
 D/SimplePageReader: Read 11 lettering region(s) from 32 line(s) as 'en'
@@ -20,7 +20,12 @@ D/UndispatchedCoroutine: Dropped BubbleBox(left=167, top=9704, right=633, bottom
 D/UndispatchedCoroutine: BRANGH THAT ALOWS
 D/UndispatchedCoroutine: THE USER TO SWITGH
 D/UndispatchedCoroutine: BODIES,
-D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 28 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(151, 3828 - 646, 4141): best containment 4%
+D/PageTranslator: No balloon for Rect(330, 4739 - 712, 4920): best containment 61%
+D/PageTranslator: No balloon for Rect(115, 11273 - 683, 11418): best containment 0%
+D/PageTranslator: Grouped 8 region(s) by balloon
 D/UndispatchedCoroutine: regression:kd53-ada33a8e.jpg rendering 8/8 translated bubbles
 D/BubbleRenderer: Simple: Rect(151, 3828 - 646, 4141) textBlock=true vertical=false lines=5 bounds=Rect(169, 3840 - 628, 4129)
 D/BubbleRenderer: Simple: Rect(78, 5105 - 585, 5325) textBlock=true vertical=false lines=5 bounds=Rect(97, 5113 - 566, 5317)

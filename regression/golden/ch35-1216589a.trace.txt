@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-1216589a.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-1216589a.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=0, en=49
 D/SimplePageReader: Read 10 lettering region(s) from 28 line(s) as 'en'
@@ -13,7 +13,18 @@ D/SimplePageReader:   region Rect(353, 9332 - 547, 9440): I...
 D/SimplePageReader:   region Rect(110, 11987 - 792, 12258): I DON'T / WANT TO LOSE / TOMORROW...
 D/SimplePageReader:   region Rect(223, 13999 - 677, 14320): THEN / WIN!
 D/UndispatchedCoroutine: This series reads as 'en' (220 chars); remembering it
-D/UndispatchedCoroutine: regression:ch35-1216589a.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 1 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(109, 160 - 625, 388): best containment 0%
+D/PageTranslator: No balloon for Rect(547, 1073 - 801, 1199): best containment 14%
+D/PageTranslator: No balloon for Rect(97, 2054 - 495, 2260): best containment 10%
+D/PageTranslator: No balloon for Rect(152, 4165 - 750, 4374): best containment 3%
+D/PageTranslator: No balloon for Rect(250, 7285 - 730, 7494): best containment 4%
+D/PageTranslator: No balloon for Rect(105, 8612 - 292, 8722): best containment 38%
+D/PageTranslator: No balloon for Rect(353, 9332 - 547, 9440): best containment 13%
+D/PageTranslator: No balloon for Rect(110, 11987 - 792, 12258): best containment 1%
+D/PageTranslator: No balloon for Rect(223, 13999 - 677, 14320): best containment 0%
+D/PageTranslator: Grouped 10 region(s) by balloon
 D/UndispatchedCoroutine: regression:ch35-1216589a.jpg rendering 10/10 translated bubbles
 D/BubbleRenderer: Simple: Rect(110, 11987 - 792, 12258) textBlock=true vertical=false lines=3 bounds=Rect(135, 11997 - 767, 12248)
 D/BubbleRenderer: Simple: Rect(223, 13999 - 677, 14320) textBlock=true vertical=false lines=2 bounds=Rect(240, 14011 - 660, 14308)

@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'zh' scored 2); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=4, en=123
 D/SimplePageReader: Not one paragraph: Rect(46, 145 - 768, 266) + Rect(29, 392 - 771, 478) — type 121 vs 42, same paper: true
@@ -18,7 +18,14 @@ D/SimplePageReader:   region Rect(457, 6323 - 689, 6354): ZXY CAPTAIN: NANDA
 D/UndispatchedCoroutine: This series reads as 'en' (367 chars); remembering it
 D/UndispatchedCoroutine: Dropped BubbleBox(left=17, top=140, right=797, bottom=271, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: AWARNING!
 D/UndispatchedCoroutine: Dropped BubbleBox(left=225, top=2842, right=582, bottom=2884, confidence=0.15, isTextBlock=true, isFallbackTextBlock=false) as an edge sliver or decoration: DooMSDAY SwORD GoD
-D/UndispatchedCoroutine: regression:asg123-0659af12.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 19 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 8 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(0, 388 - 800, 482): best containment 53%
+D/PageTranslator: No balloon for Rect(50, 576 - 732, 666): best containment 13%
+D/PageTranslator: No balloon for Rect(1, 722 - 772, 868): best containment 7%
+D/PageTranslator: No balloon for Rect(472, 936 - 781, 969): best containment 59%
+D/PageTranslator: No balloon for Rect(39, 1210 - 761, 1383): best containment 21%
+D/PageTranslator: Grouped 10 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg123-0659af12.jpg rendering 10/10 translated bubbles
 D/BubbleRenderer: Simple: Rect(39, 1210 - 761, 1383) textBlock=true vertical=false lines=2 bounds=Rect(66, 1216 - 734, 1377)
 D/BubbleRenderer: Simple: Rect(1, 722 - 772, 868) textBlock=true vertical=false lines=3 bounds=Rect(30, 727 - 743, 863)

@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg pipeline: original path (1280x11350, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg pipeline: original path (1280x11350, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=88
 D/SimplePageReader: Read 8 lettering region(s) from 25 line(s) as 'en'
@@ -11,7 +11,17 @@ D/SimplePageReader:   region Rect(594, 7627 - 1184, 7936): BUT TO PERFECTLY / EV
 D/SimplePageReader:   region Rect(393, 8647 - 1094, 8956): THEN, THE ONLY SKILL THAT / CAN BE USED IS HEAVENLY / LIGHT RIF T, BUT LIKE SWORD / CUT, IT'S A SINGLE-TARGET / ATTACK...
 D/SimplePageReader:   region Rect(183, 10632 - 861, 10708): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (401 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 5 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 2 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(183, 302 - 861, 376): best containment 18%
+D/PageTranslator: No balloon for Rect(45, 1675 - 732, 1962): best containment 5%
+D/PageTranslator: No balloon for Rect(140, 2648 - 741, 2872): best containment 34%
+D/PageTranslator: No balloon for Rect(450, 4104 - 1254, 4184): best containment 6%
+D/PageTranslator: No balloon for Rect(50, 4672 - 755, 4873): best containment 9%
+D/PageTranslator: No balloon for Rect(594, 7627 - 1184, 7936): best containment 5%
+D/PageTranslator: No balloon for Rect(393, 8647 - 1094, 8956): best containment 6%
+D/PageTranslator: No balloon for Rect(183, 10632 - 861, 10708): best containment 11%
+D/PageTranslator: Grouped 8 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-f23f78f9.jpg rendering 8/8 translated bubbles
 D/BubbleRenderer: Simple: Rect(393, 8647 - 1094, 8956) textBlock=true vertical=false lines=5 bounds=Rect(419, 8658 - 1068, 8945)
 D/BubbleRenderer: Simple: Rect(45, 1675 - 732, 1962) textBlock=true vertical=false lines=5 bounds=Rect(70, 1686 - 707, 1951)

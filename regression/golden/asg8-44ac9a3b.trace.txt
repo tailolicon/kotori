@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg pipeline: original path (1280x9255, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg pipeline: original path (1280x9255, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=58
 D/SimplePageReader: Dropping !! as noise rather than dialogue
@@ -7,7 +7,12 @@ D/SimplePageReader:   region Rect(411, 3092 - 1251, 3194): KAISCANS.COM
 D/SimplePageReader:   region Rect(209, 5182 - 991, 5268): KAISCANS.COM
 D/SimplePageReader:   region Rect(532, 5605 - 1018, 5797): DAMN IT! I STILL / ENDED UP FIGHTING / TWO AT ONCE!!
 D/UndispatchedCoroutine: This series reads as 'en' (58 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 4 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 6 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(411, 3092 - 1251, 3194): best containment 6%
+D/PageTranslator: No balloon for Rect(209, 5182 - 991, 5268): best containment 8%
+D/PageTranslator: No balloon for Rect(532, 5605 - 1018, 5797): best containment 12%
+D/PageTranslator: Grouped 3 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-44ac9a3b.jpg rendering 3/3 translated bubbles
 D/BubbleRenderer: Simple: Rect(532, 5605 - 1018, 5797) textBlock=true vertical=false lines=3 bounds=Rect(550, 5612 - 1000, 5790)
 D/BubbleRenderer: Simple: Rect(411, 3092 - 1251, 3194) textBlock=true vertical=false lines=1 bounds=Rect(442, 3096 - 1220, 3190)

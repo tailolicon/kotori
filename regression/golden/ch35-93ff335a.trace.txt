@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-93ff335a.jpg pipeline: original path (900x2215, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-93ff335a.jpg pipeline: original path (900x2215, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
-D/UndispatchedCoroutine: regression:ch35-93ff335a.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 5 overlapping balloon detection(s)

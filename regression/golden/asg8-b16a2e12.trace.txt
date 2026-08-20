@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg pipeline: original path (1280x8975, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg pipeline: original path (1280x8975, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=82
 D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'en'
@@ -8,7 +8,14 @@ D/SimplePageReader:   region Rect(482, 4346 - 1076, 4665): MAYBE I DIDN'T PAY / 
 D/SimplePageReader:   region Rect(625, 6014 - 1255, 6084): KAISCANS.COM
 D/SimplePageReader:   region Rect(623, 8326 - 1253, 8398): KAISCANS.COM
 D/UndispatchedCoroutine: This series reads as 'en' (134 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 2 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 4 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(441, 171 - 1013, 361): best containment 6%
+D/PageTranslator: No balloon for Rect(212, 1509 - 842, 1580): best containment 11%
+D/PageTranslator: No balloon for Rect(482, 4346 - 1076, 4665): best containment 5%
+D/PageTranslator: No balloon for Rect(625, 6014 - 1255, 6084): best containment 13%
+D/PageTranslator: No balloon for Rect(623, 8326 - 1253, 8398): best containment 13%
+D/PageTranslator: Grouped 5 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg rendering 5/5 translated bubbles
 D/BubbleRenderer: Simple: Rect(482, 4346 - 1076, 4665) textBlock=true vertical=false lines=5 bounds=Rect(504, 4358 - 1054, 4653)
 D/BubbleRenderer: Simple: Rect(441, 171 - 1013, 361) textBlock=true vertical=false lines=3 bounds=Rect(462, 178 - 992, 354)

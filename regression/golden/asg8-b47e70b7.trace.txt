@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:asg8-b47e70b7.jpg pipeline: original path (1280x11760, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-b47e70b7.jpg pipeline: original path (1280x11760, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=82
 D/SimplePageReader: Dropping MH as noise rather than dialogue
@@ -10,7 +10,14 @@ D/SimplePageReader:   region Rect(571, 6756 - 1253, 6832): KAISCANS.COM
 D/SimplePageReader:   region Rect(183, 10092 - 865, 10168): KAISCANS.COM
 D/SimplePageReader:   region Rect(472, 11094 - 1140, 11362): ALTHOUGH I DON'T KNOW HOW / LONG THAT SWORD AURA WILL / BE, IT'LL BE SAFER TO ESTIMATE / THIS BASED ON ITS SHORTEST / POSSIBLE LENGTH...
 D/UndispatchedCoroutine: This series reads as 'en' (220 chars); remembering it
-D/UndispatchedCoroutine: regression:asg8-b47e70b7.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 5 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(184, 2093 - 865, 2168): best containment 9%
+D/PageTranslator: No balloon for Rect(273, 5650 - 1108, 5905): best containment 5%
+D/PageTranslator: No balloon for Rect(571, 6756 - 1253, 6832): best containment 12%
+D/PageTranslator: No balloon for Rect(183, 10092 - 865, 10168): best containment 18%
+D/PageTranslator: No balloon for Rect(472, 11094 - 1140, 11362): best containment 25%
+D/PageTranslator: Grouped 5 region(s) by balloon
 D/UndispatchedCoroutine: regression:asg8-b47e70b7.jpg rendering 5/5 translated bubbles
 D/BubbleRenderer: Simple: Rect(273, 5650 - 1108, 5905) textBlock=true vertical=false lines=4 bounds=Rect(304, 5659 - 1077, 5896)
 D/BubbleRenderer: Simple: Rect(472, 11094 - 1140, 11362) textBlock=true vertical=false lines=5 bounds=Rect(497, 11104 - 1115, 11352)

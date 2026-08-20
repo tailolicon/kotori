@@ -1,9 +1,10 @@
-D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 3 region(s): ko=0, ja=1, zh=0, en=35
 D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
 D/SimplePageReader:   region Rect(73, 918 - 689, 1084): AND SHE ALSO / HAS A PERFECT READ / ON MY FATHER.
 D/UndispatchedCoroutine: This series reads as 'en' (35 chars); remembering it
-D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: No balloon for Rect(73, 918 - 689, 1084): best containment 7%
+D/PageTranslator: Grouped 1 region(s) by balloon
 D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg rendering 1/1 translated bubbles
 D/BubbleRenderer: Simple: Rect(73, 918 - 689, 1084) textBlock=true vertical=false lines=3 bounds=Rect(96, 924 - 666, 1078)

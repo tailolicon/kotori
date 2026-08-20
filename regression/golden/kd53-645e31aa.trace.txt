@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r109|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=1, en=38
 D/SimplePageReader: Dropping R as noise rather than dialogue
@@ -18,7 +18,19 @@ D/SimplePageReader:   region Rect(119, 11017 - 373, 11051): COMPRESSION.
 D/SimplePageReader:   region Rect(395, 11479 - 641, 11525): GUIDANCE.
 D/SimplePageReader:   region Rect(156, 11872 - 642, 11952): [TELEKINESIS (S)I
 D/UndispatchedCoroutine: This series reads as 'en' (206 chars); remembering it
-D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg skipping the balloon detector: WEBTOON lettered in place
+D/PageTranslator: Merged 32 overlapping balloon detection(s)
+D/UndispatchedCoroutine: Re-reading 7 balloon(s) the page pass could not read
+D/PageTranslator: No balloon for Rect(251, 444 - 677, 611): best containment 13%
+D/PageTranslator: No balloon for Rect(523, 2808 - 667, 2941): best containment 2%
+D/PageTranslator: No balloon for Rect(140, 4458 - 411, 4509): best containment 28%
+D/PageTranslator: No balloon for Rect(493, 5520 - 679, 5672): best containment 0%
+D/PageTranslator: No balloon for Rect(154, 7918 - 434, 7960): best containment 32%
+D/PageTranslator: No balloon for Rect(392, 9256 - 635, 9302): best containment 56%
+D/PageTranslator: No balloon for Rect(58, 9655 - 348, 9693): best containment 55%
+D/PageTranslator: No balloon for Rect(481, 10701 - 706, 10743): best containment 36%
+D/PageTranslator: No balloon for Rect(395, 11479 - 641, 11525): best containment 25%
+D/PageTranslator: No balloon for Rect(156, 11872 - 642, 11952): best containment 0%
+D/PageTranslator: Grouped 14 region(s) by balloon
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 4
 D/UndispatchedCoroutine: Dropping unchanged translation for bubble 6
 D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg rendering 12/14 translated bubbles
