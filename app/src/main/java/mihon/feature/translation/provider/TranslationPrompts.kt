@@ -233,6 +233,10 @@ internal object TranslationPrompts {
         9. Chỉ dùng chữ cái tiếng Việt tiền tổ hợp. Không chèn ký tự lạ, không bỏ trống giữa từ.
         10. Trang có thể trộn Nhật/Hàn/Tây Ban Nha/Anh. Dịch từng ô từ đúng ngôn ngữ của ô đó.
         11. Bỏ furigana (kana nhỏ chú thích kanji). SFX kana lặp trên tranh có thể bỏ; lời trong bóng thoại thì dịch.
+        12. Bản dịch KHÔNG BAO GIỜ được chỉ gồm dấu câu. Thán từ phải ra thành CHỮ:
+            "HEY!!" → "NÀY!!" (không phải "!!"), "STOP..." → "DỪNG LẠI..." (không phải "..."),
+            "SEE?" → "THẤY CHƯA?" (không phải "?"), "NOOOO!" → "KHÔÔÔNG!" (không phải "Ư!").
+            Kéo dài nguyên âm để giữ sức mạnh của tiếng kêu, đừng rút ngắn thành một âm.
     """.trimIndent() + "\n"
 
     private val GENERIC_DIALOGUE_RULES = """
@@ -243,6 +247,8 @@ internal object TranslationPrompts {
         4. Keep proper nouns in their original form.
         5. Short lines stay short; small bubbles cannot hold padded text.
         6. Render interjections idiomatically rather than literally.
+        7. A translation is NEVER punctuation alone. "HEY!!" is "HEY!!", not "!!"; "STOP..." keeps
+           its verb. Stretch vowels to keep a shout's force instead of shrinking it to one syllable.
     """.trimIndent() + "\n"
 
     private val VIETNAMESE_PROSE_RULES = """

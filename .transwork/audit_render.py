@@ -63,7 +63,7 @@ def components(mask, min_area):
     return out
 
 
-def audit(src_path, out_path, trace_path, scale=6):
+def audit(src_path, out_path, trace_path, scale=6, dump=None, name=""):
     src = Image.open(src_path).convert("RGB")
     out = Image.open(out_path).convert("RGB")
     if src.size != out.size:
@@ -73,9 +73,15 @@ def audit(src_path, out_path, trace_path, scale=6):
     if trace_path and os.path.exists(trace_path):
         for m in TRACE.finditer(open(trace_path, encoding="utf-8", errors="replace").read()):
             rl, rt, rr, rb, bl, bt, br, bb = map(int, m.groups())
-            slack = 6
-            if bl < rl - slack or bt < rt - slack or br > rr + slack or bb > rb + slack:
-                findings.append(("spill", f"region ({rl},{rt},{rr},{rb}) drew ({bl},{bt},{br},{bb})"))
+            # Only gross overruns. A block centred inside a balloon legitimately reports bounds
+            # that sit above or beside the box it was measured against; what is never legitimate is
+            # type set wider or taller than the region it belongs to, or hanging a third of the
+            # region's own size out into the artwork.
+            rw, rh = max(1, rr - rl), max(1, rb - rt)
+            over = max(rl - bl, rt - bt, br - rr, bb - rb)
+            if (br - bl) > rw * 1.3 or (bb - bt) > rh * 1.3 or over > 0.3 * min(rw, rh):
+                findings.append(("spill", f"region ({rl},{rt},{rr},{rb}) drew ({bl},{bt},{br},{bb})",
+                                 (bl, bt, br, bb)))
 
     # Where did the render change the page?
     diff = ImageChops.difference(src, out).convert("L").point(lambda v: 255 if v > 28 else 0)
@@ -93,9 +99,9 @@ def audit(src_path, out_path, trace_path, scale=6):
         around_out = mode_colour(out, ring)
         around_src = mode_colour(src, ring)
         if inside and around_out and dist(inside, around_out) > 14:
-            findings.append(("patch", f"{box} fill {inside} vs paper {around_out}"))
+            findings.append(("patch", f"{box} fill {inside} vs paper {around_out}", box))
         elif inside and around_src and dist(inside, around_src) > 14:
-            findings.append(("patch", f"{box} fill {inside} vs original {around_src}"))
+            findings.append(("patch", f"{box} fill {inside} vs original {around_src}", box))
         # contrast of the new lettering against its own background
         crop = out.crop(box).convert("L")
         vals = sorted(crop.getdata())
@@ -103,7 +109,19 @@ def audit(src_path, out_path, trace_path, scale=6):
             dark = vals[int(len(vals) * 0.03)]
             light = vals[int(len(vals) * 0.9)]
             if light - dark < 55:
-                findings.append(("faint", f"{box} ink {dark} on {light}"))
+                findings.append(("faint", f"{box} ink {dark} on {light}", box))
+
+    if dump and findings:
+        os.makedirs(dump, exist_ok=True)
+        for n, (kind, detail, box) in enumerate(findings):
+            pad = 40
+            crop = (max(0, box[0] - pad), max(0, box[1] - pad),
+                    min(src.width, box[2] + pad), min(src.height, box[3] + pad))
+            a, b = src.crop(crop), out.crop(crop)
+            sheet = Image.new("RGB", (a.width * 2 + 12, a.height), (255, 0, 0))
+            sheet.paste(a, (0, 0))
+            sheet.paste(b, (a.width + 12, 0))
+            sheet.save(os.path.join(dump, f"{name}-{n:02d}-{kind}.png"))
     return findings
 
 
@@ -111,6 +129,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--dump")
     args = ap.parse_args()
     bad = 0
     for s in sorted(glob.glob(os.path.join(args.src, "*"))):
@@ -120,11 +139,12 @@ def main():
             print(f"{name}: MISSING RENDER")
             bad += 1
             continue
-        f = audit(s, o, os.path.join(args.out, name + ".trace.txt"))
+        f = audit(s, o, os.path.join(args.out, name + ".trace.txt"),
+                  dump=args.dump, name=name)
         if f:
             bad += 1
             print(f"{name}: {len(f)} finding(s)")
-            for kind, detail in f[:8]:
+            for kind, detail, _ in f[:8]:
                 print(f"    {kind:6} {detail}")
         else:
             print(f"{name}: clean")

@@ -694,6 +694,15 @@ class PageTranslator(
                 logcat { "Dropping non-target-script translation for bubble ${index + 1}" }
                 return@mapIndexedNotNull null
             }
+            if (isOnlyPunctuation(translated) && !isOnlyPunctuation(ocrText)) {
+                // "HEY!!" comes back as "!!", "STOP..." as "...", "SEE?" as "?" — the model drops
+                // the interjection and returns the punctuation that followed it. Erasing the
+                // hand-drawn word to stamp a bare "!!" in its place empties the balloon, which is
+                // what a whole chapter of these looks like: page after page of bubbles holding one
+                // ellipsis. Nothing to write means nothing to erase.
+                logcat { "Dropping punctuation-only translation for bubble ${index + 1}" }
+                return@mapIndexedNotNull null
+            }
             if (isUntranslated(ocrText, translated)) {
                 // Providers echo the input when they cannot translate it, which is what happens to
                 // misread sound effects ("MHM~~" recognised as "WAWHW"). Erasing hand-drawn lettering
@@ -1157,6 +1166,10 @@ class PageTranslator(
      * an interjection that reads the same in both languages — and dropping those would leave real
      * dialogue untranslated.
      */
+    /** True when nothing in [text] is a letter or a digit — punctuation, spaces and marks only. */
+    private fun isOnlyPunctuation(text: String): Boolean =
+        text.isNotBlank() && text.none { it.isLetterOrDigit() }
+
     private fun isUntranslated(source: String, translated: String): Boolean {
         if (source.isBlank()) return false
         val a = normalizeForMatch(source)

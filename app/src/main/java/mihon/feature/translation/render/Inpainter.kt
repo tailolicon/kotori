@@ -22,6 +22,18 @@ internal object Inpainter {
     private const val RELAX_ITERATIONS = 4
     private const val EPSILON = 1e-4f
 
+    /** Below this many usable neighbours there is no texture to measure, only noise about noise. */
+    private const val MIN_GRAIN_SAMPLES = 64
+
+    /**
+     * Mean absolute residual below which the surroundings count as smooth.
+     *
+     * Paper and flat balloon interiors sit near zero; screentone, film grain and inked hatching run
+     * well above it. Set low enough to catch faint tone, high enough that a clean bubble is never
+     * given noise it did not have.
+     */
+    private const val MIN_GRAIN_STRENGTH = 3.5f
+
     /**
      * Fills every pixel where `mask` is true, in place.
      *
@@ -58,15 +70,68 @@ internal object Inpainter {
         val level = Level(width, height, red, green, blue, weight)
         solve(level)
 
+        val grain = grainOf(pixels, width, height, mask)
         for (i in 0 until size) {
             if (!mask[i]) continue
             val alpha = pixels[i] and -0x1000000
+            val noise = grain?.at(i) ?: 0f
             pixels[i] = alpha or
-                (level.red[i].toInt().coerceIn(0, 255) shl 16) or
-                (level.green[i].toInt().coerceIn(0, 255) shl 8) or
-                level.blue[i].toInt().coerceIn(0, 255)
+                ((level.red[i] + noise).toInt().coerceIn(0, 255) shl 16) or
+                ((level.green[i] + noise).toInt().coerceIn(0, 255) shl 8) or
+                (level.blue[i] + noise).toInt().coerceIn(0, 255)
         }
     }
+
+    /**
+     * The texture the solve cannot reproduce, taken from the pixels around the hole.
+     *
+     * The push-pull solve answers with a smooth field, which is exactly right on paper and exactly
+     * wrong on anything grainy. A "REC" caption over a noisy black panel came back as a smooth grey
+     * blob with a ragged edge sitting in the middle of the grain — the erase was visible from across
+     * the room even though every pixel of it was the correct average colour.
+     *
+     * So the grain is carried over rather than invented: the residual of each known pixel against
+     * its own neighbourhood is collected, and masked pixels draw from that pool. Where the
+     * surroundings are flat the residuals are ~0 and this changes nothing, which is why it can run
+     * unconditionally.
+     */
+    private class Grain(private val samples: FloatArray) {
+        fun at(index: Int): Float {
+            // Deterministic scatter: the same hole always reconstructs identically, which the
+            // regression suite depends on.
+            val h = (index * -0x61c88647) ushr 8
+            return samples[(h % samples.size)]
+        }
+    }
+
+    private fun grainOf(pixels: IntArray, width: Int, height: Int, mask: BooleanArray): Grain? {
+        if (width < 3 || height < 3) return null
+        val samples = ArrayList<Float>()
+        var total = 0f
+        var y = 1
+        while (y < height - 1) {
+            var x = 1
+            while (x < width - 1) {
+                val i = y * width + x
+                if (!mask[i] && !mask[i - 1] && !mask[i + 1] && !mask[i - width] && !mask[i + width]) {
+                    val here = luma(pixels[i])
+                    val around = (luma(pixels[i - 1]) + luma(pixels[i + 1]) +
+                        luma(pixels[i - width]) + luma(pixels[i + width])) / 4f
+                    val residual = here - around
+                    samples.add(residual)
+                    total += kotlin.math.abs(residual)
+                }
+                x++
+            }
+            y++
+        }
+        if (samples.size < MIN_GRAIN_SAMPLES) return null
+        if (total / samples.size < MIN_GRAIN_STRENGTH) return null
+        return Grain(samples.toFloatArray())
+    }
+
+    private fun luma(color: Int): Float =
+        0.299f * ((color shr 16) and 0xFF) + 0.587f * ((color shr 8) and 0xFF) + 0.114f * (color and 0xFF)
 
     private class Level(
         val width: Int,

@@ -119,6 +119,17 @@ internal object GeminiResponse {
         var value = raw.trim()
         if (value.isEmpty()) return ""
 
+        // A reply the array parser rejected — truncated, or an object where an array was asked for —
+        // reaches the per-line fallback, and one whole object arrives here as a single "translation":
+        // {"id": 9, "text": "HAAAH, THAT WAS GOOD.", "translation": "HAA, sướng thật."}
+        // That was lettered onto the page verbatim, braces and field names and all, in a caption over
+        // artwork. Recover the field the model was answering; failing that, say nothing at all,
+        // because markup painted on a page is worse than a bubble left in its original language.
+        if (value.startsWith("{") || JSON_FIELD.containsMatchIn(value)) {
+            value = JSON_TRANSLATION.find(value)?.groupValues?.get(1)?.trim().orEmpty()
+            if (value.isEmpty()) return ""
+        }
+
         // `source" -> "translation`, in any of the arrow spellings models reach for. Split on the last
         // arrow so a translation that itself contains one is not truncated at the first.
         val arrow = QUOTED_ARROW.findAll(value).lastOrNull()
@@ -129,6 +140,10 @@ internal object GeminiResponse {
         value = LEADING_INDEX.replace(value, "").trim()
         return value.replace(WHITESPACE_RUN, " ")
     }
+
+    private val JSON_FIELD = Regex("""["'](id|text|translation)["']\s*:""", RegexOption.IGNORE_CASE)
+    private val JSON_TRANSLATION =
+        Regex("""["']translation["']\s*:\s*["']([^"']*)["']""", RegexOption.IGNORE_CASE)
 
     fun parseProse(body: String, expectedParagraphs: Int): ProseTranslation {
         val text = extractText(body) ?: return ProseTranslation("")
