@@ -74,6 +74,18 @@ class PageTranslator(
     class NothingToTranslate : Exception("No speech bubbles found")
 
     /**
+     * The recogniser returned nothing at all, which is a failure and not an answer.
+     *
+     * These are different facts and the pipeline used to record them identically. "I read the page
+     * and found no dialogue" earns a permanent marker so the page is never paid for twice. "I read
+     * the page and got zero lines back" is the recogniser failing — on one emulator ML Kit returns
+     * nothing for whole chapters of halftone manga that a phone reads 41 lines from, same image and
+     * same build. Writing the permanent marker for that told the reader "this chapter has no text"
+     * forever, and the only cure was clearing the cache by hand.
+     */
+    class PageUnreadable : Exception("The page reader returned no text at all")
+
+    /**
      * Translates several consecutive pages as one tall image, then cuts the result back apart.
      *
      * Manhwa sources deliver a chapter as a hundred short images rather than one strip, and the
@@ -396,7 +408,24 @@ class PageTranslator(
                     blockTexts = blockTexts + recovered.map(rescued::get)
                 }
 
-                if (blocks.isEmpty()) throw NothingToTranslate()
+                if (blocks.isEmpty()) {
+                    // Nothing recognised at all is a failed read; nothing *kept* is a real answer.
+                    if (read.texts.isNotEmpty()) throw NothingToTranslate()
+
+                    // The recogniser can come back empty on a page that plainly is not: measured on
+                    // one emulator, ML Kit returns zero lines for halftone manga that a phone reads
+                    // 41 lines from — same image, same build. The balloon model does not use ML Kit
+                    // and is unaffected, and a vision provider reads the artwork itself, so between
+                    // them the page is still translatable. Only the erase footprint is lost, and a
+                    // balloon is a footprint.
+                    if (balloons.isEmpty() || !currentProvider().supportsVisionOcr) throw PageUnreadable()
+                    logcat {
+                        "$diagnosticLabel read nothing; falling back to ${balloons.size} detected " +
+                            "balloon(s) and letting ${currentProvider().displayName} read them"
+                    }
+                    blocks = balloons
+                    blockTexts = balloons.map { BubbleText("", emptyList()) }
+                }
                 // Manga needs the balloon interior: vertical columns are slivers. Webtoon
                 // lettering already sits in a readable footprint; typeset fill on colour
                 // strips is how neon ovals used to get painted over. Picking TYPESET still
@@ -460,7 +489,10 @@ class PageTranslator(
             if (ordered.size < refinedDetected.size + extras.size) {
                 logcat { "Dropped ${refinedDetected.size + extras.size - ordered.size} edge-sliver box(es)" }
             }
-            if (ordered.isEmpty()) throw NothingToTranslate()
+            if (ordered.isEmpty()) {
+                if (detected.isEmpty() && extras.isEmpty()) throw PageUnreadable()
+                throw NothingToTranslate()
+            }
             logcat {
                 "Detected ${ordered.size} regions (${refinedDetected.size} bubbles + ${extras.size} text " +
                     "blocks) on ${source.width}x${source.height} page"

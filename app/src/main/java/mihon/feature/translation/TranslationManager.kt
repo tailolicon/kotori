@@ -384,6 +384,11 @@ class TranslationManager(
                 reportPagesHandled(group.size)
                 val mode = if (group.size == 1) "at native page resolution" else "as one continuous strip"
                 logcat { "Translated ${group.size} page(s) $mode for chapter $chapterId" }
+            } catch (e: PageTranslator.PageUnreadable) {
+                // No marker, no progress: this page has not been answered, only failed. Leaving it
+                // unmarked is the whole point — the next look at it reads again instead of being
+                // told for ever that a chapter full of dialogue has none.
+                logcat { "Page reader returned nothing for chapter $chapterId; leaving it unmarked" }
             } catch (e: PageTranslator.NothingToTranslate) {
                 // The whole run had no dialogue: record that for each page so it is never retried.
                 if (workGate.allows(mangaId, generation) && isEnabled(mangaId)) {
@@ -468,6 +473,9 @@ class TranslationManager(
                     cache.trimToSize()
                     consecutiveFailures = 0
                     target
+                } catch (e: PageTranslator.PageUnreadable) {
+                    logcat { "Page $pageIndex of chapter $chapterId could not be read; will try again" }
+                    null
                 } catch (e: PageTranslator.NothingToTranslate) {
                     logcat { "Page $pageIndex of chapter $chapterId has no dialogue" }
                     if (workGate.allows(mangaId, generation) && isEnabled(mangaId)) {
@@ -724,6 +732,19 @@ class TranslationManager(
      * visibly softer than the original. The budget is on total pixels instead, set high enough that
      * only genuinely enormous images are touched.
      */
+    /**
+     * Decodes one page, preferring whichever decoder is actually trustworthy for its format.
+     *
+     * `BitmapFactory` used to go first for everything, with the app's own decoder as a fallback for
+     * whatever came back null. That is the wrong test, because the failure that matters is not null:
+     * on one emulator an AVIF page decodes to a **blank** bitmap rather than to nothing, so the
+     * fallback never ran, the recogniser found no text on a page full of dialogue, and the pipeline
+     * recorded "no dialogue" against every page of the chapter. The reader itself displayed those
+     * pages perfectly the whole time — it uses the app's decoder, which handles the format.
+     *
+     * So: modern container formats go to the app's decoder first, and *any* decode is checked for
+     * being uniformly blank before it is trusted.
+     */
     private fun decode(openSource: () -> InputStream): Bitmap? {
         val bytes = runCatching { openSource().use { it.readBytes() } }
             .onFailure { android.util.Log.e("KotoriTL", "read failed: ${it.message}") }
@@ -732,20 +753,86 @@ class TranslationManager(
             android.util.Log.e("KotoriTL", "empty page bytes")
             return null
         }
-        val factory = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        if (factory != null) return factory
-        val decoder = runCatching {
-            ImageDecoder.newInstance(ByteArrayInputStream(bytes))
-        }.getOrNull()
-        val decoded = decoder?.decode()
-        decoder?.recycle()
-        if (decoded == null) {
+
+        val order = if (isModernContainer(bytes)) {
+            listOf(::decodeWithApp, ::decodeWithFactory)
+        } else {
+            listOf(::decodeWithFactory, ::decodeWithApp)
+        }
+        var lastBlank: Bitmap? = null
+        for (attempt in order) {
+            val bitmap = attempt(bytes) ?: continue
+            if (!isBlank(bitmap)) {
+                lastBlank?.recycle()
+                return bitmap
+            }
+            logcat { "A decoder returned a blank ${bitmap.width}x${bitmap.height} page; trying the other" }
+            lastBlank?.recycle()
+            lastBlank = bitmap
+        }
+        // Both blank, or both failed. A genuinely blank page is possible, so hand back what we have.
+        if (lastBlank == null) {
             android.util.Log.e(
                 "KotoriTL",
                 "decode failed bytes=${bytes.size} magic=${bytes.take(8).joinToString()}",
             )
         }
+        return lastBlank
+    }
+
+    private fun decodeWithFactory(bytes: ByteArray): Bitmap? =
+        runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()
+
+    private fun decodeWithApp(bytes: ByteArray): Bitmap? {
+        val decoder = runCatching { ImageDecoder.newInstance(ByteArrayInputStream(bytes)) }.getOrNull()
+        val decoded = runCatching { decoder?.decode() }.getOrNull()
+        decoder?.recycle()
         return decoded
+    }
+
+    /**
+     * ISO base-media containers — AVIF, HEIC, HEIF — identified by the `ftyp` box.
+     *
+     * These are the formats where platform support varies by device and where a wrong answer is
+     * silent. JPEG, PNG and WebP are decoded correctly everywhere and stay on the faster path.
+     */
+    private fun isModernContainer(bytes: ByteArray): Boolean {
+        if (bytes.size < 12) return false
+        if (bytes[4] != 'f'.code.toByte() || bytes[5] != 't'.code.toByte() ||
+            bytes[6] != 'y'.code.toByte() || bytes[7] != 'p'.code.toByte()
+        ) {
+            return false
+        }
+        val brand = String(bytes, 8, 4, Charsets.US_ASCII)
+        return brand in MODERN_BRANDS
+    }
+
+    /**
+     * True when the whole page is one colour.
+     *
+     * Sampled on a grid rather than exhaustively — a page that is uniform across a few hundred
+     * spread-out pixels is uniform. Real artwork fails this on the first row it touches.
+     */
+    private fun isBlank(bitmap: Bitmap): Boolean {
+        if (bitmap.width < 2 || bitmap.height < 2) return true
+        val stepX = (bitmap.width / BLANK_SAMPLES_PER_AXIS).coerceAtLeast(1)
+        val stepY = (bitmap.height / BLANK_SAMPLES_PER_AXIS).coerceAtLeast(1)
+        var first: Int? = null
+        var y = 0
+        while (y < bitmap.height) {
+            var x = 0
+            while (x < bitmap.width) {
+                val pixel = bitmap.getPixel(x, y)
+                if (first == null) {
+                    first = pixel
+                } else if (pixel != first) {
+                    return false
+                }
+                x += stepX
+            }
+            y += stepY
+        }
+        return true
     }
 
     private companion object {
@@ -770,6 +857,12 @@ class TranslationManager(
 
         /** Strips are bound by the single-lane on-device stages, so more than one only queues. */
         const val MAX_STRIPS_IN_FLIGHT = 1
+
+        /** `ftyp` brands whose platform decoders cannot be trusted to fail loudly. */
+        val MODERN_BRANDS = setOf("avif", "avis", "heic", "heix", "heim", "heis", "hevc", "mif1", "msf1")
+
+        /** Grid resolution for the blank-page check; 32x32 samples is plenty to find any artwork. */
+        const val BLANK_SAMPLES_PER_AXIS = 32
 
         /**
          * Pixel budget for one stitched strip, and a page-count guard beside it.

@@ -97,7 +97,9 @@ class RegressionReceiver : BroadcastReceiver() {
         try {
             for (fixture in fixtures) {
                 val since = LOG_STAMP.format(Date())
-                val bitmap = BitmapFactory.decodeFile(fixture.path)
+                // Same order the app uses: modern containers first through the app's decoder, since
+                // BitmapFactory can return a blank bitmap for AVIF instead of failing.
+                val bitmap = decodePage(fixture)
                 if (bitmap == null) {
                     summary.append("${fixture.name} DECODE_FAIL\n")
                     continue
@@ -133,6 +135,25 @@ class RegressionReceiver : BroadcastReceiver() {
         }
         File(output, "DONE.txt").writeText(summary.toString())
         logcat { "Regression run complete: ${fixtures.size} fixtures" }
+    }
+
+    /** Mirrors TranslationManager.decode so a fixture is decoded the way a real page is. */
+    private fun decodePage(fixture: File): Bitmap? {
+        val bytes = runCatching { fixture.readBytes() }.getOrNull() ?: return null
+        val ftyp = bytes.size >= 12 &&
+            bytes[4] == 'f'.code.toByte() && bytes[5] == 't'.code.toByte() &&
+            bytes[6] == 'y'.code.toByte() && bytes[7] == 'p'.code.toByte()
+        fun viaApp(): Bitmap? {
+            val decoder = runCatching {
+                tachiyomi.decoder.ImageDecoder.newInstance(java.io.ByteArrayInputStream(bytes))
+            }.getOrNull()
+            val out = runCatching { decoder?.decode() }.getOrNull()
+            decoder?.recycle()
+            return out
+        }
+        fun viaFactory(): Bitmap? =
+            runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()
+        return if (ftyp) viaApp() ?: viaFactory() else viaFactory() ?: viaApp()
     }
 
     /**

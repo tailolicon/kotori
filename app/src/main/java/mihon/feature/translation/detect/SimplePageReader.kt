@@ -265,6 +265,10 @@ class SimplePageReader {
             }
         if (!latch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
             logcat { "Page read timed out on band at $offsetY" }
+        } else if (lines.isEmpty()) {
+            // Not necessarily wrong — a band can be pure artwork — but a page whose every band says
+            // this is the shape of the failure that got recorded as "no dialogue" and cached.
+            logcat { "Band at $offsetY (${input.width}x${input.height}) read nothing" }
         }
         if (input !== band) input.recycle()
         return lines
@@ -862,18 +866,36 @@ class SimplePageReader {
             }
     }
 
-    private inline fun <T> withRecognizer(sourceLanguage: String, block: (TextRecognizer) -> T): T {
-        val recognizer = when (sourceLanguage) {
-            "ja" -> TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
-            "zh" -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
-            "ko" -> TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
-            else -> TextRecognition.getClient(TextRecognizerOptions.Builder().build())
+    /**
+     * Recognisers, created once and kept.
+     *
+     * They used to be created and closed around every single read. That is what auto-detection made
+     * expensive *and* unreliable: a page now takes up to four of them — Korean, Japanese and Chinese
+     * for the probe, then Latin for the read itself — and creating and tearing them down in that
+     * sequence left the last one returning **nothing at all** on a page visibly full of dialogue.
+     * The page then looked blank to the pipeline, which recorded "no dialogue" against it and moved
+     * on. Reusing them removes the churn entirely and is faster besides; ML Kit's own guidance is to
+     * hold a client for as long as you need it and close it once.
+     */
+    private val recognizers = java.util.concurrent.ConcurrentHashMap<String, TextRecognizer>()
+
+    private fun recognizerFor(sourceLanguage: String): TextRecognizer =
+        recognizers.getOrPut(sourceLanguage) {
+            when (sourceLanguage) {
+                "ja" -> TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
+                "zh" -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+                "ko" -> TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
+                else -> TextRecognition.getClient(TextRecognizerOptions.Builder().build())
+            }
         }
-        return try {
-            block(recognizer)
-        } finally {
-            runCatching { recognizer.close() }
-        }
+
+    private inline fun <T> withRecognizer(sourceLanguage: String, block: (TextRecognizer) -> T): T =
+        block(recognizerFor(sourceLanguage))
+
+    /** Releases the recognisers. The reader is a process singleton, so this is rarely called. */
+    fun close() {
+        recognizers.values.forEach { runCatching { it.close() } }
+        recognizers.clear()
     }
 
     private companion object {
