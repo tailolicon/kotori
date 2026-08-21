@@ -274,6 +274,7 @@ class GeminiTranslationProvider(
         var lastFailure: Exception? = null
         for (modelName in modelLadder()) {
             var everyKeySpent = true
+            var modelBusy = false
             for (key in keyRing.available(keys, modelName)) {
                 try {
                     val body = callWith(key, modelName, payload(modelName))
@@ -299,8 +300,16 @@ class GeminiTranslationProvider(
                     keyRing.park(key, modelName, GeminiKeyRing.REJECTED_PARK_SECONDS)
                     logcat { "Gemini refused key ...${key.takeLast(4)}; trying the next one" }
                     lastFailure = rejected
+                } catch (busy: ProviderUnavailable) {
+                    logcat { "Gemini: '$modelName' is overloaded; stepping down the ladder" }
+                    lastFailure = busy
+                    modelBusy = true
+                    break
                 }
             }
+            // An overloaded model is worth leaving; a spent per-minute allowance is not, because the
+            // next model down has a smaller one and the pause is over in seconds either way.
+            if (modelBusy) continue
             if (!everyKeySpent) break
         }
         throw lastFailure ?: IllegalStateException("Gemini không trả lời")
@@ -350,6 +359,15 @@ class GeminiTranslationProvider(
                         "Gemini từ chối API key (lỗi ${response.code}). Key có thể đã bị thu hồi, " +
                             "hoặc tài khoản Google đang vướng thanh toán. Kiểm tra lại key ở " +
                             "aistudio.google.com, hoặc tạm chuyển sang Google Dịch trong Cài đặt → Dịch.",
+                    )
+                }
+                if (response.code in BUSY_CODES) {
+                    // "This model is currently experiencing high demand." Nothing about the key is
+                    // wrong, so parking it would be a lie and retrying it would just rejoin the same
+                    // queue. Say so distinctly and let the caller pick another model.
+                    throw ProviderUnavailable(
+                        GeminiResponse.errorMessage(body)
+                            ?: "Gemini đang quá tải (lỗi ${response.code}).",
                     )
                 }
                 val message = GeminiResponse.errorMessage(body) ?: "Gemini trả về lỗi ${response.code}"
@@ -443,6 +461,9 @@ class GeminiTranslationProvider(
          * Flash-Lite 3.1 permits 500 requests a day against the headline Flash models' twenty, which
          * is the difference between a chapter that finishes and one that stops on page six.
          */
+        /** Server-side failures that mean "busy", not "wrong": the request itself was fine. */
+        val BUSY_CODES = setOf(500, 502, 503, 504)
+
         val FALLBACK_MODELS = listOf(
             "gemini-3.1-flash-lite",
             "gemini-3.5-flash-lite",

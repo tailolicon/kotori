@@ -98,6 +98,15 @@ data class BubbleTranslation(
  */
 class ProviderRejected(message: String) : Exception(message)
 
+/**
+ * The model is busy for everyone, not for this caller.
+ *
+ * Distinct from [ProviderRateLimited], which is about an allowance this key has spent: another key
+ * meets the same queue, so spending the rest of them on an overloaded model achieves nothing. The
+ * useful move is to step down to a different model, which is what the caller does.
+ */
+class ProviderUnavailable(message: String) : Exception(message)
+
 class ProviderRateLimited(
     message: String,
     /** Server-suggested pause, when the response carried one. */
