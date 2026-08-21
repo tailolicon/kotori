@@ -1083,10 +1083,17 @@ class PageTranslator(
         val translations = MutableList(order.size) { answered[order[it]] }
         val sourceAt = List(order.size) { said[order[it]] }
         // OCR shorter than a few characters is not evidence — a lone misread glyph must not get a
-        // real translation dropped on its account.
-        fun misplacedAt(i: Int): Boolean =
-            sourceAt[i].isNotBlank() && ocr[i].length >= MIN_OCR_EVIDENCE &&
-                similarity(sourceAt[i], ocr[i]) < DROP_BELOW
+        // real translation dropped on its account — but it is not *no* evidence either. A bubble the
+        // model says it read as "haaah that was good that was good" cannot be the bubble the
+        // recogniser read as "rec": an echo that long which does not contain even the little that
+        // was read is an echo of some other bubble. Left unchecked, that is how a panel captioned
+        // REC came out saying "sướng quá đi".
+        fun misplacedAt(i: Int): Boolean {
+            val source = sourceAt[i]
+            if (source.isBlank() || ocr[i].isBlank()) return false
+            if (ocr[i].length >= MIN_OCR_EVIDENCE) return similarity(source, ocr[i]) < DROP_BELOW
+            return ShortOcrEchoGuard.contradicts(ocr[i], source)
+        }
 
         val result = translations.toMutableList()
         val claimed = mutableSetOf<Int>()
@@ -1466,6 +1473,7 @@ class PageTranslator(
         const val DROP_BELOW = 0.15f
         /** Normalised OCR text shorter than this cannot convict a translation of being misplaced. */
         const val MIN_OCR_EVIDENCE = 4
+
         /** A relocation target must match this strongly before a translation is moved into it. */
         const val RELOCATE_MIN = 0.50f
         /** Targets whose native scripts are CJK; the script sanity check does not apply to them. */
