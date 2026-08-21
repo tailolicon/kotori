@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:jpraw-99877464.jpg pipeline: original path (900x1300, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:jpraw-99877464.jpg pipeline: original path (900x1300, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Page reads best as 'ja' (60 ja-script chars across the probe bands)
 D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'ja'
 D/SimplePageReader:   region Rect(114, 175 - 395, 267): 巨竜神を前に成す術なし一!?

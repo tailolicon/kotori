@@ -1,4 +1,7 @@
-D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg123-0659af12.jpg pipeline: original path (800x6505, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'zh' scored 2); leaving the script open
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=4, en=123
 D/SimplePageReader: Not one paragraph: Rect(46, 145 - 768, 266) + Rect(29, 392 - 771, 478) — type 121 vs 42, same paper: true

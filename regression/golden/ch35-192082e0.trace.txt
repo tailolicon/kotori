@@ -1,5 +1,13 @@
-D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-192082e0.jpg pipeline: original path (900x16096, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 4); leaving the script open
+D/SimplePageReader: Band at 900 (900x1392) read nothing
+D/SimplePageReader: Band at 3600 (900x1392) read nothing
+D/SimplePageReader: Band at 6300 (900x1392) read nothing
+D/SimplePageReader: Band at 12600 (900x1392) read nothing
+D/SimplePageReader: Band at 15300 (900x988) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=0, en=89
 D/SimplePageReader: Read 11 lettering region(s) from 41 line(s) as 'en'
 D/SimplePageReader:   region Rect(79, 247 - 819, 489): MY FATHER... / HAS NO INTEREST IN MY / MAGICAL ACHIEVEMENTS / THEMSELVES.

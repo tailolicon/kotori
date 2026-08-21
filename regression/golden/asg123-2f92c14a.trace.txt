@@ -1,5 +1,13 @@
-D/UndispatchedCoroutine: regression:asg123-2f92c14a.jpg pipeline: original path (800x6930, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg123-2f92c14a.jpg pipeline: original path (800x6930, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 6); leaving the script open
+D/SimplePageReader: Band at 5400 (800x1392) read nothing
+D/SimplePageReader: Band at 0 (319x304) read nothing
+D/SimplePageReader: Band at 0 (319x304) read nothing
+D/SimplePageReader: Band at 0 (319x304) read nothing
+D/SimplePageReader: Band at 0 (319x304) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=3, zh=0, en=92
 D/SimplePageReader: Read 9 lettering region(s) from 26 line(s) as 'en'
 D/SimplePageReader:   region Rect(394, 81 - 735, 223): IS IT REALLY / OKAY TO LEAVE LORD / YE NING ALONE IN THE / SKYSCRAPER?

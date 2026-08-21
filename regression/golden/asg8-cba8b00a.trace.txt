@@ -1,5 +1,21 @@
-D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-cba8b00a.jpg pipeline: original path (1280x12780, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 900 (1280x1392) read nothing
+D/SimplePageReader: Band at 1800 (1280x1392) read nothing
+D/SimplePageReader: Band at 2700 (1280x1392) read nothing
+D/SimplePageReader: Band at 4500 (1280x1392) read nothing
+D/SimplePageReader: Band at 5400 (1280x1392) read nothing
+D/SimplePageReader: Band at 9900 (1280x1392) read nothing
+D/SimplePageReader: Band at 11700 (1280x1272) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=93
 D/SimplePageReader: Read 6 lettering region(s) from 19 line(s) as 'en'
 D/SimplePageReader:   region Rect(643, 472 - 1256, 541): KAISCANS.COM

@@ -1,5 +1,19 @@
-D/UndispatchedCoroutine: regression:ch35-e7db607f.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-e7db607f.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 1800 (900x1392) read nothing
+D/SimplePageReader: Band at 2700 (900x1392) read nothing
+D/SimplePageReader: Band at 4500 (900x1392) read nothing
+D/SimplePageReader: Band at 5400 (900x1392) read nothing
+D/SimplePageReader: Band at 8100 (900x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=2, zh=0, en=84
 D/SimplePageReader: Read 10 lettering region(s) from 34 line(s) as 'en'
 D/SimplePageReader:   region Rect(245, 1081 - 761, 1278): IM NOT THAT / VALUABLE OF A / PERSON...

@@ -1,5 +1,13 @@
-D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-a5544ef9.jpg pipeline: original path (800x11879, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 3); leaving the script open
+D/SimplePageReader: Band at 8100 (800x1392) read nothing
+D/SimplePageReader: Band at 9000 (800x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=0, zh=1, en=102
 D/SimplePageReader: Read 9 lettering region(s) from 34 line(s) as 'en'
 D/SimplePageReader:   region Rect(238, 102 - 668, 306): AS YOU / CAN SEE, MY DOLLS / ARE FORGED FROM / 'MYTHRIUM',

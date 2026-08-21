@@ -1,6 +1,28 @@
-D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg pipeline: original path (1280x10920, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-8e6b7be3.jpg pipeline: original path (1280x10920, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 1800 (1280x1392) read nothing
+D/SimplePageReader: Band at 3600 (1280x1392) read nothing
+D/SimplePageReader: Band at 4500 (1280x1392) read nothing
+D/SimplePageReader: Band at 5400 (1280x1392) read nothing
+D/SimplePageReader: Band at 6300 (1280x1392) read nothing
+D/SimplePageReader: Band at 9000 (1280x1392) read nothing
+D/SimplePageReader: Band at 9900 (1280x1212) read nothing
+D/SimplePageReader: Band at 0 (100x224) read nothing
+D/SimplePageReader: Band at 0 (664x228) read nothing
+D/SimplePageReader: Band at 0 (100x224) read nothing
+D/SimplePageReader: Band at 0 (100x224) read nothing
+D/SimplePageReader: Band at 0 (100x224) read nothing
 D/SimplePageReader: Region probe over 4 region(s): ko=0, ja=0, zh=0, en=30
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
+D/SimplePageReader: Band at 0 (1280x1200) read nothing
 D/SimplePageReader: Dropping V as noise rather than dialogue
 D/SimplePageReader: Read 3 lettering region(s) from 4 line(s) as 'en'
 D/SimplePageReader:   region Rect(129, 298 - 795, 492): SWORD CUT

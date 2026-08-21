@@ -1,5 +1,8 @@
-D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg pipeline: original path (1280x8975, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-b16a2e12.jpg pipeline: original path (1280x8975, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 1800 (1280x1392) read nothing
+D/SimplePageReader: Band at 2700 (1280x1392) read nothing
+D/SimplePageReader: Band at 6300 (1280x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=82
 D/SimplePageReader: Read 5 lettering region(s) from 11 line(s) as 'en'
 D/SimplePageReader:   region Rect(441, 171 - 1013, 361): HA, WAS THERE SUCH A / THING IN MY PREVIOUS / LIFE?

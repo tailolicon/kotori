@@ -1,5 +1,16 @@
-D/UndispatchedCoroutine: regression:kd53-b6815aef.jpg pipeline: original path (800x10788, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-b6815aef.jpg pipeline: original path (800x10788, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 0 (800x1392) read nothing
+D/SimplePageReader: Band at 4500 (800x1392) read nothing
+D/SimplePageReader: Band at 5400 (800x1392) read nothing
+D/SimplePageReader: Band at 6300 (800x1392) read nothing
+D/SimplePageReader: Band at 7200 (800x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=0, en=82
 D/SimplePageReader: Read 7 lettering region(s) from 18 line(s) as 'en'
 D/SimplePageReader:   region Rect(140, 1227 - 672, 1490): WITH THIS POWER, SHE / HAS ESCAPED FATES WHERE / SHE SHOULD HAVE DIED / MULTIPLE TIMES,

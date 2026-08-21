@@ -1,5 +1,15 @@
-D/UndispatchedCoroutine: regression:kd53-8de6e58c.jpg pipeline: original path (800x13001, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-8de6e58c.jpg pipeline: original path (800x13001, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 900 (800x1392) read nothing
+D/SimplePageReader: Band at 1800 (800x1392) read nothing
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
+D/SimplePageReader: Band at 3600 (800x1392) read nothing
+D/SimplePageReader: Band at 4500 (800x1392) read nothing
+D/SimplePageReader: Band at 11700 (800x1392) read nothing
+D/SimplePageReader: Band at 12600 (800x593) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=93
 D/SimplePageReader: Read 9 lettering region(s) from 24 line(s) as 'en'
 D/SimplePageReader:   region Rect(191, 127 - 605, 230): FOOLISH / VENGEFUL B*TCH.

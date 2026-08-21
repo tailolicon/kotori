@@ -1,5 +1,8 @@
-D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg8-84b3d935.jpg pipeline: original path (1280x10530, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best 'ko' scored 1); leaving the script open
+D/SimplePageReader: Band at 0 (1280x1392) read nothing
+D/SimplePageReader: Band at 3600 (1280x1392) read nothing
+D/SimplePageReader: Band at 8100 (1280x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=0, en=116
 D/SimplePageReader: Not one paragraph: Rect(630, 6789 - 1230, 6854) + Rect(30, 6920 - 900, 7055) — type 65 vs 27, same paper: false
 D/SimplePageReader: Read 7 lettering region(s) from 17 line(s) as 'en'

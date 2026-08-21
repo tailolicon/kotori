@@ -1,5 +1,11 @@
-D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg pipeline: original path (800x14634, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-5d2f2ea7.jpg pipeline: original path (800x14634, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'ja' scored 1); leaving the script open
+D/SimplePageReader: Band at 0 (800x1392) read nothing
+D/SimplePageReader: Band at 7200 (800x1392) read nothing
+D/SimplePageReader: Band at 11700 (800x1392) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=1, ja=0, zh=0, en=94
 D/SimplePageReader: Dropping N as noise rather than dialogue
 D/SimplePageReader: Read 12 lettering region(s) from 42 line(s) as 'en'

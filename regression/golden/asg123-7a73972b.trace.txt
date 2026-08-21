@@ -1,11 +1,22 @@
-D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg pipeline: original path (800x5901, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:asg123-7a73972b.jpg pipeline: original path (800x5901, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Page reads best as 'ja' (20 ja-script chars across the probe bands)
+D/SimplePageReader: Band at 0 (800x1392) read nothing
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
 D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Band at 0 (486x30) read nothing
 D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Band at 0 (486x30) read nothing
 D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Band at 0 (486x30) read nothing
 D/SimplePageReader: Page read failed on band at 0: InputImage width and height should be at least 32!
+D/SimplePageReader: Band at 0 (486x30) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=1, en=61
 D/SimplePageReader: 'ja' was a guess; the lettering reads as 'en'. Reading again
+D/SimplePageReader: Band at 0 (800x1392) read nothing
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
 D/SimplePageReader: Not one paragraph: Rect(119, 5147 - 270, 5173) + Rect(119, 5175 - 704, 5533) — type 26 vs 207, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(119, 5175 - 704, 5533) + Rect(352, 5563 - 711, 5613) — type 207 vs 20, same paper: true
 D/SimplePageReader: Not one paragraph: Rect(119, 5175 - 704, 5533) + Rect(417, 5684 - 693, 5739) — type 207 vs 55, same paper: true

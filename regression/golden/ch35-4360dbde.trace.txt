@@ -1,6 +1,36 @@
-D/UndispatchedCoroutine: regression:ch35-4360dbde.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-4360dbde.jpg pipeline: original path (900x16000, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 0 (900x1392) read nothing
+D/SimplePageReader: Band at 900 (900x1392) read nothing
+D/SimplePageReader: Band at 1800 (900x1392) read nothing
+D/SimplePageReader: Band at 2700 (900x1392) read nothing
+D/SimplePageReader: Band at 3600 (900x1392) read nothing
+D/SimplePageReader: Band at 4500 (900x1392) read nothing
+D/SimplePageReader: Band at 5400 (900x1392) read nothing
+D/SimplePageReader: Band at 6300 (900x1392) read nothing
+D/SimplePageReader: Band at 7200 (900x1392) read nothing
+D/SimplePageReader: Band at 9000 (900x1392) read nothing
+D/SimplePageReader: Band at 10800 (900x1392) read nothing
+D/SimplePageReader: Band at 11700 (900x1392) read nothing
+D/SimplePageReader: Band at 12600 (900x1392) read nothing
+D/SimplePageReader: Band at 13500 (900x1392) read nothing
+D/SimplePageReader: Band at 14400 (900x1392) read nothing
+D/SimplePageReader: Band at 15300 (900x892) read nothing
+D/SimplePageReader: Band at 0 (191x86) read nothing
 D/SimplePageReader: Region probe over 4 region(s): ko=0, ja=0, zh=0, en=25
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Read 2 lettering region(s) from 4 line(s) as 'en'
 D/SimplePageReader:   region Rect(284, 8734 - 709, 8935): SHE'S / DODGING ALL / OF THAT..!
 D/SimplePageReader:   region Rect(211, 10238 - 727, 10431): THATS!

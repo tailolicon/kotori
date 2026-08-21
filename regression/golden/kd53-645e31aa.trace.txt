@@ -1,6 +1,31 @@
-D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-645e31aa.jpg pipeline: original path (800x12048, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
+D/SimplePageReader: Band at 4500 (800x1392) read nothing
+D/SimplePageReader: Band at 6300 (800x1392) read nothing
+D/SimplePageReader: Band at 0 (182x171) read nothing
+D/SimplePageReader: Band at 0 (157x164) read nothing
+D/SimplePageReader: Band at 0 (220x188) read nothing
+D/SimplePageReader: Band at 0 (182x171) read nothing
+D/SimplePageReader: Band at 0 (157x164) read nothing
+D/SimplePageReader: Band at 0 (182x171) read nothing
+D/SimplePageReader: Band at 0 (157x164) read nothing
+D/SimplePageReader: Band at 0 (182x171) read nothing
+D/SimplePageReader: Band at 0 (157x164) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=0, zh=1, en=38
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
+D/SimplePageReader: Band at 4500 (800x1392) read nothing
+D/SimplePageReader: Band at 5400 (800x1392) read nothing
+D/SimplePageReader: Band at 6300 (800x1392) read nothing
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
+D/SimplePageReader: Band at 5400 (800x1392) read nothing
+D/SimplePageReader: Band at 6300 (800x1392) read nothing
 D/SimplePageReader: Dropping R as noise rather than dialogue
 D/SimplePageReader: Read 14 lettering region(s) from 21 line(s) as 'en'
 D/SimplePageReader:   region Rect(251, 444 - 677, 611): HOLY FCK! / THIS BTCH'S MANA IS / DISRLIPTING MY SPIRIT / TRANSFER!!

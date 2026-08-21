@@ -1,5 +1,23 @@
-D/UndispatchedCoroutine: regression:kd53-783d728c.jpg pipeline: original path (800x14475, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:kd53-783d728c.jpg pipeline: original path (800x14475, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
+D/SimplePageReader: Band at 0 (800x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best 'ko' scored 1); leaving the script open
+D/SimplePageReader: Band at 1800 (800x1392) read nothing
+D/SimplePageReader: Band at 2700 (800x1392) read nothing
+D/SimplePageReader: Band at 5400 (800x1392) read nothing
+D/SimplePageReader: Band at 6300 (800x1392) read nothing
+D/SimplePageReader: Band at 7200 (800x1392) read nothing
+D/SimplePageReader: Band at 8100 (800x1392) read nothing
+D/SimplePageReader: Band at 9000 (800x1392) read nothing
+D/SimplePageReader: Band at 9900 (800x1392) read nothing
+D/SimplePageReader: Band at 10800 (800x1392) read nothing
+D/SimplePageReader: Band at 11700 (800x1392) read nothing
+D/SimplePageReader: Band at 12600 (800x1392) read nothing
+D/SimplePageReader: Band at 13500 (800x1167) read nothing
 D/SimplePageReader: Region probe over 6 region(s): ko=0, ja=1, zh=1, en=157
 D/SimplePageReader: Not one paragraph: Rect(38, 144 - 758, 268) + Rect(29, 396 - 770, 478) — type 124 vs 35, same paper: true
 D/SimplePageReader: Read 6 lettering region(s) from 11 line(s) as 'en'

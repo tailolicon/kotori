@@ -1,4 +1,16 @@
-D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg pipeline: original path (900x3102, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-66e7ba52.jpg pipeline: original path (900x3102, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
+D/SimplePageReader: Band at 0 (900x1392) read nothing
+D/SimplePageReader: Band at 900 (900x1392) read nothing
+D/SimplePageReader: Band at 1800 (900x1392) read nothing
+D/SimplePageReader: Band at 2700 (900x594) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
+D/SimplePageReader: Band at 0 (900x1200) read nothing
 D/SimplePageReader: Read 0 lettering region(s) from 0 line(s) as 'en'
 D/PageTranslator: Merged 1 overlapping balloon detection(s)
+D/RegressionReceiver: Regression fixture ch35-66e7ba52.jpg failed: The page reader returned no text at all

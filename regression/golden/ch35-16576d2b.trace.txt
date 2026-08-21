@@ -1,4 +1,4 @@
-D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r110|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
+D/UndispatchedCoroutine: regression:ch35-16576d2b.jpg pipeline: original path (900x1583, script='not probed', style=SIMPLE, model=Regression, target=vi, stamp=r112|GEMINI|ko|vi|gemini-3.1-flash-lite|HL-Comic||simple)
 D/SimplePageReader: Probe inconclusive (best '' scored 0); leaving the script open
 D/SimplePageReader: Region probe over 3 region(s): ko=0, ja=1, zh=0, en=35
 D/SimplePageReader: Read 1 lettering region(s) from 3 line(s) as 'en'
