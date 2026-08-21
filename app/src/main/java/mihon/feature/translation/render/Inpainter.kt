@@ -34,6 +34,9 @@ internal object Inpainter {
      */
     private const val MIN_GRAIN_STRENGTH = 3.5f
 
+    /** Multiple of the median above which a residual is a glyph rim rather than the field itself. */
+    private const val GRAIN_OUTLIER_CEILING = 4f
+
     /**
      * Fills every pixel where `mask` is true, in place.
      *
@@ -107,7 +110,6 @@ internal object Inpainter {
     private fun grainOf(pixels: IntArray, width: Int, height: Int, mask: BooleanArray): Grain? {
         if (width < 3 || height < 3) return null
         val samples = ArrayList<Float>()
-        var total = 0f
         var y = 1
         while (y < height - 1) {
             var x = 1
@@ -117,17 +119,31 @@ internal object Inpainter {
                     val here = luma(pixels[i])
                     val around = (luma(pixels[i - 1]) + luma(pixels[i + 1]) +
                         luma(pixels[i - width]) + luma(pixels[i + width])) / 4f
-                    val residual = here - around
-                    samples.add(residual)
-                    total += kotlin.math.abs(residual)
+                    samples.add(here - around)
                 }
                 x++
             }
             y++
         }
         if (samples.size < MIN_GRAIN_SAMPLES) return null
-        if (total / samples.size < MIN_GRAIN_STRENGTH) return null
-        return Grain(samples.toFloatArray())
+
+        // Median, not mean. The crop handed to the inpainter is mostly the paper around the
+        // lettering, but it also holds the antialiased rim just outside the mask, and those few
+        // pixels carry residuals of 40 and up. Averaged in, they drag a spotless white balloon over
+        // any sensible threshold and earn it a sprinkle of noise it never had. The median ignores a
+        // minority however extreme, so it answers the question actually being asked: is the *field*
+        // grainy?
+        val magnitudes = FloatArray(samples.size) { kotlin.math.abs(samples[it]) }
+        magnitudes.sort()
+        val median = magnitudes[magnitudes.size / 2]
+        if (median < MIN_GRAIN_STRENGTH) return null
+
+        // Deal from the field, not from the rim: a transplanted glyph edge would show up as a
+        // speckle of its own.
+        val ceiling = median * GRAIN_OUTLIER_CEILING
+        val field = samples.filter { kotlin.math.abs(it) <= ceiling }
+        if (field.size < MIN_GRAIN_SAMPLES) return null
+        return Grain(field.toFloatArray())
     }
 
     private fun luma(color: Int): Float =
