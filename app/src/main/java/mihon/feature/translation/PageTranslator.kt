@@ -12,6 +12,7 @@ import mihon.feature.translation.detect.SimplePageReader
 import mihon.feature.translation.detect.TextBlockDetector
 import mihon.feature.translation.manga.MangaPageTranslator
 import mihon.feature.translation.manga.MangaPipeline
+import mihon.feature.translation.detect.BalloonTrustGuard
 import mihon.feature.translation.model.BubbleBox
 import mihon.feature.translation.model.BubbleText
 import mihon.feature.translation.model.TextLineBox
@@ -797,25 +798,12 @@ class PageTranslator(
             // sizes type to the lettering it is handed, set it 716px wide for a region 112px wide.
             // Either the balloon is trusted for both decisions, or for neither.
             val claimed = shared.map { regions[it] }
-            val hull = claimed.reduce { a, b -> hullOf(a, b) }
-            val hullArea = hull.width.toLong() * hull.height
-            val partsArea = claimed.sumOf { it.width.toLong() * it.height }
-            val balloonArea = balloon.width.toLong() * balloon.height
-            // Far larger than everything it holds: a panel, not a balloon (the chandelier case).
-            val oversized = hullArea > 0 && balloonArea > hullArea * MAX_BALLOON_TO_TEXT
-            // Holds strangers with open artwork between them: also a panel. A real balloon read as
-            // two or three blocks has them stacked against each other, so its hull is barely larger
-            // than the blocks themselves.
-            val scattered = claimed.size > 1 && partsArea > 0 &&
-                hullArea > partsArea * MAX_JOIN_SPREAD
-            if (oversized || scattered) {
-                logcat {
-                    val why = if (scattered) "spans unrelated lettering" else "is oversized"
-                    "Balloon ${balloon.toRect()} $why; keeping ${claimed.size} region(s) apart"
-                }
+            if (!BalloonTrustGuard.isBelievable(balloon, claimed)) {
+                logcat { "Balloon ${balloon.toRect()} is not one; keeping ${claimed.size} region(s) apart" }
                 shared.forEach { outBoxes += regions[it]; outTexts += texts[it] }
                 return@forEach
             }
+            val hull = claimed.reduce(BalloonTrustGuard::hullOf)
 
             val merged = BubbleText(
                 text = shared.joinToString("\n") { texts[it].text }.trim(),
@@ -880,14 +868,6 @@ class PageTranslator(
         val union = a.width.toLong() * a.height + b.width.toLong() * b.height - intersection
         return if (union <= 0) 0f else intersection.toFloat() / union
     }
-
-    /** Smallest box holding both — the footprint of lettering read as more than one block. */
-    private fun hullOf(a: BubbleBox, b: BubbleBox): BubbleBox = a.copy(
-        left = minOf(a.left, b.left),
-        top = minOf(a.top, b.top),
-        right = maxOf(a.right, b.right),
-        bottom = maxOf(a.bottom, b.bottom),
-    )
 
     /** Fraction of [inner] that lies inside [outer]. */
     private fun containedFraction(inner: BubbleBox, outer: BubbleBox): Float {
@@ -1446,22 +1426,6 @@ class PageTranslator(
         const val MERGE_BALLOON_IOU = 0.4f
         const val MERGE_BALLOON_CONTAINED = 0.6f
         const val MIN_REGION_SIDE = 10
-        /**
-         * A detector box this many times larger than the lettering is a panel, not a balloon.
-         * Measured: a real oval is 2–5× the text; the chandelier false positive was ~20×.
-         */
-        const val MAX_BALLOON_TO_TEXT = 8
-
-        /**
-         * How much larger the hull of several blocks may be than the blocks themselves before they
-         * are treated as unrelated lettering a bad detection happened to cover.
-         *
-         * A balloon read as two or three blocks stacks them against each other, so its hull runs
-         * about 1.1-1.5x their combined area. The panel-wide detection that set a sentence across
-         * the artwork scored 5.8x.
-         */
-        const val MAX_JOIN_SPREAD = 3
-
         /** Overlap above which two detections are the same balloon. */
         const val BALLOON_IOU = 0.5f
         /** Share of a detection lying inside a better one above which it is that one again. */
