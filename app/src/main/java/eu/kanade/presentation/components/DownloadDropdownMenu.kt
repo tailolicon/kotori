@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
 import eu.kanade.presentation.manga.DownloadAction
+import mihon.feature.factory.MangaFactoryBridge
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
@@ -66,6 +67,16 @@ private fun DownloadDropdownMenuItems(
             onClick = {
                 onDownloadClicked(downloadAction)
                 onDismissRequest()
+            },
+        )
+    }
+
+    if (MangaFactoryBridge.available) {
+        DropdownMenuItem(
+            text = { Text("Gửi truyện đã tải → Manga TL Factory") },
+            onClick = {
+                onDismissRequest()
+                MangaFactoryBridge.requestExport()
             },
         )
     }

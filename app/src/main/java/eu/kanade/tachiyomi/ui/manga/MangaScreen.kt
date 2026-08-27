@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.domain.manga.model.hasCustomCover
 import eu.kanade.domain.manga.model.toSManga
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.components.FactoryExportDialog
 import eu.kanade.presentation.components.NavigatorAdaptiveSheet
 import eu.kanade.presentation.manga.ChapterSettingsDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
@@ -39,6 +41,8 @@ import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
+import eu.kanade.tachiyomi.data.download.DownloadProvider
+import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.model.Filter
@@ -58,6 +62,8 @@ import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.launch
 import logcat.LogPriority
+import mihon.feature.factory.MangaFactoryBridge
+import mihon.feature.factory.MangaFactoryExporter
 import mihon.feature.migration.config.MigrationConfigScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
 import tachiyomi.core.common.util.lang.withIOContext
@@ -86,6 +92,8 @@ class MangaScreen(
         val context = LocalContext.current
         val haptic = LocalHapticFeedback.current
         val scope = rememberCoroutineScope()
+        var showFactoryExportDialog by remember { mutableStateOf(false) }
+        val factoryExporter = remember(context) { MangaFactoryExporter(DownloadProvider(context)) }
         val lifecycleOwner = LocalLifecycleOwner.current
         val screenModel = rememberScreenModel {
             MangaScreenModel(context, lifecycleOwner.lifecycle, mangaId, fromSource)
@@ -100,6 +108,16 @@ class MangaScreen(
 
         val successState = state as MangaScreenModel.State.Success
         val isHttpSource = remember { successState.source is HttpSource }
+        val factoryChapters = remember(successState.chapters) {
+            successState.chapters
+                .filter { it.downloadState == Download.State.DOWNLOADED }
+                .map { it.chapter }
+        }
+
+        DisposableEffect(mangaId) {
+            MangaFactoryBridge.bind(mangaId) { showFactoryExportDialog = true }
+            onDispose { MangaFactoryBridge.unbind(mangaId) }
+        }
 
         LaunchedEffect(successState.manga, screenModel.source) {
             if (isHttpSource) {
@@ -176,6 +194,38 @@ class MangaScreen(
             onAllChapterSelected = screenModel::toggleAllSelection,
             onInvertSelection = screenModel::invertSelection,
         )
+
+        if (showFactoryExportDialog) {
+            FactoryExportDialog(
+                chapterCount = factoryChapters.size,
+                onDismissRequest = { showFactoryExportDialog = false },
+                onConfirm = { token ->
+                    showFactoryExportDialog = false
+                    context.toast("Đang gửi ${factoryChapters.size} chương lên Manga TL Factory…")
+                    scope.launch {
+                        try {
+                            val result = withIOContext {
+                                factoryExporter.export(
+                                    manga = successState.manga,
+                                    chapters = factoryChapters,
+                                    source = successState.source,
+                                    token = token,
+                                    targetLanguage = "vi",
+                                )
+                            }
+                            screenModel.snackbarHostState.showSnackbar(
+                                message = "Đã gửi ${result.chapterCount} chương / ${result.pageCount} trang · ${result.commitSha.take(8)}",
+                            )
+                        } catch (e: Exception) {
+                            logcat(LogPriority.ERROR, e) { "Manga TL Factory export failed" }
+                            screenModel.snackbarHostState.showSnackbar(
+                                message = "Gửi Manga TL Factory thất bại: ${e.message ?: e::class.simpleName}",
+                            )
+                        }
+                    }
+                },
+            )
+        }
 
         var showScanlatorsDialog by remember { mutableStateOf(false) }
 
