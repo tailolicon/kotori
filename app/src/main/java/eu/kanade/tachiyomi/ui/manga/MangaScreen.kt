@@ -41,8 +41,6 @@ import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.theme.kotori.isKotoriTablet
-import eu.kanade.tachiyomi.data.download.DownloadProvider
-import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.model.Filter
@@ -93,7 +91,7 @@ class MangaScreen(
         val haptic = LocalHapticFeedback.current
         val scope = rememberCoroutineScope()
         var showFactoryExportDialog by remember { mutableStateOf(false) }
-        val factoryExporter = remember(context) { MangaFactoryExporter(DownloadProvider(context)) }
+        val factoryExporter = remember { MangaFactoryExporter() }
         val lifecycleOwner = LocalLifecycleOwner.current
         val screenModel = rememberScreenModel {
             MangaScreenModel(context, lifecycleOwner.lifecycle, mangaId, fromSource)
@@ -110,12 +108,14 @@ class MangaScreen(
         val isHttpSource = remember { successState.source is HttpSource }
         val factoryChapters = remember(successState.chapters) {
             successState.chapters
-                .filter { it.downloadState == Download.State.DOWNLOADED }
                 .map { it.chapter }
+                .sortedWith(compareBy<Chapter> { it.chapterNumber }.thenBy { it.sourceOrder })
         }
 
-        DisposableEffect(mangaId) {
-            MangaFactoryBridge.bind(mangaId) { showFactoryExportDialog = true }
+        DisposableEffect(mangaId, isHttpSource) {
+            if (isHttpSource) {
+                MangaFactoryBridge.bind(mangaId) { showFactoryExportDialog = true }
+            }
             onDispose { MangaFactoryBridge.unbind(mangaId) }
         }
 
@@ -197,25 +197,24 @@ class MangaScreen(
 
         if (showFactoryExportDialog) {
             FactoryExportDialog(
-                chapterCount = factoryChapters.size,
+                chapters = factoryChapters,
                 onDismissRequest = { showFactoryExportDialog = false },
-                onConfirm = { token ->
+                onConfirm = { chapter, token ->
                     showFactoryExportDialog = false
-                    context.toast("Đang gửi ${factoryChapters.size} chương lên Manga TL Factory…")
+                    context.toast("Đang resolve ${chapter.name} cho Manga TL Factory…")
                     scope.launch {
                         try {
                             val result = withIOContext {
                                 factoryExporter.export(
                                     manga = successState.manga,
-                                    chapters = factoryChapters,
+                                    chapter = chapter,
                                     source = successState.source,
                                     token = token,
-                                    targetLanguage = "vi",
                                 )
                             }
                             screenModel.snackbarHostState.showSnackbar(
                                 message =
-                                    "Đã gửi ${result.chapterCount} chương / ${result.pageCount} trang · " +
+                                    "Đã gửi handoff ${result.chapterCount} chương / ${result.pageCount} trang · " +
                                         result.commitSha.take(8),
                             )
                         } catch (e: Exception) {

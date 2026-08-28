@@ -5,7 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * Small UI bridge so the shared manga download menu can ask the currently visible manga screen
+ * UI-only action relay (not an acquisition/runtime Android bridge) so the shared download menu can
+ * ask the currently visible manga screen
  * to open the Factory export dialog without threading another callback through every phone/tablet
  * presentation layer.
  */

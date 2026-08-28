@@ -41,7 +41,7 @@ $feed = [ordered]@{
     schema      = 1
     versionCode = [long]$versionCode
     versionName = $Version
-    changelog   = 'Thêm Manga TL Factory. Từ menu Tải xuống của một bộ truyện, chọn “Gửi truyện đã tải → Manga TL Factory” để đưa các chương đã tải cùng ảnh gốc lên tailolicon/manga-tl-factory. Kotori đọc cả thư mục ảnh và CBZ, giữ đúng thứ tự trang, tính SHA-256 cho từng ảnh, tạo manifest dự án/yêu cầu và ghi tất cả trong một commit GitHub. Token fine-grained chỉ dùng trong lần gửi hiện tại, được che khi nhập và không lưu trong ứng dụng. Chỉ các chương đã tải hoàn chỉnh mới được gửi; lỗi mạng hoặc quyền GitHub được báo ngay trong màn truyện.'
+    changelog   = 'Thêm Source Handoff cho Manga TL Factory. Từ menu Tải xuống của một bộ truyện, chọn “Gửi URL nguồn → Manga TL Factory”, chọn một chương rồi gửi. Kotori chỉ dùng extension để resolve URL trang và header an toàn vào source_handoff.json; không tải hay đưa ảnh, cookie, authorization hoặc phiên đăng nhập lên GitHub. Worker của Factory tự tải song song bằng HTTP, chỉ bootstrap Chromium khi cần, kiểm chữ ký/MIME/kích thước/SHA-256 và xóa ảnh tạm sau bài test. Token fine-grained chỉ dùng trong lần gửi hiện tại, được che khi nhập và không lưu trong ứng dụng.'
     releaseUrl  = "https://github.com/tailolicon/kotori/releases/tag/v$Version"
     assets      = $assets
 }

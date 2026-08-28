@@ -73,7 +73,7 @@ private fun DownloadDropdownMenuItems(
 
     if (MangaFactoryBridge.available) {
         DropdownMenuItem(
-            text = { Text("Gửi truyện đã tải → Manga TL Factory") },
+            text = { Text("Gửi URL nguồn → Manga TL Factory") },
             onClick = {
                 onDismissRequest()
                 MangaFactoryBridge.requestExport()
