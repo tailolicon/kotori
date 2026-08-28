@@ -3,7 +3,7 @@
 # screen shows it that way. The BOM is what makes it read this file as UTF-8.
 # Packages the freshly built release APKs the way the in-app updater expects:
 # renamed per-ABI assets plus an update.json whose schema mirrors v1.0.6's.
-param([string]$Version = "1.0.26")
+param([string]$Version = "1.0.27")
 
 $ErrorActionPreference = "Stop"
 $repo = "E:\Project\kotori"
@@ -41,7 +41,7 @@ $feed = [ordered]@{
     schema      = 1
     versionCode = [long]$versionCode
     versionName = $Version
-    changelog   = "Sửa loạt lỗi hiển thị bản dịch trên trang truyện. • Chữ tràn ra ngoài bóng thoại: khi bộ dò nhả ra một hộp trùm hai bóng riêng biệt, hai câu bị gộp làm một rồi viết trải qua cả khoảng tranh giữa chúng — có trang viết rộng 716px trong một vùng rộng 112px. Nay một hộp phải đáng tin cho cả việc làm khung lẫn việc gộp, hoặc không dùng cho việc nào. • Bóng thoại rỗng: thán từ như HEY!! bị dịch thành đúng dấu câu !!, STOP... thành ... — chữ vẽ tay bị xoá đi để đóng lại một dấu chấm than. Nay không có gì để viết thì không xoá, và lời nhắc cấm hẳn kiểu trả lời đó. • Nền tô nham nhở: chỗ xoá chữ trên nền có hạt nhiễu bị vá thành một mảng mịn lộ rõ. Nay hạt nhiễu quanh đó được bê sang chỗ vá. • Bản dịch rơi nhầm ô: một panel ghi REC hiện ra lời thoại của bóng khác. Nay một vùng chữ ngắn vẫn đủ sức bác bỏ câu trả lời dài không liên quan gì tới nó. • Có lúc JSON thô bị vẽ thẳng lên trang khi máy chủ trả lời dở dang; nay bị chặn. • Gemini báo quá tải thì tự chuyển sang model khác thay vì bỏ cuộc. Trước đây chỉ chuyển khi hết quota, nên gặp lúc model đông người dùng thì thêm bao nhiêu API key cũng không cứu được — cả trang sẽ không dịch. Kiểm chứng: chạy lại toàn bộ 46 trang một chương thật, soi từng vùng thay đổi so với ảnh gốc; 48/48 ảnh trong bộ kiểm thử giữ nguyên từng pixel."
+    changelog   = "Thêm Manga TL Factory. Từ menu Tải xuống của một bộ truyện, chọn “Gửi truyện đã tải → Manga TL Factory” để đưa các chương đã tải cùng ảnh gốc lên tailolicon/manga-tl-factory. Kotori đọc cả thư mục ảnh và CBZ, giữ đúng thứ tự trang, tính SHA-256 cho từng ảnh, tạo manifest dự án/yêu cầu và ghi tất cả trong một commit GitHub. Token fine-grained chỉ dùng trong lần gửi hiện tại, được che khi nhập và không lưu trong ứng dụng. Chỉ các chương đã tải hoàn chỉnh mới được gửi; lỗi mạng hoặc quyền GitHub được báo ngay trong màn truyện."
     releaseUrl  = "https://github.com/tailolicon/kotori/releases/tag/v$Version"
     assets      = $assets
 }
