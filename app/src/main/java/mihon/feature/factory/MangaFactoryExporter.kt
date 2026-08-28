@@ -50,7 +50,8 @@ class MangaFactoryExporter {
             "Manga source did not resolve to an HTTP URL"
         }
         val chapterUrl = source.getChapterUrl(chapter.toSChapter())
-        val projectId = slugifySource(sourceUrl.ifBlank { manga.title })
+        val projectId = slugifySeriesTitle(manga.title)
+        val sourceKey = slugifySource(sourceUrl)
         val importId = "kotori-${manga.id}-${System.currentTimeMillis().toString(36)}"
         val handoffPath = "work/imports/$projectId/$importId/source_handoff.json"
 
@@ -80,6 +81,7 @@ class MangaFactoryExporter {
             .put("provider", "kotori")
             .put("created_at", Instant.now().toString())
             .put("project_id", projectId)
+            .put("source_key", sourceKey)
             .put(
                 "source",
                 JSONObject()
@@ -172,6 +174,14 @@ class MangaFactoryExporter {
         return "ch-${sha256(seed.toByteArray()).take(12)}"
     }
 
+    private fun slugifySeriesTitle(title: String): String =
+        title
+            .replace(Regex("[^a-zA-Z0-9]+"), "-")
+            .trim('-')
+            .lowercase(Locale.ROOT)
+            .take(64)
+            .ifBlank { "series" }
+
     private fun slugifySource(source: String): String {
         val seed = runCatching {
             val uri = URI(source)
@@ -186,7 +196,7 @@ class MangaFactoryExporter {
             .trim('-')
             .lowercase(Locale.ROOT)
             .takeLast(64)
-            .ifBlank { "series" }
+            .ifBlank { "source" }
     }
 
     private fun createTextBlob(json: JSONObject, token: String): String =
