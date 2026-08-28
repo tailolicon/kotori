@@ -214,7 +214,9 @@ class MangaScreen(
                                 )
                             }
                             screenModel.snackbarHostState.showSnackbar(
-                                message = "Đã gửi ${result.chapterCount} chương / ${result.pageCount} trang · ${result.commitSha.take(8)}",
+                                message =
+                                    "Đã gửi ${result.chapterCount} chương / ${result.pageCount} trang · " +
+                                        result.commitSha.take(8),
                             )
                         } catch (e: Exception) {
                             logcat(LogPriority.ERROR, e) { "Manga TL Factory export failed" }
