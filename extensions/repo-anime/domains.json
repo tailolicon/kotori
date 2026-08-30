@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-08-28T16:27:25Z",
+  "updated": "2026-08-30T18:28:13Z",
   "sources": [
     {
       "key": "animehay",
@@ -13,11 +13,11 @@
       "behind": 6,
       "announce": [],
       "domains": [
-        "animehay11.site",
         "animehay12.site",
         "animehay15.site",
         "animehay14.site",
         "animehay13.site",
+        "animehay11.site",
         "animehay10.site",
         "animehay09.site",
         "animehay08.site",
