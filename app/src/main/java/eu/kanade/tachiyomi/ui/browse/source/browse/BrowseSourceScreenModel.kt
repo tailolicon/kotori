@@ -22,6 +22,7 @@ import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.util.removeCovers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import eu.kanade.tachiyomi.source.model.SManga
@@ -141,10 +142,22 @@ class BrowseSourceScreenModel(
     private val rawGenres = MutableStateFlow<List<Pair<String, List<SManga>>>>(emptyList())
     private val feedRefresh = MutableStateFlow(0)
 
-    val feed = combine(rawPopular, rawLatest, rawGenres, feedRefresh) { popular, latest, genreRows, _ ->
-        if (popular.isEmpty() && latest.isEmpty()) return@combine SourceFeed()
-        val popularItems = popular.toDomain()
-        val latestItems = latest.toDomain()
+    /**
+     * Why the feed has nothing, when it has nothing because the source refused.
+     *
+     * Without this a failed first fetch was indistinguishable from a slow one: both feeds stayed
+     * empty, [SourceFeed.loaded] stayed false and the screen sat on its spinner with no error, no
+     * retry and no way back to it — on hosts a Vietnamese ISP resets, which is routine here, that
+     * is the normal outcome rather than an edge case.
+     */
+    private val feedError = MutableStateFlow<Throwable?>(null)
+    private var feedLoading = false
+
+    val feed = combine(rawPopular, rawLatest, rawGenres, feedRefresh, feedError) {
+            popular, latest, genreRows, _, error ->
+        if (popular.isEmpty() && latest.isEmpty()) return@combine SourceFeed(error = error)
+        val popularItems = popular.toDomain().withFreshFavorites()
+        val latestItems = latest.toDomain().withFreshFavorites()
         SourceFeed(
             hero = popularItems.firstOrNull(),
             top = popularItems.take(TOP_SHELF_SIZE),
@@ -159,7 +172,9 @@ class BrowseSourceScreenModel(
                     ?.let { SourceShelf("HOÀN THÀNH · CÀY TRỌN BỘ", "", it) },
             ) + genreRows.mapNotNull { (genre, entries) ->
                 entries.takeIf { it.isNotEmpty() }
-                    ?.let { SourceShelf(genre.uppercase(), "", it.toDomain(), genre = genre) }
+                    ?.let {
+                        SourceShelf(genre.uppercase(), "", it.toDomain().withFreshFavorites(), genre = genre)
+                    }
             },
             genres = (source as? CatalogueSource)?.genreNames().orEmpty(),
             loaded = true,
@@ -169,18 +184,53 @@ class BrowseSourceScreenModel(
     private suspend fun List<SManga>.toDomain(): List<Manga> =
         networkToLocalManga(map { it.toDomainManga(sourceId) })
 
+    /**
+     * Re-reads the feed's rows from the database.
+     *
+     * The grid keeps its in-library ticks honest by subscribing each row to the database; the feed
+     * builds its rows once inside a `stateIn` combine and then replays that cached snapshot, so a
+     * cover added to the library straight from the feed — long-press, no navigation — kept showing
+     * as not-in-library until the screen was rebuilt. Rather than give every shelf item its own
+     * flow, re-read the whole feed when something actually changes; a feed is a few dozen rows.
+     */
+    private suspend fun List<Manga>.withFreshFavorites(): List<Manga> = map { manga ->
+        getManga.await(manga.id) ?: manga
+    }
+
     fun loadFeed() {
-        if (rawPopular.value.isNotEmpty()) return
+        if (rawPopular.value.isNotEmpty() || feedLoading) return
+        feedLoading = true
+        feedError.value = null
         screenModelScope.launchIO {
-            // Independent so a source whose latest feed is broken still shows the rest.
-            runCatching { source.getPopularManga(1).mangas }
-                .onSuccess { rawPopular.value = it }
-            if (source.supportsLatest) {
-                runCatching { source.getLatestUpdates(1).mangas }
-                    .onSuccess { rawLatest.value = it }
+            try {
+                // Independent so a source whose latest feed is broken still shows the rest.
+                runCatching { source.getPopularManga(1).mangas }
+                    .onSuccess { rawPopular.value = it }
+                    // runCatching swallows cancellation too; a screen popped mid-fetch would
+                    // otherwise record its own teardown as a source failure.
+                    .onFailure { if (it is CancellationException) throw it else feedError.value = it }
+                if (source.supportsLatest) {
+                    runCatching { source.getLatestUpdates(1).mangas }
+                        .onSuccess { rawLatest.value = it }
+                        .onFailure {
+                            if (it is CancellationException) throw it
+                            if (rawPopular.value.isEmpty()) feedError.value = it
+                        }
+                }
+                if (rawPopular.value.isNotEmpty() || rawLatest.value.isNotEmpty()) {
+                    feedError.value = null
+                    loadGenreShelves()
+                }
+            } finally {
+                feedLoading = false
             }
-            loadGenreShelves()
         }
+    }
+
+    /** Retry after a failed [loadFeed]; the screen offers this instead of an endless spinner. */
+    fun retryFeed() {
+        feedError.value = null
+        loadFeed()
     }
 
     /**
@@ -264,8 +314,16 @@ class BrowseSourceScreenModel(
      */
     private fun CatalogueSource.genreNames(): List<String> = runCatching {
         getFilterList()
+            // Match on shape as well as on name. A source may well introduce its genre picker with
+            // a Filter.Header, and a Header's `name` is the whole sentence it displays — Novel
+            // Fever's "Bỏ trống ô tìm kiếm để duyệt theo thể loại" and DocLN's near-twin both
+            // contain "thể loại", so a name-only match picked the Header, fell through the `when`
+            // below to an empty list, and quietly substituted KOTORI_COMMON_GENRES. The chips then
+            // named genres those sources do not have: tapping one matched no Select entry and
+            // degraded into a plain text search for the chip's own label.
             .firstOrNull { filter ->
-                filter.name.contains("thể loại", true) || filter.name.contains("genre", true)
+                (filter is SourceModelFilter.Group<*> || filter is SourceModelFilter.Select<*>) &&
+                    (filter.name.contains("thể loại", true) || filter.name.contains("genre", true))
             }
             .let { filter ->
                 when (filter) {
@@ -287,6 +345,8 @@ class BrowseSourceScreenModel(
         val shelves: List<SourceShelf> = emptyList(),
         val genres: List<String> = emptyList(),
         val loaded: Boolean = false,
+        /** Set when the first fetch failed, so the screen can say so instead of spinning. */
+        val error: Throwable? = null,
     )
 
     @Immutable
@@ -477,6 +537,9 @@ class BrowseSourceScreenModel(
             }
 
             updateManga.await(new.toMangaUpdate())
+            // Adding from a feed cover happens in place, with no navigation to come back from, so
+            // nothing else would ever tell the feed its in-library ticks are out of date.
+            refreshFeedFavorites()
         }
     }
 

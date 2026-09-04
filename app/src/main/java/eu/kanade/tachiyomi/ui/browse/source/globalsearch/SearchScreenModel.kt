@@ -196,8 +196,21 @@ abstract class SearchScreenModel(
         }
     }
 
+    /**
+     * Records one source's result.
+     *
+     * The merge has to happen *inside* the update block. Reading `state.value.items` first and
+     * handing the finished map to [updateItems] means two sources finishing at once can both start
+     * from the same snapshot: the second write reinstates the first as [SearchItemResult.Loading],
+     * its coroutine has already returned, and nothing ever retries — that row spins for good and
+     * the progress counter never reaches the total. `update` re-runs this lambda on CAS failure, so
+     * merging here is both correct and safe to repeat.
+     */
     private fun updateItem(source: Source, result: SearchItemResult) {
-        updateItems(state.value.items + (source to result))
+        mutableState.update { state ->
+            val merged = state.items + (source to result)
+            state.copy(items = merged.toSortedMap(sortComparator(merged)))
+        }
     }
 
     fun setMigrateDialog(currentId: Long, target: Manga) {

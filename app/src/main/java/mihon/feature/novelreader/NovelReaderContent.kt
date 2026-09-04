@@ -1,6 +1,7 @@
 package mihon.feature.novelreader
 
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -105,6 +106,16 @@ fun NovelReaderContent(
 
     LaunchedEffect(state.chapter?.id) {
         completedChapterId = null
+    }
+
+    // A chapter switch that failed leaves the current chapter on screen on purpose, so the error
+    // cannot be rendered in place of it — a toast is the only surface that does not take the page
+    // away. Without this every failed Next/Previous was silent and the button simply re-enabled.
+    val context = LocalContext.current
+    LaunchedEffect(state.transientError) {
+        val message = state.transientError ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        viewModel.onTransientErrorShown()
     }
 
     val onProgressChanged: (Int) -> Unit = { percent ->

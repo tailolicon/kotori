@@ -53,8 +53,15 @@ class NovelFever : MirroredNovelSource() {
 
     // ============================== Browse ==============================
 
+    /**
+     * `view_count` is 0 on every single book in the catalogue, so sorting by it asks the server to
+     * order 397 rows on a key they all share. Its paging then repeats one book and drops another —
+     * measured, and byte-identical across runs, so it is the tie rather than flakiness. `vote_count`
+     * is the only popularity signal the API actually carries (213 distinct values, max 309298) and
+     * a full walk on it returns every book exactly once.
+     */
     override suspend fun getPopularManga(page: Int): MangasPage =
-        books(page = page, sort = "-view_count").toMangasPage()
+        books(page = page, sort = "-vote_count").toMangasPage()
 
     override suspend fun getLatestUpdates(page: Int): MangasPage =
         books(page = page, sort = "-new_chap_at").toMangasPage()
@@ -131,7 +138,7 @@ class NovelFever : MirroredNovelSource() {
         url = "/books/$bookId"
         title = string("name").orEmpty()
         thumbnail_url = posterUrl()
-        author = nestedName("author")
+        author = authorName()
     }
 
     // ============================== Local search ==============================
@@ -180,7 +187,7 @@ class NovelFever : MirroredNovelSource() {
             val mangas = collected.map { it.toSManga() }
             Catalogue(
                 mangas = mangas,
-                index = mangas.map { NovelFeverSearch.Entry(it.title, it.author) },
+                index = mangas.map { NovelFeverSearch.Entry(it.title) },
                 fetchedAt = System.currentTimeMillis(),
             ).also { catalogue = it }
         }
@@ -210,7 +217,7 @@ class NovelFever : MirroredNovelSource() {
             url = novel.url
             title = book.string("name") ?: novel.title
             thumbnail_url = book.posterUrl() ?: novel.thumbnail_url
-            author = book.nestedName("author")
+            author = book.authorName()
             genre = (book["genres"] as? JsonArray).orEmpty()
                 .mapNotNull { (it as? JsonObject)?.string("name") }
                 .joinToString()
@@ -236,7 +243,11 @@ class NovelFever : MirroredNovelSource() {
                 SChapter.create().apply {
                     val chapterId = chapter.string("id").orEmpty()
                     url = "/chapters/$chapterId"
+                    // The list endpoint leaves is_locked null on every row and prices the chapter
+                    // in unlock_price instead, so that is the only field worth reading here.
+                    val priced = (chapter.string("unlock_price")?.toIntOrNull() ?: 0) > 0
                     name = chapter.string("name")?.trim().orEmpty()
+                        .let { if (priced) "🔒 $it" else it }
                     // The API index is the reading order. Displayed chapter numbers may deliberately
                     // differ, as in list index 604 being named "Chương 606".
                     chapter_number = chapter.string("index")?.toFloatOrNull() ?: -1f
@@ -255,6 +266,20 @@ class NovelFever : MirroredNovelSource() {
             ?: throw IllegalStateException("URL chương Novel Fever không hợp lệ: ${chapter.url}")
         val data = api("/chapters/$chapterId")["data"] as? JsonObject
             ?: throw IllegalStateException("Novel Fever không trả về chương $chapterId")
+
+        // A chapter behind the site's coin wall still answers 200 with a `content` that decrypts
+        // cleanly — into the first two lines and nothing else. Rendering that silently is the worst
+        // outcome available: the reader sees a paragraph, the progress tracker marks the chapter
+        // read because a teaser fits one screen, and the downloader writes the stub to disk and
+        // flags it DOWNLOADED for good. There is no login here to unlock it with, so say so.
+        val locked = data.string("is_locked") == "1" ||
+            (data.string("unlock_price")?.toIntOrNull() ?: 0) > 0
+        if (locked) {
+            throw IllegalStateException(
+                "Chương này bị khoá trên Novel Fever (phải mở bằng xu trên ứng dụng gốc)",
+            )
+        }
+
         val encrypted = data.string("content")
             ?: throw IllegalStateException("Chương Novel Fever $chapterId không có nội dung")
         return decryptChapter(encrypted)
@@ -367,10 +392,32 @@ class NovelFever : MirroredNovelSource() {
     private fun JsonObject.nestedName(key: String): String? =
         (get(key) as? JsonObject)?.string("name")
 
+    /**
+     * Every book carries all four sizes, and the same url backs the grid tile, the details header
+     * and the full-screen cover dialog — so the largest is the one to take. "600" is preferred over
+     * "default" although they are byte-identical today: it is the explicitly sized key, and stays
+     * right if the API ever repoints "default".
+     */
     private fun JsonObject.posterUrl(): String? {
         val poster = get("poster") as? JsonObject ?: return null
-        return poster.string("300") ?: poster.string("600") ?: poster.string("default")
+        return poster.string("600") ?: poster.string("default")
+            ?: poster.string("300") ?: poster.string("150")
     }
+
+    /**
+     * The writer's name, or null when the API has none — which is every book.
+     *
+     * `author` is a dead entity here: across the whole catalogue it is null on 266 books, an empty
+     * name on 112, and on the remaining 19 the literal placeholder "Đang Cập Nhật" ("being
+     * updated"). Letting that through put a placeholder on the details screen as if it were a
+     * person, and the details screen makes an author tappable — into a search for that exact
+     * string, which then matched those same 19 unrelated books and nothing else.
+     *
+     * `creator` is not a substitute: it is a User object with an avatar and an exp level, 333
+     * distinct values with handles like "lllOUZOlll", i.e. the account that uploaded the book.
+     */
+    private fun JsonObject.authorName(): String? = nestedName("author")
+        ?.takeIf { it.isNotBlank() && !it.equals(AUTHOR_PLACEHOLDER, ignoreCase = true) }
 
     private fun String?.toEpochMillis(): Long = this?.let { value ->
         runCatching { Instant.parse(value).toEpochMilli() }.getOrDefault(0L)
@@ -390,6 +437,7 @@ class NovelFever : MirroredNovelSource() {
 
     private companion object {
         private const val LEGACY_SOURCE_NAME = "Nôvel Fever (MeTruyenChu)"
+        private const val AUTHOR_PLACEHOLDER = "Đang Cập Nhật"
         private const val PAGE_SIZE = 20
         private const val MAX_LEGACY_SEARCH_PAGES = 3
         private const val CATALOGUE_PAGE_SIZE = 100

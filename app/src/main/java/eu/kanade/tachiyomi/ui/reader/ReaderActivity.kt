@@ -260,6 +260,12 @@ class ReaderActivity : BaseActivity() {
         viewModel.eventFlow
             .onEach { event ->
                 when (event) {
+                    is ReaderViewModel.Event.OpenNovelReader -> {
+                        startActivity(
+                            NovelReaderActivity.newIntent(this@ReaderActivity, event.mangaId, event.chapterId),
+                        )
+                        finish()
+                    }
                     ReaderViewModel.Event.ReloadViewerChapters -> {
                         viewModel.state.value.viewerChapters?.let(::setChapters)
                     }

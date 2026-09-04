@@ -23,6 +23,7 @@ import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
+import eu.kanade.tachiyomi.source.NovelSource
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.reader.loader.ChapterLoader
@@ -298,6 +299,17 @@ class ReaderViewModel @JvmOverloads constructor(
 
                     val context = Injekt.get<Application>()
                     val source = sourceManager.getOrStub(manga.source)
+                    // ReaderActivity decides in onCreate whether this is prose, and on a cold start
+                    // — an Updates notification straight into the reader — the extensions have not
+                    // finished loading yet, so the source is not in the map and a novel lands here.
+                    // NovelHttpSource extends HttpSource, so ChapterLoader would happily build an
+                    // HttpPageLoader for it and the first getPageList() throws
+                    // UnsupportedOperationException. By this point initialization really is done,
+                    // so this is the check that can be trusted; hand it back to the activity.
+                    if (source is NovelSource) {
+                        eventChannel.send(Event.OpenNovelReader(manga.id, chapterId.takeIf { it != -1L }))
+                        return@withIOContext Result.success(false)
+                    }
                     loader = ChapterLoader(context, downloadManager, downloadProvider, manga, source)
 
                     translationManager.beginSession(manga.id)
@@ -1203,6 +1215,8 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     sealed interface Event {
+        /** The entry turned out to be prose; the page reader must hand over and close. */
+        data class OpenNovelReader(val mangaId: Long, val chapterId: Long?) : Event
         data object ReloadViewerChapters : Event
         data object PageChanged : Event
         data class SetOrientation(val orientation: Int) : Event

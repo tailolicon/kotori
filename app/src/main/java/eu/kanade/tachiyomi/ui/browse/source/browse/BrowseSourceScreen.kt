@@ -1,6 +1,13 @@
 package eu.kanade.tachiyomi.ui.browse.source.browse
 
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.ui.platform.LocalContext
+import eu.kanade.presentation.util.formattedMessage
+import tachiyomi.presentation.core.screens.EmptyScreen
+import tachiyomi.presentation.core.screens.EmptyScreenAction
 import androidx.compose.foundation.background
 import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +34,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -101,6 +112,16 @@ data class BrowseSourceScreen(
             }
         }
         LaunchedEffect(screenModel.source) { screenModel.loadFeed() }
+        // Coming back from a detail screen where the entry was added to (or removed from) the
+        // library: the feed rows were built once and cached, so re-read them or the ticks lie.
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) screenModel.refreshFeedFavorites()
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
 
         val navigator = LocalNavigator.currentOrThrow
         val navigateUp: () -> Unit = {
@@ -212,8 +233,29 @@ data class BrowseSourceScreen(
                 val feedIsTheView = state.listing == Listing.Popular && !state.showGrid
                 // Falling through to the grid while the feed loads flashed the old layout for a
                 // few seconds and then swapped it out underneath the reader.
-                if (feedIsTheView && !feed.loaded) {
+                if (feedIsTheView && !feed.loaded && feed.error == null) {
                     LoadingScreen(Modifier.padding(paddingValues))
+                    return@Scaffold
+                }
+                // A source that refused the first fetch used to leave the spinner up for good.
+                val feedError = feed.error
+                if (feedIsTheView && !feed.loaded && feedError != null) {
+                    EmptyScreen(
+                        modifier = Modifier.padding(paddingValues),
+                        message = with(LocalContext.current) { feedError.formattedMessage },
+                        actions = listOf(
+                            EmptyScreenAction(
+                                stringRes = MR.strings.action_retry,
+                                icon = Icons.Outlined.Refresh,
+                                onClick = screenModel::retryFeed,
+                            ),
+                            EmptyScreenAction(
+                                stringRes = MR.strings.action_open_in_web_view,
+                                icon = Icons.Outlined.Public,
+                                onClick = onWebViewClick,
+                            ),
+                        ),
+                    )
                     return@Scaffold
                 }
                 if (feedIsTheView) {

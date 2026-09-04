@@ -233,7 +233,17 @@ fun NovelReaderScreen(
 
     val progressPercent by remember {
         derivedStateOf {
-            if (scrollState.maxValue <= 0) 0 else (scrollState.value * 100 / scrollState.maxValue).coerceIn(0, 100)
+            // maxValue == 0 means the chapter has been measured and does not overflow the viewport,
+            // so there is nothing left to scroll to and the reader has seen all of it. Reporting 0
+            // there pinned short chapters — a prologue, an author's note — at 0% for good: the only
+            // place `read = true` is ever written needs >= 98. Before layout maxValue is
+            // Int.MAX_VALUE rather than 0, so this cannot fire early and report a chapter read
+            // before it is on screen.
+            when {
+                scrollState.maxValue == Int.MAX_VALUE -> 0
+                scrollState.maxValue <= 0 -> 100
+                else -> (scrollState.value * 100 / scrollState.maxValue).coerceIn(0, 100)
+            }
         }
     }
     LaunchedEffect(progressPercent, twoColumn) { if (!twoColumn) onProgressChanged(progressPercent) }
@@ -510,10 +520,16 @@ fun NovelReaderScreen(
                 .fillMaxSize()
                 .graphicsLayer { translationY = boundaryOffset }
                 .then(
-                    if (!twoColumn && readingMode == NovelReadingMode.SCROLL) {
-                        Modifier.verticalScroll(scrollState)
-                    } else {
-                        Modifier
+                    when {
+                        twoColumn -> Modifier
+                        // Paged still needs the state attached, or nothing measures the content and
+                        // maxValue stays Int.MAX_VALUE: the swipe handler's `value >= maxValue` end
+                        // test never fires, animateScrollTo has nothing to move, and progress stays
+                        // 0 for every chapter. Scrolling by touch stays off — the page turns are
+                        // what drives it.
+                        readingMode == NovelReadingMode.PAGED ->
+                            Modifier.verticalScroll(scrollState, enabled = false)
+                        else -> Modifier.verticalScroll(scrollState)
                     },
                 )
                 .windowInsetsPadding(WindowInsets.statusBars)

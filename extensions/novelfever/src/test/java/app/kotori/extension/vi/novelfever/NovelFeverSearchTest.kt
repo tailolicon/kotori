@@ -17,11 +17,11 @@ class NovelFeverSearchTest {
         entry("Toàn Chức Pháp Sư Dị Bản"),
         entry("Đấu La: Khí Vận Chi Nữ? Cơ Duyên? Tất Cả Là Của Ta!"),
         entry("Bắt Đầu Cùng Chị Dâu Nương Tựa Lẫn Nhau"),
-        entry("Lãng Nhân: Mỹ Nữ, Mời Tư Vấn", author = "Giang Tự"),
+        entry("Lãng Nhân: Mỹ Nữ, Mời Tư Vấn"),
         entry("Dị Nhân Đại Náo Tu Tiên Giới"),
     )
 
-    private fun entry(title: String, author: String? = null) = NovelFeverSearch.Entry(title, author)
+    private fun entry(title: String) = NovelFeverSearch.Entry(title)
 
     private fun titlesFor(query: String) = NovelFeverSearch.match(entries, query)
         .map { entries[it].title }
@@ -59,11 +59,6 @@ class NovelFeverSearchTest {
         // "la" as a prefix would also match "Lẫn" in "Bắt Đầu Cùng Chị Dâu Nương Tựa Lẫn Nhau",
         // and two loose tokens like that are enough to fill the screen with noise.
         assertTrue(titlesFor("dau la").none { it.startsWith("bat dau") })
-    }
-
-    @Test
-    fun `the author is searchable even though the server never indexes it`() {
-        assertEquals(listOf("lang nhan my nu moi tu van"), titlesFor("Giang Tự"))
     }
 
     @Test

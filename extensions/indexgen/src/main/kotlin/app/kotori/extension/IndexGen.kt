@@ -128,9 +128,12 @@ private fun writeStore(root: File, kind: Kind, modules: List<Module>, fingerprin
     val baseUrl = "$BASE/${kind.repoDir}"
 
     val built = modules.map { module ->
-        val apk = File(root, "extensions/${module.dir}/build/outputs/apk")
-            .walkTopDown()
-            .firstOrNull { it.isFile && it.extension == "apk" }
+        // The release directory by name, not a walk of build/outputs/apk. Once anyone has run
+        // assembleDebug in the publish tree — Android Studio's Run button does — that tree holds a
+        // debug/ folder too, and which one a directory walk reaches first is filesystem order.
+        val apk = File(root, "extensions/${module.dir}/build/outputs/apk/release")
+            .listFiles()
+            ?.firstOrNull { it.isFile && it.extension == "apk" }
             ?: error("Build ${module.dir} first (./gradlew :${module.dir}-ext:assembleRelease)")
 
         apk.copyTo(File(apkDir, "${module.pkg}.apk"), overwrite = true)

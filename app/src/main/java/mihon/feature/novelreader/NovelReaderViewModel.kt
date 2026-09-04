@@ -19,6 +19,7 @@ import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.service.getChapterSort
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.manga.interactor.GetManga
@@ -57,6 +58,11 @@ class NovelReaderViewModel(
         /** Adjacent chapter is loading while the current chapter remains visible. */
         val isChangingChapter: Boolean = false,
         val error: String? = null,
+        /**
+         * A failure that must not replace the chapter on screen — a chapter switch that did not
+         * happen. Shown once as a snackbar and then cleared through [onTransientErrorShown].
+         */
+        val transientError: String? = null,
         /** Where to restore the reader to, 0..100. */
         val startPercent: Int = 0,
         /** Set when the source wants its own page to render the chapter; [content] is then unused. */
@@ -67,6 +73,11 @@ class NovelReaderViewModel(
 
     private val _state = MutableStateFlow(State())
     val state = _state.asStateFlow()
+
+    /** Called once the UI has shown [State.transientError], so it does not fire again on rotation. */
+    fun onTransientErrorShown() {
+        _state.update { it.copy(transientError = null) }
+    }
 
     /** Latest scroll position reported by the UI, 0..100. Written back on pause/chapter change. */
     private var currentPercent: Int = 0
@@ -89,7 +100,10 @@ class NovelReaderViewModel(
         fun fail(message: String) {
             _state.update {
                 if (keepCurrentChapter) {
-                    it.copy(isChangingChapter = false)
+                    // Setting `error` here would blank out the chapter the reader is still reading,
+                    // which is why this branch dropped the message entirely — and so every failed
+                    // chapter switch was silent, with the button re-enabling for another silent try.
+                    it.copy(isChangingChapter = false, transientError = message)
                 } else {
                     it.copy(isLoading = false, error = message)
                 }
@@ -184,10 +198,17 @@ class NovelReaderViewModel(
         source: NovelSource,
     ) {
         if (!novelTranslator.isEnabled(mangaId)) return
-        val currentIndex = chapters.indexOfFirst { it.id == current.id }
+        // Sort before taking "the next few". `chapters` arrives in database order, which is source
+        // order — and a novel source hands its chapter list back newest-first, so dropping past the
+        // current index there walks *backwards* into chapters already read. The reader itself
+        // orders with the same comparator (NovelReaderContent), and the manga reader's twin of this
+        // prefetch sorts before slicing too; this one did not, so it warmed the wrong chapters and
+        // fed an older chapter's tail into the next translation prompt.
+        val ordered = chapters.sortedWith(getChapterSort(manga, sortDescending = false))
+        val currentIndex = ordered.indexOfFirst { it.id == current.id }
         if (currentIndex < 0) return
 
-        val upcoming = chapters.drop(currentIndex + 1).take(TRANSLATION_PREFETCH_CHAPTERS)
+        val upcoming = ordered.drop(currentIndex + 1).take(TRANSLATION_PREFETCH_CHAPTERS)
         if (upcoming.isEmpty()) return
 
         scope.launchIO {
