@@ -9,6 +9,8 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.novel.NovelChapterHtml
 import eu.kanade.tachiyomi.source.online.MirroredNovelSource
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -64,12 +66,33 @@ class NovelFever : MirroredNovelSource() {
 
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList): MangasPage {
         val genreId = filters.filterIsInstance<GenreFilter>().firstOrNull()?.selectedId()
-        return books(
-            page = page,
-            query = query.trim().takeIf(String::isNotEmpty),
-            genreId = genreId,
-            sort = if (query.isBlank()) "-new_chap_at" else null,
-        ).toMangasPage()
+        val term = query.trim()
+        if (term.isEmpty()) {
+            return books(page = page, genreId = genreId, sort = "-new_chap_at").toMangasPage()
+        }
+
+        // Paging only asks for page 2 once page 1 has arrived, so remembering which of the two
+        // searches answered this query keeps the rest of the pages coming from the same place
+        // instead of silently switching source halfway down the grid.
+        val key = NovelFeverSearch.normalize(term)
+        val cached = cachedSearch
+        if (page > 1 && cached != null && cached.first == key) return cached.second.asPage(page)
+
+        val remote = books(page = page, query = term, genreId = genreId)
+        if (remote.books.isNotEmpty()) {
+            if (page == 1) cachedSearch = null
+            return remote.toMangasPage()
+        }
+        // Past page 1 the server has already told us where the results end; only the first page
+        // coming back empty means the query itself went unplaced.
+        if (page > 1) return MangasPage(emptyList(), false)
+        // A genre is tapped, not typed, and the local index carries no genres — falling back here
+        // would quietly drop the genre the reader chose.
+        if (genreId != null) return MangasPage(emptyList(), false)
+
+        val hits = searchCatalogue(term)
+        cachedSearch = key to hits
+        return hits.asPage(1)
     }
 
     private suspend fun books(
@@ -77,10 +100,11 @@ class NovelFever : MirroredNovelSource() {
         query: String? = null,
         genreId: String? = null,
         sort: String? = null,
+        limit: Int = PAGE_SIZE,
     ): BookPage {
         val parameters = buildList {
             add("include" to "author,creator,genres,tags")
-            add("limit" to PAGE_SIZE.toString())
+            add("limit" to limit.toString())
             add("page" to page.toString())
             query?.let { add("filter[keyword]" to it) }
             genreId?.let { add("filter[genres.id]" to it) }
@@ -92,7 +116,7 @@ class NovelFever : MirroredNovelSource() {
         val pagination = root["pagination"] as? JsonObject
         val hasNext = pagination?.string("next") != null ||
             page < (pagination?.string("last")?.toIntOrNull() ?: page) ||
-            (pagination == null && books.size >= PAGE_SIZE)
+            (pagination == null && books.size >= limit)
         return BookPage(books, hasNext)
     }
 
@@ -108,6 +132,68 @@ class NovelFever : MirroredNovelSource() {
         title = string("name").orEmpty()
         thumbnail_url = posterUrl()
         author = nestedName("author")
+    }
+
+    // ============================== Local search ==============================
+
+    /**
+     * The whole catalogue, kept so [NovelFeverSearch] can answer a query the server could not.
+     *
+     * It is small enough to be worth holding — a few hundred books, four requests, well under a
+     * megabyte gzipped — and the server still answers first, since that is one request and it
+     * paginates. This is built only once a search comes back with nothing at all.
+     */
+    private class Catalogue(
+        val mangas: List<SManga>,
+        val index: List<NovelFeverSearch.Entry>,
+        val fetchedAt: Long,
+    )
+
+    private val catalogueLock = Mutex()
+
+    @Volatile
+    private var catalogue: Catalogue? = null
+
+    /** The last query answered locally, so its later pages are neither re-matched nor re-fetched. */
+    @Volatile
+    private var cachedSearch: Pair<String, List<SManga>>? = null
+
+    private suspend fun searchCatalogue(query: String): List<SManga> {
+        val loaded = loadCatalogue()
+        return NovelFeverSearch.match(loaded.index, query).map(loaded.mangas::get)
+    }
+
+    private suspend fun loadCatalogue(): Catalogue {
+        catalogue?.takeIf { it.isFresh() }?.let { return it }
+        return catalogueLock.withLock {
+            // Two searches can miss at once; the second waits here and then finds it already built.
+            catalogue?.takeIf { it.isFresh() }?.let { return@withLock it }
+
+            val collected = mutableListOf<JsonObject>()
+            var page = 1
+            while (page <= MAX_CATALOGUE_PAGES) {
+                val result = books(page = page, limit = CATALOGUE_PAGE_SIZE)
+                collected += result.books
+                if (result.books.isEmpty() || !result.hasNext) break
+                page++
+            }
+            val mangas = collected.map { it.toSManga() }
+            Catalogue(
+                mangas = mangas,
+                index = mangas.map { NovelFeverSearch.Entry(it.title, it.author) },
+                fetchedAt = System.currentTimeMillis(),
+            ).also { catalogue = it }
+        }
+    }
+
+    private fun Catalogue.isFresh(): Boolean =
+        mangas.isNotEmpty() && System.currentTimeMillis() - fetchedAt < CATALOGUE_TTL_MS
+
+    private fun List<SManga>.asPage(page: Int): MangasPage {
+        val from = (page - 1) * PAGE_SIZE
+        if (from >= size) return MangasPage(emptyList(), false)
+        val to = minOf(from + PAGE_SIZE, size)
+        return MangasPage(subList(from, to).toList(), to < size)
     }
 
     // ============================== Details ==============================
@@ -306,6 +392,9 @@ class NovelFever : MirroredNovelSource() {
         private const val LEGACY_SOURCE_NAME = "Nôvel Fever (MeTruyenChu)"
         private const val PAGE_SIZE = 20
         private const val MAX_LEGACY_SEARCH_PAGES = 3
+        private const val CATALOGUE_PAGE_SIZE = 100
+        private const val MAX_CATALOGUE_PAGES = 20
+        private const val CATALOGUE_TTL_MS = 6L * 60 * 60 * 1000
         private const val KEY_START = 17
         private const val KEY_END = 33
 

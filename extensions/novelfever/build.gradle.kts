@@ -10,7 +10,12 @@ plugins {
 // LinkageError on load, ClassCastException on use.
 extra["kotlin.stdlib.default.dependency"] = "false"
 
-val extVersionCode = 1
+/** Kotori's extension signing key, or null on a checkout that does not carry it. */
+val extensionKeystore: Properties? = rootProject.file("extensions/keystore/keystore.properties")
+    .takeIf { it.isFile }
+    ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+
+val extVersionCode = 2
 val extLib = "1.4"
 
 android {
@@ -29,10 +34,13 @@ android {
     }
 
     signingConfigs {
-        create("kotori") {
-            val propsFile = rootProject.file("extensions/keystore/keystore.properties")
-            if (propsFile.isFile) {
-                val props = Properties().apply { propsFile.inputStream().use(::load) }
+        // Only declared when the key is actually there. Creating it unconditionally and filling it
+        // in later left an empty config behind, and `findByName("kotori")` then returned that empty
+        // config rather than null — so the fallback to the debug key below never ran and a checkout
+        // without the (gitignored) keystore failed at packaging with "missing required property
+        // storeFile" instead of just building something installable.
+        extensionKeystore?.let { props ->
+            create("kotori") {
                 storeFile = rootProject.file(props.getProperty("storeFile"))
                 storePassword = props.getProperty("storePassword")
                 keyAlias = props.getProperty("keyAlias")
@@ -87,4 +95,13 @@ dependencies {
     compileOnly(libs.kotlinx.serialization.json)
     compileOnly(libs.injekt)
     compileOnly(libs.androidx.preference)
+
+    // The apk ships without a stdlib; the unit tests still need one to compile.
+    testImplementation(kotlin("stdlib"))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+android.testOptions.unitTests.all {
+    it.useJUnitPlatform()
 }
