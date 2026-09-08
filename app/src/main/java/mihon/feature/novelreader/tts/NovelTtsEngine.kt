@@ -100,7 +100,11 @@ enum class NovelTtsEngineId(val label: String) {
     NEURAL("Ngoại tuyến"),
 
     /** Microsoft's neural voices, streamed — by far the best Vietnamese, but needs the network. */
-    EDGE("Microsoft");
+    EDGE("Microsoft"),
+
+    /** CapCut's Vietnamese editor voices, streamed from its text-to-speech service. */
+    CAPCUT("CapCut"),
+    ;
 
     /**
      * Engines to try, best first, when this one cannot be readied.
@@ -113,5 +117,6 @@ enum class NovelTtsEngineId(val label: String) {
         EDGE -> listOf(NEURAL, SYSTEM)
         NEURAL -> listOf(EDGE, SYSTEM)
         SYSTEM -> listOf(EDGE, NEURAL)
+        CAPCUT -> listOf(EDGE, NEURAL, SYSTEM)
     }
 }

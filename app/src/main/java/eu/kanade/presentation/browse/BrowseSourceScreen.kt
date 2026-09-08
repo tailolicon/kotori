@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -44,6 +45,8 @@ fun BrowseSourceContent(
     snackbarHostState: SnackbarHostState,
     contentPadding: PaddingValues,
     onWebViewClick: () -> Unit,
+    searchQuery: String? = null,
+    onGlobalSearchClick: (() -> Unit)? = null,
     onHelpClick: () -> Unit,
     onLocalSourceHelpClick: () -> Unit,
     onMangaClick: (Manga) -> Unit,
@@ -82,7 +85,11 @@ fun BrowseSourceContent(
             modifier = Modifier.padding(contentPadding),
             message = when (errorState) {
                 is LoadState.Error -> getErrorMessage(errorState)
-                else -> stringResource(MR.strings.no_results_found)
+                else -> if (!searchQuery.isNullOrBlank() && source != null) {
+                    stringResource(MR.strings.no_results_found_in_source, searchQuery, source.name)
+                } else {
+                    stringResource(MR.strings.no_results_found)
+                }
             },
             actions = if (source is LocalSource) {
                 listOf(
@@ -93,23 +100,42 @@ fun BrowseSourceContent(
                     ),
                 )
             } else {
-                listOf(
-                    EmptyScreenAction(
-                        stringRes = MR.strings.action_retry,
-                        icon = Icons.Outlined.Refresh,
-                        onClick = mangaList::refresh,
-                    ),
-                    EmptyScreenAction(
-                        stringRes = MR.strings.action_open_in_web_view,
-                        icon = Icons.Outlined.Public,
-                        onClick = onWebViewClick,
-                    ),
-                    EmptyScreenAction(
-                        stringRes = MR.strings.label_help,
-                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
-                        onClick = onHelpClick,
-                    ),
-                )
+                buildList {
+                    add(
+                        EmptyScreenAction(
+                            stringRes = MR.strings.action_retry,
+                            icon = Icons.Outlined.Refresh,
+                            onClick = mangaList::refresh,
+                        ),
+                    )
+                    if (!searchQuery.isNullOrBlank() && onGlobalSearchClick != null) {
+                        add(
+                            EmptyScreenAction(
+                                stringRes = MR.strings.action_global_search,
+                                icon = Icons.Outlined.Search,
+                                onClick = onGlobalSearchClick,
+                            ),
+                        )
+                    }
+                    add(
+                        EmptyScreenAction(
+                            stringRes = MR.strings.action_open_in_web_view,
+                            icon = Icons.Outlined.Public,
+                            onClick = onWebViewClick,
+                        ),
+                    )
+                    // Three actions already fill a phone row. During a title search the global
+                    // search is the useful escape hatch; outside search, keep the ordinary help.
+                    if (searchQuery.isNullOrBlank() || onGlobalSearchClick == null) {
+                        add(
+                            EmptyScreenAction(
+                                stringRes = MR.strings.label_help,
+                                icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                                onClick = onHelpClick,
+                            ),
+                        )
+                    }
+                }
             },
         )
 

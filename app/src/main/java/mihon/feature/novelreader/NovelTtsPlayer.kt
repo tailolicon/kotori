@@ -336,6 +336,8 @@ private fun NovelTtsVoicePanel(
                         "Nhấn phát để tải giọng AI tiếng Việt về máy (chỉ tải một lần)."
                     NovelTtsEngineId.EDGE ->
                         "Nhấn phát để nghe — giọng Microsoft, cần mạng, không phải tải gì."
+                    NovelTtsEngineId.CAPCUT ->
+                        "Nhấn phát để nghe — giọng CapCut tiếng Việt, cần kết nối mạng."
                     NovelTtsEngineId.SYSTEM ->
                         "Đang lấy danh sách giọng của thiết bị…"
                 },

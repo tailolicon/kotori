@@ -55,6 +55,7 @@ class NovelTtsController(
     private val system by lazy { SystemTtsEngine(appContext) }
     private val neural by lazy { MoonshineTtsEngine(appContext) }
     private val edge by lazy { EdgeTtsEngine(appContext) }
+    private val capCut by lazy { CapCutTtsEngine(appContext) }
 
     private var prepareJob: Job? = null
     private var script: SpeechScript = SpeechScript.Empty
@@ -84,6 +85,7 @@ class NovelTtsController(
             NovelTtsEngineId.EDGE -> edge
             NovelTtsEngineId.NEURAL -> neural
             NovelTtsEngineId.SYSTEM -> system
+            NovelTtsEngineId.CAPCUT -> capCut
         }
 
     /** Replaces the chapter being read. Any current playback stops: the text under it is gone. */
@@ -152,6 +154,7 @@ class NovelTtsController(
         system.stop()
         neural.stop()
         edge.stop()
+        capCut.stop()
         cursor = 0
         state = state.copy(
             status = NovelTtsStatus.IDLE,
@@ -244,6 +247,7 @@ class NovelTtsController(
         system.release()
         neural.release()
         edge.release()
+        capCut.release()
         scope.cancel()
     }
 

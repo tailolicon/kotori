@@ -277,6 +277,7 @@
     <string name="filter_mode_multiply">Nhân</string>
     <string name="label_help">Trợ giúp</string>
     <string name="no_results_found">Không tìm thấy kết quả nào</string>
+    <string name="no_results_found_in_source">“%1$s” không có trong %2$s. Hãy thử tìm ở tất cả nguồn.</string>
     <string name="migration_selection_prompt">Chọn 1 nguồn để di chuyển từ</string>
     <string name="channel_ext_updates">Cập nhật tiện ích mở rộng</string>
     <string name="information_webview_outdated">Vui lòng cập nhật WebView để tương thích tốt hơn</string>

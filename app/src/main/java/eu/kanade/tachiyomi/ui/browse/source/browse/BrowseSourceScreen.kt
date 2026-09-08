@@ -1,21 +1,15 @@
 package eu.kanade.tachiyomi.ui.browse.source.browse
 
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.ui.platform.LocalContext
-import eu.kanade.presentation.util.formattedMessage
-import tachiyomi.presentation.core.screens.EmptyScreen
-import tachiyomi.presentation.core.screens.EmptyScreenAction
 import androidx.compose.foundation.background
-import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -29,8 +23,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
@@ -42,28 +38,29 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.core.util.ifSourcesLoaded
 import eu.kanade.presentation.browse.BrowseSourceContent
-import eu.kanade.presentation.browse.MissingSourceScreen
 import eu.kanade.presentation.browse.KotoriFeedItem
-import eu.kanade.presentation.browse.KotoriFeedShelf
-import eu.kanade.presentation.browse.KotoriSourceFeed
-import eu.kanade.tachiyomi.source.model.SManga
-import tachiyomi.domain.manga.model.Manga
-import tachiyomi.domain.manga.model.asMangaCover
-import eu.kanade.presentation.browse.KotoriGenreRow
 import eu.kanade.presentation.browse.KotoriFeedPill
+import eu.kanade.presentation.browse.KotoriFeedShelf
 import eu.kanade.presentation.browse.KotoriFilterFab
+import eu.kanade.presentation.browse.KotoriGenreRow
+import eu.kanade.presentation.browse.KotoriSourceFeed
+import eu.kanade.presentation.browse.MissingSourceScreen
 import eu.kanade.presentation.browse.components.BrowseSourceToolbar
 import eu.kanade.presentation.browse.components.RemoveMangaDialog
+import eu.kanade.presentation.browse.components.rememberBrowseHeaderScrollState
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.theme.kotori.AuroraBackground
-import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.theme.kotori.KotoriChip
+import eu.kanade.presentation.theme.kotori.KotoriColors
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
+import eu.kanade.presentation.util.formattedMessage
+import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.browse.extension.details.SourcePreferencesScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreenModel.Listing
+import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
@@ -74,11 +71,15 @@ import mihon.feature.migration.dialog.MigrateMangaDialog
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import tachiyomi.core.common.Constants
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.asMangaCover
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.screens.EmptyScreen
+import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.LocalSource
 
@@ -316,6 +317,10 @@ data class BrowseSourceScreen(
                     snackbarHostState = snackbarHostState,
                     contentPadding = paddingValues,
                     onWebViewClick = onWebViewClick,
+                    searchQuery = (state.listing as? Listing.Search)?.query,
+                    onGlobalSearchClick = (state.listing as? Listing.Search)?.query
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { query -> { navigator.push(GlobalSearchScreen(query)) } },
                     onHelpClick = { uriHandler.openUri(Constants.URL_HELP) },
                     onLocalSourceHelpClick = onHelpClick,
                     onMangaClick = { navigator.push((MangaScreen(it.id, true))) },
