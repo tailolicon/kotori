@@ -3,7 +3,7 @@
 # screen shows it that way. The BOM is what makes it read this file as UTF-8.
 # Packages the freshly built release APKs the way the in-app updater expects:
 # renamed per-ABI assets plus an update.json whose schema mirrors v1.0.6's.
-param([string]$Version = "1.0.27")
+param([string]$Version = "1.0.29")
 
 $ErrorActionPreference = "Stop"
 $repo = "E:\Project\kotori"
@@ -41,7 +41,7 @@ $feed = [ordered]@{
     schema      = 1
     versionCode = [long]$versionCode
     versionName = $Version
-    changelog   = 'Thêm Source Handoff cho Manga TL Factory. Từ menu Tải xuống của một bộ truyện, chọn “Gửi URL nguồn → Manga TL Factory”, chọn một chương rồi gửi. Kotori chỉ dùng extension để resolve URL trang và header an toàn vào source_handoff.json; không tải hay đưa ảnh, cookie, authorization hoặc phiên đăng nhập lên GitHub. Worker của Factory tự tải song song bằng HTTP, chỉ bootstrap Chromium khi cần, kiểm chữ ký/MIME/kích thước/SHA-256 và xóa ảnh tạm sau bài test. Token fine-grained chỉ dùng trong lần gửi hiện tại, được che khi nhập và không lưu trong ứng dụng.'
+    changelog   = 'Sửa tìm kiếm Chấp Ma trong Novel Fever: kết quả mở đúng truyện, tải đủ 1.504 chương và đọc được nội dung chương thật. Giữ 24 giọng CapCut tiếng Việt đã thêm ở bản trước.'
     releaseUrl  = "https://github.com/tailolicon/kotori/releases/tag/v$Version"
     assets      = $assets
 }

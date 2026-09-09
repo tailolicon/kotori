@@ -15,7 +15,7 @@ val extensionKeystore: Properties? = rootProject.file("extensions/keystore/keyst
     .takeIf { it.isFile }
     ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
-val extVersionCode = 2
+val extVersionCode = 3
 val extLib = "1.4"
 
 android {
@@ -98,6 +98,9 @@ dependencies {
 
     // The apk ships without a stdlib; the unit tests still need one to compile.
     testImplementation(kotlin("stdlib"))
+    testImplementation(projects.sourceApi)
+    testImplementation(libs.jsoup)
+    testImplementation(libs.okhttp.core)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

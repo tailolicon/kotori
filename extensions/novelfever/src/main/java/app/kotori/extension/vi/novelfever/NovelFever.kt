@@ -31,8 +31,9 @@ import javax.crypto.spec.SecretKeySpec
  * Native source for the Novel Fever Android catalogue.
  *
  * Novel Fever's book and chapter identities come from its JSON API. They are unrelated to the
- * similarly named MeTruyenChu website, so mixing those two catalogues produces plausible-looking
- * but incorrect chapter lists. All operations in this source intentionally stay within one API.
+ * similarly named MeTruyenChu website, so generic mixing of those two catalogues produces
+ * plausible-looking but incorrect chapter lists. One explicitly tagged archive entry is routed to
+ * [TruyenNetArchive] because the current API dropped Chấp Ma while readers still expect it here.
  */
 class NovelFever : MirroredNovelSource() {
 
@@ -50,6 +51,20 @@ class NovelFever : MirroredNovelSource() {
         .set("User-Agent", DESKTOP_UA)
         .set("Accept", "application/json")
         .set("Referer", "https://android.lonoapp.net/")
+
+    override fun getMangaUrl(manga: SManga): String =
+        if (TruyenNetArchive.isNovelUrl(manga.url)) {
+            TruyenNetArchive.siteUrl(manga.url)
+        } else {
+            super.getMangaUrl(manga)
+        }
+
+    override fun getChapterUrl(chapter: SChapter): String =
+        if (TruyenNetArchive.isChapterUrl(chapter.url)) {
+            TruyenNetArchive.siteUrl(chapter.url)
+        } else {
+            super.getChapterUrl(chapter)
+        }
 
     // ============================== Browse ==============================
 
@@ -96,6 +111,12 @@ class NovelFever : MirroredNovelSource() {
         // A genre is tapped, not typed, and the local index carries no genres — falling back here
         // would quietly drop the genre the reader chose.
         if (genreId != null) return MangasPage(emptyList(), false)
+
+        if (TruyenNetArchive.matches(term)) {
+            val hits = listOf(TruyenNetArchive.searchResult())
+            cachedSearch = key to hits
+            return hits.asPage(1)
+        }
 
         val hits = searchCatalogue(term)
         cachedSearch = key to hits
@@ -206,6 +227,11 @@ class NovelFever : MirroredNovelSource() {
     // ============================== Details ==============================
 
     override suspend fun getNovelDetails(novel: SManga): SManga {
+        if (TruyenNetArchive.isNovelUrl(novel.url)) {
+            val html = archiveGet(TruyenNetArchive.siteUrl(novel.url))
+            return TruyenNetArchive.parseDetails(html, novel).novel
+        }
+
         val bookId = novel.bookId()
         val book = api("/books/$bookId")["data"] as? JsonObject
             ?: throw IllegalStateException("Novel Fever không trả về thông tin truyện $bookId")
@@ -235,6 +261,8 @@ class NovelFever : MirroredNovelSource() {
     // ============================== Chapters ==============================
 
     override suspend fun getChapterList(novel: SManga): List<SChapter> {
+        if (TruyenNetArchive.isNovelUrl(novel.url)) return getArchivedChapterList(novel)
+
         val bookId = novel.bookId()
         val root = api("/chapters", listOf("filter[book_id]" to bookId))
         val chapters = (root["data"] as? JsonArray).orEmpty()
@@ -262,6 +290,11 @@ class NovelFever : MirroredNovelSource() {
     // ============================== Chapter text ==============================
 
     override suspend fun getChapterText(chapter: SChapter): String {
+        if (TruyenNetArchive.isChapterUrl(chapter.url)) {
+            val html = archiveGet(TruyenNetArchive.siteUrl(chapter.url))
+            return TruyenNetArchive.parseChapterText(html)
+        }
+
         val chapterId = CHAPTER_ID_REGEX.find(chapter.url)?.value
             ?: throw IllegalStateException("URL chương Novel Fever không hợp lệ: ${chapter.url}")
         val data = api("/chapters/$chapterId")["data"] as? JsonObject
@@ -360,6 +393,34 @@ class NovelFever : MirroredNovelSource() {
     }
 
     // ============================== HTTP / JSON ==============================
+
+    private suspend fun getArchivedChapterList(novel: SManga): List<SChapter> {
+        val detailsHtml = archiveGet(TruyenNetArchive.siteUrl(novel.url))
+        val details = TruyenNetArchive.parseDetails(detailsHtml, novel)
+        val chapters = TruyenNetArchive.parseChapters(detailsHtml).toMutableList()
+
+        for (page in 2..details.lastPage) {
+            val response = archiveGet(TruyenNetArchive.chapterPageUrl(details.bookId, page))
+            val root = try {
+                json.parseToJsonElement(response) as? JsonObject
+            } catch (error: Exception) {
+                throw IllegalStateException("Danh sách chương Chấp Ma không phải JSON hợp lệ", error)
+            } ?: throw IllegalStateException("Danh sách chương Chấp Ma không hợp lệ")
+            val fragment = root.string("data")
+                ?: throw IllegalStateException("Danh sách chương Chấp Ma thiếu dữ liệu trang $page")
+            chapters += TruyenNetArchive.parseChapters(fragment)
+        }
+
+        return chapters.distinctBy(SChapter::url).reversed()
+    }
+
+    private suspend fun archiveGet(url: String): String {
+        val archiveHeaders = headers.newBuilder()
+            .set("Accept", "text/html,application/xhtml+xml,application/json")
+            .set("Referer", "${TruyenNetArchive.BASE_URL}/")
+            .build()
+        return client.newCall(GET(url, archiveHeaders)).awaitSuccess().use { it.body.string() }
+    }
 
     private suspend fun api(
         path: String,
