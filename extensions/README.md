@@ -6,7 +6,7 @@ Kho nguồn riêng của Kotori, cùng kiểu Keiyoushi. Dán URL này vào **Du
 https://raw.githubusercontent.com/tailolicon/kotori/main/extensions/repo/index.pb
 ```
 
-Bản tương thích Mihon cũ (nếu fork chỉ đọc JSON):
+Bản JSON tương thích với các client cũ chỉ đọc định dạng legacy:
 
 ```
 https://raw.githubusercontent.com/tailolicon/kotori/main/extensions/repo/index.min.json

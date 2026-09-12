@@ -1,4 +1,4 @@
-# Handoff: Kotori — Manga · Anime · Light Novel App Redesign (Mihon fork)
+# Handoff: Kotori — Manga · Anime · Light Novel App Redesign
 
 ## Overview
 
