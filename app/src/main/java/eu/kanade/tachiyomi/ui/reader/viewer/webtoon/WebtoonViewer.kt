@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.reader.viewer.webtoon
 
 import android.graphics.PointF
+import android.os.Build
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -88,6 +89,10 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
         recycler.adapter = adapter
         recycler.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    setHighRefreshRate(newState != RecyclerView.SCROLL_STATE_IDLE)
+                }
+
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     onScrolled()
 
@@ -198,7 +203,38 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
      */
     override fun destroy() {
         super.destroy()
+        setHighRefreshRate(false)
         scope.cancel()
+    }
+
+    /**
+     * Requests the display's high refresh-rate path only while the webtoon is moving. Android 15
+     * and newer can take a frame-rate category vote directly from the RecyclerView. Older Android
+     * versions need the equivalent window preference, for which the highest rate supported by the
+     * current display is used. Both are hints, so the system can still apply thermal and power
+     * policy, and returning to the default while idle avoids pinning a static manga page at 120 Hz.
+     */
+    @Suppress("DEPRECATION")
+    private fun setHighRefreshRate(enabled: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            recycler.requestedFrameRate = if (enabled) {
+                View.REQUESTED_FRAME_RATE_CATEGORY_HIGH
+            } else {
+                View.REQUESTED_FRAME_RATE_CATEGORY_DEFAULT
+            }
+            return
+        }
+
+        val preferredRate = if (enabled) {
+            recycler.display?.supportedRefreshRates?.maxOrNull() ?: 0f
+        } else {
+            0f
+        }
+        val attributes = activity.window.attributes
+        if (attributes.preferredRefreshRate != preferredRate) {
+            attributes.preferredRefreshRate = preferredRate
+            activity.window.attributes = attributes
+        }
     }
 
     /**

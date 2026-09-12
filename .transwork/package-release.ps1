@@ -3,7 +3,7 @@
 # screen shows it that way. The BOM is what makes it read this file as UTF-8.
 # Packages the freshly built release APKs the way the in-app updater expects:
 # renamed per-ABI assets plus an update.json whose schema mirrors v1.0.6's.
-param([string]$Version = "1.0.29")
+param([string]$Version = "1.0.30")
 
 $ErrorActionPreference = "Stop"
 $repo = "E:\Project\kotori"
@@ -41,7 +41,7 @@ $feed = [ordered]@{
     schema      = 1
     versionCode = [long]$versionCode
     versionName = $Version
-    changelog   = 'Sửa tìm kiếm Chấp Ma trong Novel Fever: kết quả mở đúng truyện, tải đủ 1.504 chương và đọc được nội dung chương thật. Giữ 24 giọng CapCut tiếng Việt đã thêm ở bản trước.'
+    changelog   = 'Làm cuộn truyện webtoon mượt hơn trên màn hình tần số quét cao: Kotori yêu cầu 90/120 Hz khi kéo hoặc fling và trở về mặc định khi dừng để tiết kiệm pin. Khôi phục chữ ký phát hành gốc để điện thoại đang ở v1.0.27 có thể cập nhật trực tiếp mà không mất dữ liệu.'
     releaseUrl  = "https://github.com/tailolicon/kotori/releases/tag/v$Version"
     assets      = $assets
 }
