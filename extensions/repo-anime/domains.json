@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-24T01:01:28Z",
+  "updated": "2026-09-28T12:45:20Z",
   "sources": [
     {
       "key": "animehay",
@@ -14,9 +14,7 @@
       "announce": [],
       "domains": [
         "animehay13.site",
-        "animehay15.site",
         "animehay14.site",
-        "animehay12.site",
         "animehay11.site",
         "animehay10.site",
         "animehay09.site",
@@ -24,10 +22,12 @@
         "animehay07.site",
         "animehay06.site",
         "animehay05.site",
-        "animehay04.site",
         "animehay03.site",
         "animehay02.site",
-        "animehay01.site"
+        "animehay01.site",
+        "animehay15.site",
+        "animehay12.site",
+        "animehay04.site"
       ]
     },
     {
