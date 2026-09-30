@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-30T01:09:16Z",
+  "updated": "2026-09-30T12:46:41Z",
   "sources": [
     {
       "key": "animehay",
@@ -24,10 +24,10 @@
         "animehay07.site",
         "animehay06.site",
         "animehay05.site",
-        "animehay04.site",
         "animehay03.site",
         "animehay02.site",
-        "animehay01.site"
+        "animehay01.site",
+        "animehay04.site"
       ]
     },
     {
