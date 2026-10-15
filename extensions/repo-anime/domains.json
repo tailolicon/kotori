@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-01T22:44:35Z",
+  "updated": "2026-10-15T11:37:02Z",
   "sources": [
     {
       "key": "animehay",
@@ -40,6 +40,7 @@
         "https://bit.ly/animevietsubtv"
       ],
       "domains": [
+        "animevietsub.sale",
         "animevietsub.nl",
         "animevietsub.li",
         "animevietsub.zip",
